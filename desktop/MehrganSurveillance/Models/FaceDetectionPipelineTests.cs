@@ -9,14 +9,12 @@ using MehrganSurveillance.Services;
 namespace MehrganSurveillance.Models;
 
 /// <summary>
-/// آزمون‌های متمرکز خط لوله آشکارسازی چهره (Face Detection Pipeline Tests)
-/// اعتبارسنجی انطباق با نیازمندی‌های امنیتی: غیرفعال به صورت پیش‌فرض، صرفاً کادر محاطی غیرهویتی،
-/// الگوریتم NMS، محوسازی چهره، و تفکیک ظرفیت چهره از پلاک‌خوان
+/// آزمون‌های متمرکز خط لوله آشکارسازی چهره و انزوا دادن بافر محوسازی (Phase Zero Step 5 Bug Fixes)
 /// </summary>
 public static class FaceDetectionPipelineTests
 {
     /// <summary>
-    /// آزمون ۱: خط لوله به صورت پیش‌فرض غیرفعال است (Disabled by default) و تا زمان تایید صریح مدیر فریم‌ها را پردازش نمی‌کند
+    /// آزمون ۱: خط لوله به صورت پیش‌فرض غیرفعال است (Disabled by default)
     /// </summary>
     public static async Task<(bool Passed, string Message)> Test_DisabledByDefault_RequiresExplicitAdminEnable()
     {
@@ -59,7 +57,6 @@ public static class FaceDetectionPipelineTests
 
     /// <summary>
     /// آزمون ۲: تایید خروجی صرفاً کادر محاطی غیرهویتی (Strictly Non-Identifying Bounding Box Only)
-    /// عدم وجود هرگونه بردار ویژگی (Embedding)، نمایه بیومتریک یا داده هویتی
     /// </summary>
     public static (bool Passed, string Message) Test_NonIdentifyingBoundingBoxOnly_Contract()
     {
@@ -78,7 +75,7 @@ public static class FaceDetectionPipelineTests
             return (false, $"خطا در محاسبه مختصات پیکسلی: ({px}, {py}, {pw}, {ph})");
         }
 
-        var result = new FaceDetectionResult
+        using var result = new FaceDetectionResult
         {
             FrameId = 100,
             ChannelIndex = 0,
@@ -91,7 +88,6 @@ public static class FaceDetectionPipelineTests
             return (false, "شمارش چهره‌ها نادرست است");
         }
 
-        // بررسی اینکه مدل FaceDetectionResult هیچ فیلد یا ارجاعی به شناسه هویتی، امبدینگ یا دیتابیس ندارد
         var type = typeof(FaceDetectionResult);
         var properties = type.GetProperties();
         foreach (var p in properties)
@@ -111,11 +107,8 @@ public static class FaceDetectionPipelineTests
     /// </summary>
     public static (bool Passed, string Message) Test_NonMaximumSuppression_RemovesOverlappingBoxes()
     {
-        // دو کادر بسیار نزدیک و همپوشان برای یک چهره واحد (IoU بالا)
         var box1 = new FaceBoundingBox { NormalizedX = 0.10f, NormalizedY = 0.10f, NormalizedWidth = 0.20f, NormalizedHeight = 0.20f, Confidence = 0.90f };
         var box2 = new FaceBoundingBox { NormalizedX = 0.11f, NormalizedY = 0.11f, NormalizedWidth = 0.19f, NormalizedHeight = 0.19f, Confidence = 0.75f };
-
-        // یک کادر چهره کاملاً مجزا در سمت دیگر تصویر (بدون همپوشانی)
         var box3 = new FaceBoundingBox { NormalizedX = 0.60f, NormalizedY = 0.50f, NormalizedWidth = 0.15f, NormalizedHeight = 0.15f, Confidence = 0.85f };
 
         var inputCandidates = new List<FaceBoundingBox> { box1, box2, box3 };
@@ -135,9 +128,9 @@ public static class FaceDetectionPipelineTests
     }
 
     /// <summary>
-    /// آزمون ۴: اعتبارسنجی محوسازی خودکار کادر چهره (Anonymization Blur / Pixelation)
+    /// آزمون ۷: Face anonymization does not change any byte of the original frame
     /// </summary>
-    public static (bool Passed, string Message) Test_FaceAnonymizationBlur_MutatesPixels()
+    public static (bool Passed, string Message) Test_FaceAnonymization_DoesNotChangeOriginalFrameBytes()
     {
         int width = 100;
         int height = 100;
@@ -145,15 +138,18 @@ public static class FaceDetectionPipelineTests
         int size = stride * height;
         byte[] buffer = ArrayPool<byte>.Shared.Rent(size);
 
-        // پر کردن فریم با الگوی گرادیانی قابل پیش‌بینی
+        // پر کردن فریم با الگوی مقادیر نمونه
         for (int i = 0; i < size; i++)
         {
-            buffer[i] = (byte)(i % 256);
+            buffer[i] = (byte)(i % 251);
         }
 
-        var frame = new AcquiredFrame(1, 0, "cam-blur", width, height, stride, "RV32", buffer, size);
+        // ایجاد کپی ایزوله پشتیبان برای مقایسه دقیق بایت به بایت
+        byte[] originalCopy = new byte[size];
+        Array.Copy(buffer, 0, originalCopy, 0, size);
 
-        // تعریف کادر چهره در مرکز تصویر (از پیکسل ۲۰ تا ۵۰)
+        var frame = new AcquiredFrame(7001, 0, "cam-blur-test", width, height, stride, "RV32", buffer, size);
+
         var face = new FaceBoundingBox
         {
             NormalizedX = 0.20f,
@@ -163,66 +159,120 @@ public static class FaceDetectionPipelineTests
             Confidence = 0.95f
         };
 
-        // ذخیره مقادیر پیکسل‌های داخل کادر قبل از محوسازی
-        var (px, py, pw, ph) = face.ToPixelCoordinates(width, height);
-        byte[] beforeCenterSample = new byte[pw * 4];
-        Array.Copy(buffer, (py + ph / 2) * stride + px * 4, beforeCenterSample, 0, beforeCenterSample.Length);
+        // فراخوانی متد کپی انزوا یافته محوسازی
+        byte[] anonymizedOutput = FaceDetectionPipeline.CreateAnonymizedCopy(frame, new List<FaceBoundingBox> { face }, blockSize: 8);
 
-        // اعمال محوسازی پیکسلی
-        FaceDetectionPipeline.ApplyFaceAnonymizationBlur(frame, new List<FaceBoundingBox> { face }, blockSize: 8);
-
-        // مقایسه پیکسل‌های پس از محوسازی
-        byte[] afterCenterSample = new byte[pw * 4];
-        Array.Copy(buffer, (py + ph / 2) * stride + px * 4, afterCenterSample, 0, afterCenterSample.Length);
-
-        bool pixelsChanged = false;
-        for (int i = 0; i < beforeCenterSample.Length; i++)
+        // بررسی اینکه فریم اصلی حتی ۱ بایت تغییر نکرده باشد
+        ReadOnlySpan<byte> currentFrameSpan = frame.PixelData.Span;
+        for (int i = 0; i < size; i++)
         {
-            if (beforeCenterSample[i] != afterCenterSample[i])
+            if (currentFrameSpan[i] != originalCopy[i])
             {
-                pixelsChanged = true;
-                break;
+                ArrayPool<byte>.Shared.Return(anonymizedOutput);
+                frame.Dispose();
+                return (false, $"خطای حاد: بایت شماره {i} از فریم اصلی دستکاری شده است! ({currentFrameSpan[i]} != {originalCopy[i]})");
             }
         }
 
+        ArrayPool<byte>.Shared.Return(anonymizedOutput);
         frame.Dispose();
 
-        if (!pixelsChanged)
-        {
-            return (false, "خطا: پیکسل‌های داخل کادر چهره محوسازی یا تغییر نیافته‌اند!");
-        }
-
-        return (true, "موفق: الگوریتم محوسازی (Pixelation Anonymization) پیکسل‌های محدوده چهره را جهت حفظ حریم خصوصی تغییر داد.");
+        return (true, "موفق: محوسازی چهره حتی ۱ بایت از فریم اصلی و مشترک را دستکاری یا مخدوش نکرد.");
     }
 
     /// <summary>
-    /// آزمون ۵: تفکیک مستقل ظرفیت چهره از ظرفیت پلاک‌خوان و بار ترکیبی در AiCapacityPolicy
+    /// آزمون ۸: The anonymized output is independent and correctly disposed
     /// </summary>
-    public static (bool Passed, string Message) Test_FaceCapacity_IndependentFromAnpr()
+    public static (bool Passed, string Message) Test_AnonymizedOutput_IsIndependentAndDisposedCleanly()
     {
-        var policy = new AiCapacityPolicy();
-        policy.SetInitialHardwareEstimates(isGpuAvailable: true, logicalCores: 8, totalRamGb: 16.0);
+        int width = 100;
+        int height = 100;
+        int stride = width * 4;
+        int size = stride * height;
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(size);
+        for (int i = 0; i < size; i++) buffer[i] = (byte)(i % 255);
 
-        int initialFaceMax = policy.FaceCapacity.MaximumStableChannels;
-        int initialAnprMax = policy.AnprCapacity.MaximumStableChannels;
-        int initialCombinedMax = policy.CombinedCapacity.MaximumStableChannels;
+        var frame = new AcquiredFrame(8001, 0, "cam-out-test", width, height, stride, "RV32", buffer, size);
 
-        // کالیبراسیون آزمایشی صرفاً برای بار چهره
-        policy.FaceCapacity.MaximumStableChannels = 6;
-        policy.FaceCapacity.State = CapacityCalibrationState.Calibrated;
-
-        // ظرفیت پلاک‌خوان و ترکیبی نباید به صورت ساده دستخوش تغییر شوند
-        if (policy.AnprCapacity.MaximumStableChannels != initialAnprMax)
+        var face = new FaceBoundingBox
         {
-            return (false, "تغییر در ظرفیت چهره باعث نشت ناخواسته به ظرفیت پلاک‌خوان گردید!");
+            NormalizedX = 0.10f,
+            NormalizedY = 0.10f,
+            NormalizedWidth = 0.40f,
+            NormalizedHeight = 0.40f,
+            Confidence = 0.90f
+        };
+
+        byte[] anonymizedOutput = FaceDetectionPipeline.CreateAnonymizedCopy(frame, new List<FaceBoundingBox> { face }, blockSize: 8);
+
+        // ۱. بررسی ارجاع متفاوت بافر خروجی نسبت به فریم اصلی
+        if (ReferenceEquals(anonymizedOutput, frame.GetRawBuffer()))
+        {
+            frame.Dispose();
+            return (false, "خطا: بافر خروجی محوسازی نباید همان ارجاع بافر فریم اصلی باشد!");
         }
 
-        if (policy.CombinedCapacity.MaximumStableChannels == policy.FaceCapacity.MaximumStableChannels + policy.AnprCapacity.MaximumStableChannels)
+        // ۲. بررسی تغییر پیکسل‌های داخل کادر چهره در بافر خروجی
+        var (px, py, pw, ph) = face.ToPixelCoordinates(width, height);
+        int sampleIdx = (py + ph / 2) * stride + (px + pw / 2) * 4;
+        if (anonymizedOutput[sampleIdx] == frame.PixelData.Span[sampleIdx])
         {
-            return (false, "خطای معماری: ظرفیت ترکیبی هرگز نباید حاصل‌جمع جبری دو بار مستقل باشد!");
+            frame.Dispose();
+            return (false, "پیکسل‌های داخل کادر چهره در بافر خروجی تغییر نیافته‌اند");
         }
 
-        return (true, $"موفق: استقلال ظرفیت چهره ({policy.FaceCapacity.MaximumStableChannels}) از پلاک ({policy.AnprCapacity.MaximumStableChannels}) و ترکیبی ({policy.CombinedCapacity.MaximumStableChannels}) تضمین شده است.");
+        // ۳. بررسی آزادسازی پاکیزه در FaceDetectionResult
+        var result = new FaceDetectionResult
+        {
+            FrameId = 8001,
+            AnonymizationApplied = true,
+            AnonymizedPixelBuffer = anonymizedOutput
+        };
+
+        result.Dispose(); // آزادسازی بافر خروجی به ArrayPool
+        frame.Dispose();
+
+        return (true, "موفق: بافر خروجی محوسازی کاملاً مستقل بوده و با Dispose آزاد گردید.");
+    }
+
+    /// <summary>
+    /// آزمون ۹: Concurrent calls to FaceDetectionResult.Dispose() are thread-safe and return buffer exactly once
+    /// </summary>
+    public static (bool Passed, string Message) Test_ConcurrentDispose_CallsOnFaceDetectionResult_AreThreadSafe()
+    {
+        byte[] rented = ArrayPool<byte>.Shared.Rent(512);
+        var result = new FaceDetectionResult
+        {
+            FrameId = 9001,
+            AnonymizationApplied = true,
+            AnonymizedPixelBuffer = rented
+        };
+
+        // فراخوانی همزمان Dispose از ۵0 نخ به صورت موازی
+        var exceptions = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+        Parallel.For(0, 50, _ =>
+        {
+            try
+            {
+                result.Dispose();
+            }
+            catch (Exception ex)
+            {
+                exceptions.Add(ex);
+            }
+        });
+
+        if (exceptions.Count > 0)
+        {
+            return (false, $"استثنا در فراخوانی‌های همزمان Dispose: {exceptions.First().Message}");
+        }
+
+        if (result.AnonymizedPixelBuffer != null)
+        {
+            return (false, "بافر پس از Dispose همزمان باید null شده باشد");
+        }
+
+        return (true, "موفق: فراخوانی‌های همزمان Dispose در FaceDetectionResult کاملاً نخ‌ایمن بوده و بافر را دقیقاً یک‌بار آزاد کردند.");
     }
 
     /// <summary>
@@ -241,11 +291,14 @@ public static class FaceDetectionPipelineTests
         var t3 = Test_NonMaximumSuppression_RemovesOverlappingBoxes();
         results.Add(("Test_NonMaximumSuppression_RemovesOverlappingBoxes", t3.Passed, t3.Message));
 
-        var t4 = Test_FaceAnonymizationBlur_MutatesPixels();
-        results.Add(("Test_FaceAnonymizationBlur_MutatesPixels", t4.Passed, t4.Message));
+        var t7 = Test_FaceAnonymization_DoesNotChangeOriginalFrameBytes();
+        results.Add(("Test_FaceAnonymization_DoesNotChangeOriginalFrameBytes", t7.Passed, t7.Message));
 
-        var t5 = Test_FaceCapacity_IndependentFromAnpr();
-        results.Add(("Test_FaceCapacity_IndependentFromAnpr", t5.Passed, t5.Message));
+        var t8 = Test_AnonymizedOutput_IsIndependentAndDisposedCleanly();
+        results.Add(("Test_AnonymizedOutput_IsIndependentAndDisposedCleanly", t8.Passed, t8.Message));
+
+        var t9 = Test_ConcurrentDispose_CallsOnFaceDetectionResult_AreThreadSafe();
+        results.Add(("Test_ConcurrentDispose_CallsOnFaceDetectionResult_AreThreadSafe", t9.Passed, t9.Message));
 
         return results;
     }

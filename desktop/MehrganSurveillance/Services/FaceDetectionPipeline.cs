@@ -148,12 +148,17 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
     {
         if (!_config.IsEnabled || !_isInitialized || _isDisposed)
         {
-            // پردازش چهره غیرفعال است یا راه‌اندازی نشده؛ بدون معطلی بازگردانده می‌شود
+            // پردازش چهره غیرفعال است؛ اجاره مصرف‌کننده بلافاصله آزاد می‌شود
+            frame.Release();
             return ValueTask.CompletedTask;
         }
 
         // درج در صف محدود استنتاج با خط‌مشی DropOldest
-        _inferenceQueue.Writer.TryWrite(frame);
+        if (!_inferenceQueue.Writer.TryWrite(frame))
+        {
+            // صف استنتاج پر است؛ اجاره مصرف‌کننده آزاد می‌شود تا نشت نکند
+            frame.Release();
+        }
         return ValueTask.CompletedTask;
     }
 
@@ -170,6 +175,7 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                 {
                     if (!_config.IsEnabled)
                     {
+                        frame.Release();
                         continue;
                     }
 
@@ -189,6 +195,11 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                     {
                         Log($"خطا در استنتاج چهره برای فریم {frame.FrameId}: {ex.Message}");
                     }
+                    finally
+                    {
+                        // آزادسازی قطعی اجاره مصرف‌کننده پس از اتمام پردازش
+                        frame.Release();
+                    }
                 }
             }
         }
@@ -199,7 +210,7 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
     }
 
     /// <summary>
-    /// پردازش کامل فریم: پیش‌پردازش تنسور، استنتاج ONNX تحت قفل انحصاری، پس‌پردازش NMS و محوسازی اختیاری
+    /// پردازش کامل فریم: پیش‌پردازش تنسور، استنتاج ONNX تحت قفل انحصاری، پس‌پردازش NMS و کپی انزوا یافته محوسازی
     /// </summary>
     public FaceDetectionResult? ProcessFrame(AcquiredFrame frame)
     {
@@ -241,9 +252,11 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                 postSw.Stop();
 
                 bool anonymized = false;
+                byte[]? anonymizedBuffer = null;
+
                 if (_config.EnableFaceAnonymizationBlur && detectedFaces.Count > 0)
                 {
-                    ApplyFaceAnonymizationBlur(frame, detectedFaces, _config.AnonymizationPixelationBlockSize);
+                    anonymizedBuffer = CreateAnonymizedCopy(frame, detectedFaces, _config.AnonymizationPixelationBlockSize);
                     anonymized = true;
                 }
 
@@ -258,7 +271,8 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                     InferenceLatencyMs = infSw.Elapsed.TotalMilliseconds,
                     PostprocessingLatencyMs = postSw.Elapsed.TotalMilliseconds,
                     ExecutionProviderUsed = _activeProvider,
-                    AnonymizationApplied = anonymized
+                    AnonymizationApplied = anonymized,
+                    AnonymizedPixelBuffer = anonymizedBuffer
                 };
             }
             else
@@ -401,64 +415,76 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
     }
 
     /// <summary>
-    /// محوسازی پیکسلی/بلوکی داخل کادرهای چهره جهت حفظ حریم خصوصی (Anonymization Blur)
+    /// ایجاد یک کپی مستقل و اختصاصی از بافر تصویر و اعمال محوسازی پیکسلی بر روی کپی خروجی
+    /// تضمین انزوا و عدم تغییر حتی ۱ بایتی از فریم اصلی shared AcquiredFrame
     /// </summary>
-    public static void ApplyFaceAnonymizationBlur(AcquiredFrame frame, List<FaceBoundingBox> faces, int blockSize = 12)
+    public static byte[] CreateAnonymizedCopy(AcquiredFrame frame, List<FaceBoundingBox> faces, int blockSize = 12)
     {
-        byte[] buffer = frame.GetRawBuffer();
+        if (frame == null) throw new ArgumentNullException(nameof(frame));
+
+        ReadOnlySpan<byte> sourceSpan = frame.PixelData.Span;
+        int dataLength = frame.DataLength;
+
+        // تخصیص بافر مستقل از ArrayPool جهت کپی خروجی
+        byte[] outputBuffer = ArrayPool<byte>.Shared.Rent(dataLength);
+        sourceSpan.CopyTo(outputBuffer);
+
         int width = frame.Width;
         int height = frame.Height;
         int stride = frame.Stride;
 
-        foreach (var face in faces)
+        if (faces != null && faces.Count > 0)
         {
-            var (fx, fy, fw, fh) = face.ToPixelCoordinates(width, height);
-
-            for (int by = fy; by < fy + fh; by += blockSize)
+            foreach (var face in faces)
             {
-                int bh = Math.Min(blockSize, fy + fh - by);
-                for (int bx = fx; bx < fx + fw; bx += blockSize)
+                var (fx, fy, fw, fh) = face.ToPixelCoordinates(width, height);
+
+                for (int by = fy; by < fy + fh; by += blockSize)
                 {
-                    int bw = Math.Min(blockSize, fx + fw - bx);
-
-                    // محاسبه میانگین رنگی بلوک
-                    long sumB = 0, sumG = 0, sumR = 0;
-                    int count = 0;
-
-                    for (int py = by; py < by + bh; py++)
+                    int bh = Math.Min(blockSize, fy + fh - by);
+                    for (int bx = fx; bx < fx + fw; bx += blockSize)
                     {
-                        int rowOffset = py * stride;
-                        for (int px = bx; px < bx + bw; px++)
-                        {
-                            int idx = rowOffset + (px * 4);
-                            if (idx + 2 < buffer.Length)
-                            {
-                                sumB += buffer[idx];
-                                sumG += buffer[idx + 1];
-                                sumR += buffer[idx + 2];
-                                count++;
-                            }
-                        }
-                    }
+                        int bw = Math.Min(blockSize, fx + fw - bx);
 
-                    if (count > 0)
-                    {
-                        byte avgB = (byte)(sumB / count);
-                        byte avgG = (byte)(sumG / count);
-                        byte avgR = (byte)(sumR / count);
+                        // محاسبه میانگین رنگی بلوک روی بافر خروجی کپی‌شده
+                        long sumB = 0, sumG = 0, sumR = 0;
+                        int count = 0;
 
-                        // اعمال رنگ میانگین به کلیه پیکسل‌های بلوک (Pixelation)
                         for (int py = by; py < by + bh; py++)
                         {
                             int rowOffset = py * stride;
                             for (int px = bx; px < bx + bw; px++)
                             {
                                 int idx = rowOffset + (px * 4);
-                                if (idx + 2 < buffer.Length)
+                                if (idx + 2 < dataLength)
                                 {
-                                    buffer[idx] = avgB;
-                                    buffer[idx + 1] = avgG;
-                                    buffer[idx + 2] = avgR;
+                                    sumB += outputBuffer[idx];
+                                    sumG += outputBuffer[idx + 1];
+                                    sumR += outputBuffer[idx + 2];
+                                    count++;
+                                }
+                            }
+                        }
+
+                        if (count > 0)
+                        {
+                            byte avgB = (byte)(sumB / count);
+                            byte avgG = (byte)(sumG / count);
+                            byte avgR = (byte)(sumR / count);
+
+                            // اعمال رنگ میانگین صرفاً به بافر خروجی کپی‌شده (Pixelation)
+                            for (int py = by; py < by + bh; py++)
+                            {
+                                int rowOffset = py * stride;
+                                for (int px = bx; px < bx + bw; px++)
+                                {
+                                    int idx = rowOffset + (px * 4);
+                                    if (idx + 2 < dataLength)
+                                    {
+                                        outputBuffer[idx] = avgB;
+                                        outputBuffer[idx + 1] = avgG;
+                                        outputBuffer[idx + 2] = avgR;
+                                    }
                                 }
                             }
                         }
@@ -466,6 +492,8 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                 }
             }
         }
+
+        return outputBuffer;
     }
 
     private void Log(string message)
@@ -481,6 +509,11 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
             _cts.Cancel();
 
             _inferenceQueue.Writer.TryComplete();
+            while (_inferenceQueue.Reader.TryRead(out var leftoverFrame))
+            {
+                leftoverFrame.Release();
+            }
+
             if (_workerTask != null)
             {
                 await Task.WhenAny(_workerTask, Task.Delay(500));

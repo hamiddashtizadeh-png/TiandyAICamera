@@ -272,7 +272,7 @@ public class LocalFrameAcquisitionPipeline : IAsyncDisposable
                     bool success = true;
                     try
                     {
-                        // ارسال به کلیه مصرف‌کنندگان ثبت‌شده به صورت مستقل و بدون تداخل
+                        // ارسال به کلیه مصرف‌کنندگان ثبت‌شده به صورت مستقل با حفظ اجاره مجزا برای هر مصرف‌کننده
                         var activeConsumers = _consumers.Values.ToList();
                         if (activeConsumers.Count > 0)
                         {
@@ -280,7 +280,10 @@ public class LocalFrameAcquisitionPipeline : IAsyncDisposable
                             {
                                 try
                                 {
-                                    await consumer.OnFrameAvailableAsync(frame, token);
+                                    if (frame.TryRetain())
+                                    {
+                                        await consumer.OnFrameAvailableAsync(frame, token);
+                                    }
                                 }
                                 catch (Exception cEx)
                                 {
@@ -298,7 +301,7 @@ public class LocalFrameAcquisitionPipeline : IAsyncDisposable
                     finally
                     {
                         context.Accounting.OnInFlightCompleted(success);
-                        // فریم پس از پردازش توسط کلیه مصرف‌کنندگان، بافر خود را به Pool بازمی‌گرداند
+                        // آزادسازی اجاره توزیع‌کننده (Dispatcher Lease). بافر تنها زمانی به Pool بازمی‌گردد که کلیه مصرف‌کنندگان اجاره خود را آزاد کرده باشند.
                         frame.Dispose();
                     }
                 }

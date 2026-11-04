@@ -11,7 +11,8 @@ namespace MehrganSurveillance.Models;
 public sealed class AcquiredFrame : IDisposable
 {
     private byte[]? _buffer;
-    private bool _disposed;
+    private int _refCount = 1; // Producer initial lease
+    private int _primaryDisposed = 0;
 
     public long FrameId { get; init; }
     public int ChannelIndex { get; init; }
@@ -29,6 +30,16 @@ public sealed class AcquiredFrame : IDisposable
     public ReadOnlyMemory<byte> PixelData => _buffer != null ? new ReadOnlyMemory<byte>(_buffer, 0, DataLength) : ReadOnlyMemory<byte>.Empty;
 
     public int DataLength { get; init; }
+
+    /// <summary>
+    /// تعداد اجاره‌های فعال جاری روی این فریم
+    /// </summary>
+    public int ReferenceCount => System.Threading.Volatile.Read(ref _refCount);
+
+    /// <summary>
+    /// آیا تمامی اجاره‌های بافر آزاد شده و بافر به ArrayPool بازگشته است؟
+    /// </summary>
+    public bool IsDisposed => System.Threading.Volatile.Read(ref _refCount) <= 0 || _buffer == null;
 
     public AcquiredFrame(
         long frameId,
@@ -52,29 +63,70 @@ public sealed class AcquiredFrame : IDisposable
         _buffer = buffer;
         DataLength = dataLength;
         IsSubStream = isSubStream;
+        _refCount = 1;
     }
 
     /// <summary>
-    /// ایجاد یک کپی مستقل یا بافر مشترک برای مصرف‌کننده
+    /// تلاش برای ثبت یک اجاره/ارجاع جدید توسط مصرف‌کننده غیرهمگام
+    /// در صورت فعال بودن بافر، شمارنده ارجاع یک واحد افزایش یافته و true بازمی‌گردد
+    /// </summary>
+    public bool TryRetain()
+    {
+        while (true)
+        {
+            int current = System.Threading.Volatile.Read(ref _refCount);
+            if (current <= 0 || _buffer == null) return false;
+            if (System.Threading.Interlocked.CompareExchange(ref _refCount, current + 1, current) == current)
+                return true;
+        }
+    }
+
+    /// <summary>
+    /// آزادسازی یک اجاره/ارجاع. با رسیدن تعداد ارجاعات به صفر، بافر دقیقاً یک‌بار به ArrayPool بازگردانده می‌شود.
+    /// </summary>
+    public void Release()
+    {
+        while (true)
+        {
+            int current = System.Threading.Volatile.Read(ref _refCount);
+            if (current <= 0) return; // قبلاً به طور کامل آزاد شده است
+            int next = current - 1;
+            if (System.Threading.Interlocked.CompareExchange(ref _refCount, next, current) == current)
+            {
+                if (next == 0)
+                {
+                    byte[]? buf = System.Threading.Interlocked.Exchange(ref _buffer, null);
+                    if (buf != null)
+                    {
+                        ArrayPool<byte>.Shared.Return(buf);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// دریافت بافر خام جهت دسترسی خواندن. در صورت آزادسازی تمام اجاره‌ها، ObjectDisposedException پرتاب می‌شود.
     /// </summary>
     public byte[] GetRawBuffer()
     {
-        if (_disposed || _buffer == null)
+        byte[]? buf = _buffer;
+        if (IsDisposed || buf == null)
             throw new ObjectDisposedException(nameof(AcquiredFrame));
 
-        return _buffer;
+        return buf;
     }
 
+    /// <summary>
+    /// آزادسازی اجاره دارنده اصلی (Producer / Dispatcher Lease)
+    /// جهت جلوگیری از اثر منفی فراخوانی‌های مکرر Dispose روی یک ارجاع، از Interlocked.Exchange استفاده می‌شود.
+    /// </summary>
     public void Dispose()
     {
-        if (!_disposed)
+        if (System.Threading.Interlocked.Exchange(ref _primaryDisposed, 1) == 0)
         {
-            _disposed = true;
-            if (_buffer != null)
-            {
-                ArrayPool<byte>.Shared.Return(_buffer);
-                _buffer = null;
-            }
+            Release();
         }
     }
 }

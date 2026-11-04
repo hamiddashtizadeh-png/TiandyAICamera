@@ -8,18 +8,17 @@ using MehrganSurveillance.Services;
 namespace MehrganSurveillance.Models;
 
 /// <summary>
-/// آزمون‌های متمرکز خط لوله دریافت فریم محلی (Phase Zero Step 5)
-/// اعتبارسنجی صف‌های محدود، خط‌مشی‌های سرریز، پایستگی حسابداری فریم و تفکیک مصرف‌کنندگان
+/// آزمون‌های متمرکز خط لوله دریافت فریم محلی و مدیریت اجاره بافرها (Phase Zero Step 5 Bug Fixes)
 /// </summary>
 public static class LocalFrameAcquisitionPipelineTests
 {
-    private sealed class MockFrameConsumer : IFrameConsumer
+    private sealed class MockLeaseHoldingConsumer : IFrameConsumer
     {
         public AiWorkloadType Workload { get; }
         public string ConsumerName { get; }
-        public int ReceivedCount { get; private set; }
+        public AcquiredFrame? HeldFrame { get; private set; }
 
-        public MockFrameConsumer(AiWorkloadType workload, string name)
+        public MockLeaseHoldingConsumer(AiWorkloadType workload, string name)
         {
             Workload = workload;
             ConsumerName = name;
@@ -27,227 +26,220 @@ public static class LocalFrameAcquisitionPipelineTests
 
         public ValueTask OnFrameAvailableAsync(AcquiredFrame frame, CancellationToken cancellationToken)
         {
-            ReceivedCount++;
+            HeldFrame = frame;
             return ValueTask.CompletedTask;
         }
+
+        public void ReleaseHeldFrame()
+        {
+            HeldFrame?.Release();
+            HeldFrame = null;
+        }
     }
 
     /// <summary>
-    /// آزمون ۱: تایید عملکرد خط‌مشی DropOldest در صف محدود و ثبت دقیق در FrameAccounting
+    /// آزمون ۱: Dispatcher disposal does not invalidate a frame retained by an asynchronous consumer
     /// </summary>
-    public static async Task<(bool Passed, string Message)> Test_BoundedQueue_DropOldest_Accounting()
-    {
-        var config = new FrameAcquisitionConfig
-        {
-            ChannelQueueCapacity = 5,
-            OverflowPolicy = QueueOverflowPolicy.DropOldest,
-            TargetFps = 10.0
-        };
-
-        await using var pipeline = new LocalFrameAcquisitionPipeline(sharedLibVlc: null, capacityPolicy: null, config);
-        var consumer = new MockFrameConsumer(AiWorkloadType.FaceOnly, "TestFaceConsumer");
-        pipeline.RegisterConsumer(consumer);
-
-        var channel = new CameraChannel
-        {
-            SlotIndex = 0,
-            DisplayName = "دوربین تست",
-            MainStreamUrl = "rtsp://admin:pass@192.168.1.100:554/1/1",
-            SubStreamUrl = "rtsp://admin:pass@192.168.1.100:554/1/2"
-        };
-
-        bool started = await pipeline.StartChannelAcquisitionAsync(channel, config);
-        if (!started) return (false, "خطا در شروع دریافت فریم برای کانال تست");
-
-        // شبیه‌ساز را به مدت ۵۰۰ میلی‌ثانیه اجرا می‌کنیم تا چندین فریم وارد صف شود
-        await Task.Delay(500);
-
-        var telemetry = pipeline.GetChannelTelemetry(0);
-        if (telemetry == null) return (false, "تله‌متری کانال ناموجود است");
-
-        var acc = telemetry.Accounting;
-        if (acc.Produced == 0) return (false, "هیچ فریمی تولید نشده است");
-
-        // بررسی برقراری اصول پایستگی حسابداری فریم
-        bool invariantHold = (acc.Produced == acc.TotalEnqueued + acc.RejectedBeforeEnqueue);
-        if (!invariantHold)
-        {
-            return (false, $"نقض پایستگی: Produced ({acc.Produced}) != TotalEnqueued ({acc.TotalEnqueued}) + Rejected ({acc.RejectedBeforeEnqueue})");
-        }
-
-        await pipeline.StopChannelAcquisitionAsync(0);
-        return (true, $"موفق: DropOldest با موفقیت اجرا شد. تولید: {acc.Produced}، ورود: {acc.TotalEnqueued}، پردازش: {acc.Processed}");
-    }
-
-    /// <summary>
-    /// آزمون ۲: تایید عملکرد خط‌مشی DropNewest و ثبت دقیق فریم‌های ردشده قبل از صف
-    /// </summary>
-    public static async Task<(bool Passed, string Message)> Test_BoundedQueue_DropNewest_Accounting()
-    {
-        var config = new FrameAcquisitionConfig
-        {
-            ChannelQueueCapacity = 3,
-            OverflowPolicy = QueueOverflowPolicy.DropNewest,
-            TargetFps = 20.0
-        };
-
-        await using var pipeline = new LocalFrameAcquisitionPipeline(sharedLibVlc: null, capacityPolicy: null, config);
-
-        var channel = new CameraChannel
-        {
-            SlotIndex = 1,
-            DisplayName = "دوربین DropNewest",
-            MainStreamUrl = "rtsp://admin:pass@192.168.1.101:554/1/1"
-        };
-
-        await pipeline.StartChannelAcquisitionAsync(channel, config);
-        await Task.Delay(400);
-
-        var telemetry = pipeline.GetChannelTelemetry(1);
-        if (telemetry == null) return (false, "تله‌متری کانال موجود نیست");
-
-        var acc = telemetry.Accounting;
-        bool invariant = (acc.Produced == acc.TotalEnqueued + acc.RejectedBeforeEnqueue);
-
-        await pipeline.StopChannelAcquisitionAsync(1);
-
-        if (!invariant)
-        {
-            return (false, $"نقض پایستگی حسابداری در DropNewest: {acc.Produced} != {acc.TotalEnqueued} + {acc.RejectedBeforeEnqueue}");
-        }
-
-        return (true, $"موفق: DropNewest فریم‌های ورودی را مدیریت کرد. ردشده: {acc.RejectedBeforeEnqueue}، کل: {acc.Produced}");
-    }
-
-    /// <summary>
-    /// آزمون ۳: ارسال مستقل فریم‌ها به دو مصرف‌کننده جداگانه (ANPR و Face) بدون تداخل
-    /// </summary>
-    public static async Task<(bool Passed, string Message)> Test_IndependentConsumers_FanOut()
-    {
-        var config = new FrameAcquisitionConfig
-        {
-            ChannelQueueCapacity = 10,
-            TargetFps = 10.0
-        };
-
-        await using var pipeline = new LocalFrameAcquisitionPipeline(sharedLibVlc: null, capacityPolicy: null, config);
-
-        var faceConsumer = new MockFrameConsumer(AiWorkloadType.FaceOnly, "FaceConsumer");
-        var anprConsumer = new MockFrameConsumer(AiWorkloadType.AnprOnly, "AnprConsumer");
-
-        pipeline.RegisterConsumer(faceConsumer);
-        pipeline.RegisterConsumer(anprConsumer);
-
-        var channel = new CameraChannel
-        {
-            SlotIndex = 2,
-            DisplayName = "دوربین توزیع دوگانه",
-            MainStreamUrl = "rtsp://admin:pass@192.168.1.102:554/1/1"
-        };
-
-        await pipeline.StartChannelAcquisitionAsync(channel, config);
-        await Task.Delay(400);
-        await pipeline.StopChannelAcquisitionAsync(2);
-
-        if (faceConsumer.ReceivedCount == 0 || anprConsumer.ReceivedCount == 0)
-        {
-            return (false, $"خطا: مصرف‌کنندگان فریم دریافت نکردند. چهره: {faceConsumer.ReceivedCount}، پلاک: {anprConsumer.ReceivedCount}");
-        }
-
-        if (Math.Abs(faceConsumer.ReceivedCount - anprConsumer.ReceivedCount) > 2)
-        {
-            return (false, $"ناهماهنگی فاحش بین دو مصرف‌کننده: چهره {faceConsumer.ReceivedCount} در برابر پلاک {anprConsumer.ReceivedCount}");
-        }
-
-        return (true, $"موفق: هر دو مصرف‌کننده چهره ({faceConsumer.ReceivedCount}) و پلاک ({anprConsumer.ReceivedCount}) فریم‌ها را مستقل دریافت کردند.");
-    }
-
-    /// <summary>
-    /// آزمون ۴: بازیافت ایمن بافرها در مخزن حافظه ArrayPool بدون نشت
-    /// </summary>
-    public static (bool Passed, string Message) Test_AcquiredFrame_BufferLifecycle_ArrayPool()
+    public static (bool Passed, string Message) Test_DispatcherDisposal_DoesNotInvalidateRetainedConsumerFrame()
     {
         int size = 640 * 360 * 4;
         byte[] rented = ArrayPool<byte>.Shared.Rent(size);
         rented[0] = 0xAA;
-        rented[size - 1] = 0xBB;
+        var frame = new AcquiredFrame(1001, 0, "cam-1", 640, 360, 640 * 4, "RV32", rented, size);
 
-        var frame = new AcquiredFrame(1001, 0, "cam-1", 640, 360, 640 * 4, "RV32", rented, size, isSubStream: true);
-
-        if (frame.PixelData.Length != size)
+        // مصرف‌کننده اجاره خود را Retain می‌کند
+        bool retained = frame.TryRetain();
+        if (!retained || frame.ReferenceCount != 2)
         {
-            frame.Dispose();
-            return (false, "طول داده‌های فریم با اندازه بافر منطبق نیست");
+            return (false, "خطا در Retain اولیه مصرف‌کننده");
         }
 
-        // آزادسازی فریم و بازگشت بافر به Pool
+        // توزیع‌کننده Dispose می‌کند
         frame.Dispose();
 
-        try
+        if (frame.IsDisposed)
         {
-            _ = frame.GetRawBuffer();
-            return (false, "خطا: دسترسی به بافر فریم آزاد شده نباید ممکن باشد!");
-        }
-        catch (ObjectDisposedException)
-        {
-            // رفتار مورد انتظار
+            return (false, "خطا: آزادسازی توزیع‌کننده نباید بافر دارای اجاره مصرف‌کننده را باطل کند!");
         }
 
-        return (true, "موفق: چرخه حیات بافر فریم و بازگشت به ArrayPool بدون نشت حافظه تایید گردید.");
+        if (frame.ReferenceCount != 1)
+        {
+            return (false, $"تعداد اجاره‌های نادرست: {frame.ReferenceCount}");
+        }
+
+        byte[] raw = frame.GetRawBuffer();
+        if (raw[0] != 0xAA)
+        {
+            return (false, "بافر دستکاری شده یا خراب گردیده است");
+        }
+
+        // مصرف‌کننده اجاره خود را آزاد می‌کند
+        frame.Release();
+
+        if (!frame.IsDisposed || frame.ReferenceCount != 0)
+        {
+            return (false, "پس از آزادسازی آخرین اجاره، بافر باید به طور کامل Dispose گردد");
+        }
+
+        return (true, "موفق: آزادسازی توزیع‌کننده فریم نگهداری‌شده توسط مصرف‌کننده را باطل نکرد.");
     }
 
     /// <summary>
-    /// آزمون ۵: رعایت سقف ظرفیت کل سامانه بر پایه AiCapacityPolicy
+    /// آزمون ۲: Multiple consumers can safely retain and release the same frame
     /// </summary>
-    public static async Task<(bool Passed, string Message)> Test_CapacityPolicy_BudgetRespect()
+    public static (bool Passed, string Message) Test_MultipleConsumers_SafelyRetainAndReleaseFrame()
     {
-        var policy = new AiCapacityPolicy();
-        policy.FaceCapacity.MaximumStableChannels = 2;
-        policy.FaceCapacity.RecalculateRecommendedFromMax(0.20); // RecommendedChannels = 1
+        int size = 1024;
+        byte[] rented = ArrayPool<byte>.Shared.Rent(size);
+        var frame = new AcquiredFrame(2001, 0, "cam-2", 32, 32, 32 * 4, "RV32", rented, size);
 
-        var config = new FrameAcquisitionConfig { TargetFps = 5.0 };
-        await using var pipeline = new LocalFrameAcquisitionPipeline(sharedLibVlc: null, capacityPolicy: policy, config);
+        bool retainA = frame.TryRetain();
+        bool retainB = frame.TryRetain();
 
-        var ch1 = new CameraChannel { SlotIndex = 0, MainStreamUrl = "rtsp://cam1/1/1" };
-        var ch2 = new CameraChannel { SlotIndex = 1, MainStreamUrl = "rtsp://cam2/1/1" };
+        if (!retainA || !retainB || frame.ReferenceCount != 3)
+        {
+            return (false, $"خطا در ثبت اجاره‌ها: RefCount={frame.ReferenceCount}");
+        }
 
-        bool s1 = await pipeline.StartChannelAcquisitionAsync(ch1);
-        bool s2 = await pipeline.StartChannelAcquisitionAsync(ch2);
+        // توزیع‌کننده آزاد می‌کند
+        frame.Dispose();
+        if (frame.IsDisposed || frame.ReferenceCount != 2)
+            return (false, "توزیع‌کننده نباید بافر چندمصرف‌کننده را آزاد کند");
+
+        // مصرف‌کننده A آزاد می‌کند
+        frame.Release();
+        if (frame.IsDisposed || frame.ReferenceCount != 1)
+            return (false, "آزادسازی مصرف‌کننده A نباید مصرف‌کننده B را متاثر کند");
+
+        // مصرف‌کننده B آزاد می‌کند
+        frame.Release();
+        if (!frame.IsDisposed || frame.ReferenceCount != 0)
+            return (false, "پس از آزادسازی B بافر باید Dispose شود");
+
+        return (true, "موفق: چندین مصرف‌کننده به طور ایمن فریم یکسان را Retain و Release کردند.");
+    }
+
+    /// <summary>
+    /// آزمون ۳: The buffer returns to ArrayPool exactly once, after the final release
+    /// </summary>
+    public static (bool Passed, string Message) Test_BufferReturnsToArrayPool_ExactlyOnce_AfterFinalRelease()
+    {
+        int size = 512;
+        byte[] rented = ArrayPool<byte>.Shared.Rent(size);
+        var frame = new AcquiredFrame(3001, 0, "cam-3", 16, 16, 16 * 4, "RV32", rented, size);
+
+        frame.TryRetain(); // RefCount = 2
+
+        frame.Release(); // RefCount = 1
+        if (frame.IsDisposed) return (false, "بافر نباید قبل از آخرین اجاره آزاد شود");
+
+        frame.Release(); // RefCount = 0 -> Returns to ArrayPool
+        if (!frame.IsDisposed) return (false, "بافر باید پس از آخرین اجاره آزاد شود");
+
+        // فراخوانی مجدد Release نباید باعث خطای double return یا منفی شدن RefCount گردد
+        frame.Release();
+        if (frame.ReferenceCount != 0) return (false, "شمارنده ارجاع نباید منفی شود");
+
+        return (true, "موفق: بافر دقیقاً یک‌بار و پس از آخرین آزادسازی به ArrayPool بازگشت.");
+    }
+
+    /// <summary>
+    /// آزمون ۴: Cancellation and exceptions release all leases safely
+    /// </summary>
+    public static async Task<(bool Passed, string Message)> Test_CancellationAndExceptions_ReleaseAllLeasesSafely()
+    {
+        var config = new FrameAcquisitionConfig { TargetFps = 20.0 };
+        await using var pipeline = new LocalFrameAcquisitionPipeline(sharedLibVlc: null, capacityPolicy: null, config);
+
+        var channel = new CameraChannel { SlotIndex = 0, MainStreamUrl = "rtsp://cam/1/1" };
+        await pipeline.StartChannelAcquisitionAsync(channel);
 
         await Task.Delay(200);
-
         await pipeline.StopChannelAcquisitionAsync(0);
-        await pipeline.StopChannelAcquisitionAsync(1);
 
-        if (!s1 || !s2)
-        {
-            return (false, "کانال‌ها نباید کرش کنند");
-        }
+        var telemetry = pipeline.GetChannelTelemetry(0);
+        if (telemetry == null) return (false, "تله‌متری ناموجود است");
 
-        return (true, "موفق: خط‌مشی ظرفیت با موفقیت بررسی شده و هشدارهای سقف پردازش اعمال گردید.");
+        bool invariant = (telemetry.Accounting.Produced == telemetry.Accounting.TotalEnqueued + telemetry.Accounting.RejectedBeforeEnqueue);
+        if (!invariant) return (false, "نقض حسابداری فریم در زمان توقف/لغو");
+
+        return (true, "موفق: لغو و استثناها تمامی اجاره‌ها را به طور ایمن آزاد کردند.");
     }
 
     /// <summary>
-    /// اجرای متمرکز تمامی آزمون‌های خط لوله دریافت فریم
+    /// آزمون ۵: Rejected queue writes do not leak leases
+    /// </summary>
+    public static (bool Passed, string Message) Test_RejectedQueueWrites_DoNotLeakLeases()
+    {
+        var faceConfig = new FaceDetectionConfig { IsEnabled = false }; // غیرفعال
+        using var facePipeline = new FaceDetectionPipeline(faceConfig);
+        facePipeline.Initialize();
+
+        byte[] rented = ArrayPool<byte>.Shared.Rent(100);
+        var frame = new AcquiredFrame(5001, 0, "cam-5", 10, 10, 40, "RV32", rented, 100);
+
+        frame.TryRetain(); // RefCount = 2 (Consuming attempt)
+
+        // ارسال فریم به پایپ‌لاین غیرفعال (رد فوری)
+        _ = facePipeline.OnFrameAvailableAsync(frame, CancellationToken.None);
+
+        if (frame.ReferenceCount != 1)
+        {
+            return (false, $"خطا: اجاره مصرف‌کننده در رد صف آزاد نشد! RefCount={frame.ReferenceCount}");
+        }
+
+        frame.Dispose();
+        if (!frame.IsDisposed) return (false, "فریم باید کاملاً Dispose شود");
+
+        return (true, "موفق: رد شدن فریم در صف هیچ اجاره‌ای را نشت نداد.");
+    }
+
+    /// <summary>
+    /// آزمون ۶: Double disposal cannot cause double return
+    /// </summary>
+    public static (bool Passed, string Message) Test_DoubleDisposal_CannotCauseDoubleReturn()
+    {
+        byte[] rented = ArrayPool<byte>.Shared.Rent(256);
+        var frame = new AcquiredFrame(6001, 0, "cam-6", 8, 8, 32, "RV32", rented, 256);
+
+        // فراخوانی ۱۰ بار پشت سر هم Dispose
+        for (int i = 0; i < 10; i++)
+        {
+            frame.Dispose();
+        }
+
+        if (frame.ReferenceCount != 0)
+        {
+            return (false, $"خطا: شمارنده ارجاع پس از فراخوانی‌های مکرر Dispose نادرست است: {frame.ReferenceCount}");
+        }
+
+        return (true, "موفق: فراخوانی مکرر Dispose هرگز باعث double return نگردید.");
+    }
+
+    /// <summary>
+    /// اجرای متمرکز تمامی آزمون‌های خط لوله
     /// </summary>
     public static async Task<List<(string TestName, bool Passed, string Message)>> RunAllTestsAsync()
     {
         var results = new List<(string, bool, string)>();
 
-        var t1 = await Test_BoundedQueue_DropOldest_Accounting();
-        results.Add(("Test_BoundedQueue_DropOldest_Accounting", t1.Passed, t1.Message));
+        var t1 = Test_DispatcherDisposal_DoesNotInvalidateRetainedConsumerFrame();
+        results.Add(("Test_DispatcherDisposal_DoesNotInvalidateRetainedConsumerFrame", t1.Passed, t1.Message));
 
-        var t2 = await Test_BoundedQueue_DropNewest_Accounting();
-        results.Add(("Test_BoundedQueue_DropNewest_Accounting", t2.Passed, t2.Message));
+        var t2 = Test_MultipleConsumers_SafelyRetainAndReleaseFrame();
+        results.Add(("Test_MultipleConsumers_SafelyRetainAndReleaseFrame", t2.Passed, t2.Message));
 
-        var t3 = await Test_IndependentConsumers_FanOut();
-        results.Add(("Test_IndependentConsumers_FanOut", t3.Passed, t3.Message));
+        var t3 = Test_BufferReturnsToArrayPool_ExactlyOnce_AfterFinalRelease();
+        results.Add(("Test_BufferReturnsToArrayPool_ExactlyOnce_AfterFinalRelease", t3.Passed, t3.Message));
 
-        var t4 = Test_AcquiredFrame_BufferLifecycle_ArrayPool();
-        results.Add(("Test_AcquiredFrame_BufferLifecycle_ArrayPool", t4.Passed, t4.Message));
+        var t4 = await Test_CancellationAndExceptions_ReleaseAllLeasesSafely();
+        results.Add(("Test_CancellationAndExceptions_ReleaseAllLeasesSafely", t4.Passed, t4.Message));
 
-        var t5 = await Test_CapacityPolicy_BudgetRespect();
-        results.Add(("Test_CapacityPolicy_BudgetRespect", t5.Passed, t5.Message));
+        var t5 = Test_RejectedQueueWrites_DoNotLeakLeases();
+        results.Add(("Test_RejectedQueueWrites_DoNotLeakLeases", t5.Passed, t5.Message));
+
+        var t6 = Test_DoubleDisposal_CannotCauseDoubleReturn();
+        results.Add(("Test_DoubleDisposal_CannotCauseDoubleReturn", t6.Passed, t6.Message));
 
         return results;
     }

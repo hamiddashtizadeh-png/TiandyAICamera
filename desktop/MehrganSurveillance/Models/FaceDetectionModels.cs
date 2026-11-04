@@ -51,8 +51,10 @@ public record FaceBoundingBox
 /// نتیجه حاصل از استنتاج مدل آشکارسازی چهره روی یک فریم مشخص
 /// غیرهویتی (Strictly Non-Identifying): صرفاً تعداد چهره و موقعیت فضایی کادرها
 /// </summary>
-public class FaceDetectionResult
+public class FaceDetectionResult : IDisposable
 {
+    private byte[]? _anonymizedPixelBuffer;
+
     public Guid ResultId { get; init; } = Guid.NewGuid();
     public long FrameId { get; init; }
     public int ChannelIndex { get; init; }
@@ -84,6 +86,24 @@ public class FaceDetectionResult
     /// آیا عملیات محوسازی/حفظ حریم خصوصی (Anonymization Blur) بر روی چهره‌ها اعمال شده است؟
     /// </summary>
     public bool AnonymizationApplied { get; init; }
+
+    /// <summary>
+    /// بافر مستقل و اختصاصی کپی تصویر محوسازی‌شده جهت خروجی بدون دستکاری فریم اصلی
+    /// </summary>
+    public byte[]? AnonymizedPixelBuffer
+    {
+        get => System.Threading.Volatile.Read(ref _anonymizedPixelBuffer);
+        init => _anonymizedPixelBuffer = value;
+    }
+
+    public void Dispose()
+    {
+        byte[]? bufferToReturn = System.Threading.Interlocked.Exchange(ref _anonymizedPixelBuffer, null);
+        if (bufferToReturn != null)
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(bufferToReturn);
+        }
+    }
 }
 
 /// <summary>

@@ -9,8 +9,9 @@
              FlowDirection="RightToLeft"
              FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif">
 
+    <!-- کادر اصلی سلول با استایل مانیتورینگ پیشرفته سازمانی -->
     <Border x:Name="RootBorder"
-            Background="{StaticResource CardBackgroundBrush}"
+            Background="#FFFFFF"
             BorderBrush="{StaticResource BorderLightBrush}"
             BorderThickness="1.5"
             CornerRadius="6"
@@ -18,12 +19,12 @@
             ClipToBounds="True">
         <Grid>
             <Grid.RowDefinitions>
-                <!-- سربرگ سلول: نوار کنترل و وضعیت مستقل از پنجره HWND (جلوگیری قطعی از مشکل Airspace) -->
-                <RowDefinition Height="34" />
-                <!-- بخش رندر ویدیوی نیتیو LibVLC -->
+                <!-- سربرگ سلول: نوار فشرده و حرفه‌ای ۲۸ پیکسلی کاملاً مستقل از مستطیل HWND -->
+                <RowDefinition Height="28" />
+                <!-- ویوپورت رندر ویدیوی حقیقی بومی با پس‌زمینه سینمایی تیره -->
                 <RowDefinition Height="*" />
-                <!-- نوار زیرین مشخصات استریم و کدک -->
-                <RowDefinition Height="24" />
+                <!-- نوار زیرین متادیتای تکنیکال استریم (رزولوشن، کدک و آدرس محافظت‌شده) -->
+                <RowDefinition Height="22" />
             </Grid.RowDefinitions>
 
             <!-- ۱. سربرگ سلول -->
@@ -31,26 +32,31 @@
                     Background="#F8FAFC"
                     BorderBrush="{StaticResource BorderLightBrush}"
                     BorderThickness="0,0,0,1"
-                    Padding="6,3">
+                    Padding="6,2">
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <!-- نشانگر اسلات و نام دوربین -->
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <!-- وضعیت زنده و کیفیت -->
+                        <ColumnDefinition Width="Auto" />
+                        <!-- ابزارهای کنترلی سریع -->
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- نشانگر اسلات و نام دوربین -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- نشانگر اسلات -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
                         <Border x:Name="SlotBadgeBorder"
-                                Background="{StaticResource PrimaryBrush}"
-                                CornerRadius="4"
-                                Padding="6,2"
-                                Margin="0,0,6,0">
+                                Background="{StaticResource NavyDarkBrush}"
+                                CornerRadius="3"
+                                Padding="5,1"
+                                Margin="0,0,5,0">
                             <TextBlock x:Name="SlotBadgeText"
-                                       Text="کانال ۱"
+                                       Text="CH 01"
                                        Foreground="White"
-                                       FontSize="10"
-                                       FontWeight="Bold" />
+                                       FontSize="9.5"
+                                       FontWeight="Bold"
+                                       FontFamily="JetBrains Mono, Consolas, Tahoma" />
                         </Border>
 
                         <TextBlock x:Name="CameraTitleText"
@@ -59,159 +65,168 @@
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource TextPrimaryBrush}"
                                    VerticalAlignment="Center"
-                                   MaxWidth="160"
+                                   MaxWidth="140"
                                    TextTrimming="CharacterEllipsis" />
                     </StackPanel>
 
-                    <!-- وضعیت اتصال زنده -->
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                HorizontalAlignment="Center"
+                    <!-- وضعیت اتصال زنده و پروفایل استریم -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                        <!-- بج کیفیت استریم (Main یا Sub) -->
+                        <Border x:Name="StreamProfileBadge"
+                                Background="#FEF3C7"
+                                CornerRadius="3"
+                                Padding="5,1"
+                                Margin="0,0,5,0"
                                 VerticalAlignment="Center">
-                        <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="#64748B" Margin="0,0,5,0" />
+                            <TextBlock x:Name="StreamProfileBadgeText"
+                                       Text="Sub-Stream"
+                                       FontSize="8.5"
+                                       FontWeight="Bold"
+                                       Foreground="#92400E" />
+                        </Border>
+
+                        <Ellipse x:Name="StatusDot" Width="6.5" Height="6.5" Fill="#64748B" Margin="0,0,4,0" />
                         <TextBlock x:Name="StatusText"
-                                   Text="آماده اتصال"
-                                   FontSize="10"
+                                   Text="آماده"
+                                   FontSize="9.5"
+                                   FontWeight="Medium"
                                    Foreground="{StaticResource TextSecondaryBrush}" />
                     </StackPanel>
 
-                    <!-- دکمه‌های کنترلی اختصاصی سلول -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- دکمه تغییر / انتخاب دوربین ثبت شده -->
+                    <!-- دکمه‌های کنترلی سلول -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- دکمه تخصیص/تنظیم دوربین -->
                         <Button x:Name="AssignButton"
-                                ToolTip="انتخاب یا تخصیص دوربین به این اسلات"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Padding="5,2"
-                                Height="24"
-                                FontSize="10"
-                                Margin="0,0,4,0"
+                                ToolTip="تخصیص دوربین از رجیستری (⚙️)"
+                                Style="{StaticResource IconToolButtonStyle}"
+                                Width="22" Height="22"
+                                Margin="0,0,3,0"
                                 Click="AssignButton_Click">
-                            <TextBlock Text="⚙️" FontSize="10" />
+                            <TextBlock Text="⚙" FontSize="10" />
                         </Button>
 
-                        <!-- دکمه اتصال / قطع اختصاصی -->
+                        <!-- دکمه اتصال/قطع سریع -->
                         <Button x:Name="PlayPauseButton"
-                                ToolTip="اتصال / قطع استریم این دوربین"
+                                ToolTip="اتصال / قطع استریم این اسلات"
                                 Style="{StaticResource PrimaryButtonStyle}"
-                                Padding="7,2"
-                                Height="24"
-                                FontSize="10"
-                                Margin="0,0,4,0"
+                                Height="22"
+                                Padding="6,1"
+                                Margin="0,0,3,0"
                                 Click="PlayPauseButton_Click">
-                            <TextBlock x:Name="PlayPauseButtonText" Text="▶ اتصال" FontSize="10" />
+                            <TextBlock x:Name="PlayPauseButtonText" Text="▶" FontSize="9" FontWeight="Bold" />
                         </Button>
 
-                        <!-- دکمه تمام‌صفحه / بازگشت -->
+                        <!-- دکمه بزرگ‌نمایی تمام‌صفحه -->
                         <Button x:Name="MaximizeButton"
-                                ToolTip="بزرگ‌نمایی این تصویر (دابل‌کلیک نیز کار می‌کند)"
+                                ToolTip="بزرگ‌نمایی این تصویر (دابل‌کلیک)"
                                 Style="{StaticResource SecondaryButtonStyle}"
-                                Padding="6,2"
-                                Height="24"
-                                FontSize="10"
+                                Height="22"
+                                Width="22"
+                                Padding="0"
                                 Click="MaximizeButton_Click">
-                            <TextBlock x:Name="MaximizeIconText" Text="⛶" FontSize="11" FontWeight="Bold" />
+                            <TextBlock x:Name="MaximizeIconText" Text="⛶" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Button>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- ۲. فضای رندر ویدیوی نیتیو LibVLC و لایه پیام قطع/خطا -->
+            <!-- ۲. فضای رندر ویدیوی نیتیو LibVLC و لایه وضعیت آماده‌باش -->
             <Grid Grid.Row="1"
-                  Background="#090D16"
+                  Background="#060913"
                   MouseLeftButtonDown="VideoArea_MouseLeftButtonDown">
+                
                 <!-- کنترل رندر ویدیوی حقیقی بومی LibVLC -->
                 <vlc:VideoView x:Name="CellVideoView"
                                HorizontalAlignment="Stretch"
                                VerticalAlignment="Stretch" />
 
-                <!-- لایه نگهدارنده و پیام وضعیت (در حالت عدم پخش یا خطا نمایش می‌یابد) -->
+                <!-- لایه نگه‌دارنده شیک مانیتورینگ با خطوط هدایت Viewfinder در زمان عدم پخش -->
                 <Border x:Name="PlaceholderOverlay"
-                        Background="#0F172A"
-                        Opacity="0.95"
+                        Background="#090E1A"
+                        Opacity="0.98"
                         Visibility="Visible"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch">
-                    <StackPanel HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Margin="12">
-                        <TextBlock x:Name="PlaceholderIcon"
-                                   Text="📹"
-                                   FontSize="22"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,6" />
-                        <TextBlock x:Name="PlaceholderMessage"
-                                   Text="تصویر زنده غیرفعال است"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="#F8FAFC"
-                                   HorizontalAlignment="Center" />
-                        <TextBlock x:Name="PlaceholderSubText"
-                                   Text="جهت مشاهده پخش زنده، دکمه اتصال را بفشارید"
-                                   FontSize="9.5"
-                                   Foreground="#94A3B8"
-                                   Margin="0,4,0,8"
-                                   HorizontalAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   TextAlignment="Center" />
-                        <Button x:Name="QuickConnectOverlayButton"
-                                Content="اتصال به این کانال"
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                FontSize="10"
-                                Padding="10,4"
-                                HorizontalAlignment="Center"
-                                Click="PlayPauseButton_Click" />
-                    </StackPanel>
+                    <Grid>
+                        <!-- خطوط کمکی و کراس‌هیر مهندسی مانیتورینگ -->
+                        <Rectangle Width="28" Height="1" Fill="#1E293B" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-24,0,0" />
+                        <Rectangle Width="1" Height="28" Fill="#1E293B" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-24,0,0" />
+
+                        <StackPanel HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Margin="10">
+                            <!-- آیکون دوربین دوربین مداربسته -->
+                            <Border Width="38" Height="38"
+                                    Background="#131C2E"
+                                    BorderBrush="#1E293B"
+                                    BorderThickness="1"
+                                    CornerRadius="19"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,0,0,6">
+                                <TextBlock Text="📹" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+
+                            <TextBlock x:Name="PlaceholderMessage"
+                                       Text="تصویر زنده غیرفعال است"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="#F1F5F9"
+                                       HorizontalAlignment="Center" />
+
+                            <TextBlock x:Name="PlaceholderSubText"
+                                       Text="جهت مشاهده پخش زنده، دکمه اتصال را بفشارید"
+                                       FontSize="9"
+                                       Foreground="#64748B"
+                                       Margin="0,3,0,6"
+                                       HorizontalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center" />
+
+                            <Button x:Name="QuickConnectOverlayButton"
+                                    Content="اتصال استریم"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    FontSize="9.5"
+                                    Padding="10,3"
+                                    HorizontalAlignment="Center"
+                                    Click="PlayPauseButton_Click" />
+                        </StackPanel>
+                    </Grid>
                 </Border>
             </Grid>
 
-            <!-- ۳. نوار زیرین مشخصات فنی استریم -->
+            <!-- ۳. نوار زیرین مشخصات تکنیکال استریم (خارج از مستطیل HWND) -->
             <Border Grid.Row="2"
-                    Background="#F1F5F9"
+                    Background="#F8FAFC"
                     BorderBrush="{StaticResource BorderLightBrush}"
                     BorderThickness="0,1,0,0"
-                    Padding="6,2">
+                    Padding="6,1">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- نشانگر کیفیت استریم: Main یا Sub -->
-                    <Border x:Name="StreamProfileBadge"
-                            Grid.Column="0"
-                            Background="#E2E8F0"
-                            CornerRadius="3"
-                            Padding="5,1"
-                            VerticalAlignment="Center">
-                        <TextBlock x:Name="StreamProfileBadgeText"
-                                   Text="Sub-Stream (/1/2)"
-                                   FontSize="9"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextSecondaryBrush}" />
-                    </Border>
-
-                    <!-- آدرس پوشش داده شده (بدون افشای رمز) -->
+                    <!-- آدرس پوشش‌داده‌شده امن (بدون افشای رمز عبور) -->
                     <TextBlock x:Name="MaskedUrlText"
-                               Grid.Column="1"
+                               Grid.Column="0"
                                Text="rtsp://---"
-                               FontSize="9"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="8.5"
+                               Foreground="{StaticResource TextMutedBrush}"
                                FontFamily="JetBrains Mono, Consolas, Courier New"
                                VerticalAlignment="Center"
-                               HorizontalAlignment="Center"
                                TextTrimming="CharacterEllipsis"
-                               Margin="6,0"
                                FlowDirection="LeftToRight" />
 
-                    <!-- مشخصات فریم و کدک حقیقی -->
+                    <!-- مشخصات فریم و کدک واقعی -->
                     <TextBlock x:Name="SpecsText"
-                               Grid.Column="2"
+                               Grid.Column="1"
                                Text="-- x --"
-                               FontSize="9"
+                               FontSize="8.5"
                                FontWeight="Bold"
                                Foreground="{StaticResource PrimaryBrush}"
-                               VerticalAlignment="Center" />
+                               FontFamily="JetBrains Mono, Consolas"
+                               VerticalAlignment="Center"
+                               Margin="4,0,0,0" />
                 </Grid>
             </Border>
         </Grid>

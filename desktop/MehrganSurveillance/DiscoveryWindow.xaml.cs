@@ -46,13 +46,16 @@ namespace MehrganSurveillance
             Closing += DiscoveryWindow_Closing;
         }
 
-        private void DiscoveryWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void DiscoveryWindow_Loaded(object sender, RoutedEventArgs e)
         {
             try
             {
-                // مقداردهی هسته LibVLC برای پیش‌نمایش تست زنده
-                Core.Initialize();
-                _libVlc = new LibVLC("--rtsp-tcp", "--network-caching=300", "--avcodec-hw=any", "--no-video-title-show");
+                // مقداردهی هسته LibVLC برای پیش‌نمایش تست زنده به صورت ناهمگام
+                await Task.Run(() =>
+                {
+                    Core.Initialize();
+                    _libVlc = new LibVLC("--rtsp-tcp", "--network-caching=300", "--avcodec-hw=any", "--no-video-title-show");
+                });
                 LogEvent("هسته بومی LibVLC جهت تست پیش‌نمایش استریم‌ها آماده شد.");
             }
             catch (Exception ex)
@@ -488,11 +491,15 @@ namespace MehrganSurveillance
 
         private void LogEvent(string message)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
                 string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
                 string entry = $"[{timestamp}] {message}";
                 DiscoveryLogListBox.Items.Add(entry);
+                if (DiscoveryLogListBox.Items.Count > 150)
+                {
+                    DiscoveryLogListBox.Items.RemoveAt(0);
+                }
                 DiscoveryLogListBox.ScrollIntoView(entry);
             });
         }

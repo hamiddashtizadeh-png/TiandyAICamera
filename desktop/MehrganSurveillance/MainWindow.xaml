@@ -5,361 +5,489 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:MehrganSurveillance.Controls"
         mc:Ignorable="d"
-        Title="سامانه نظارت تصویری هوشمند مهرگان - نسخه ویندوز چنددوربینه (Multi-Camera Live View)"
-        Height="900" Width="1400"
-        MinWidth="1100" MinHeight="750"
+        Title="سامانه نظارت تصویری هوشمند مهرگان | Mehrgan VMS Enterprise (نسخه ویندوز)"
+        Height="920" Width="1440"
+        MinWidth="1150" MinHeight="750"
         FlowDirection="RightToLeft"
         FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif"
         Background="{StaticResource BackgroundLightBrush}"
         WindowStartupLocation="CenterScreen">
 
-    <Grid Margin="14">
+    <Grid>
         <Grid.RowDefinitions>
-            <!-- ۱. سربرگ اصلی برنامه -->
-            <RowDefinition Height="Auto" />
-            <!-- ۲. نوار ابزار چیدمان چنددوربینه و مدیریت اسلات‌ها -->
-            <RowDefinition Height="Auto" />
-            <!-- ۳. نوار اعلان وضعیت حالت تمام‌صفحه (Maximized Banner) -->
-            <RowDefinition Height="Auto" />
-            <!-- ۴. ویوپورت شبکه ماتریسی دوربین‌ها (۱×۱، ۲×۲، ۳×۳) -->
+            <!-- ۱. نوار ابزار اصلی شل برنامه (Application Top Shell Bar - 48px) -->
+            <RowDefinition Height="48" />
+            <!-- ۲. فضای کاری اصلی نظارت (Live Video Wall + Collapsible Sidebar) -->
             <RowDefinition Height="*" />
-            <!-- ۵. پنل وقایع حقیقی LibVLC و آمار دیکود سخت‌افزاری -->
-            <RowDefinition Height="160" />
+            <!-- ۳. نوار مانیتورینگ وضعیت و پنل کشویی لاگ‌ها (Collapsible Status & Diagnostics) -->
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- ۱. سربرگ اصلی برنامه -->
+        <!-- ================================================================= -->
+        <!-- ۱. نوار ابزار اصلی شل برنامه (Enterprise VMS Top Shell)           -->
+        <!-- ================================================================= -->
         <Border Grid.Row="0"
-                Background="{StaticResource CardBackgroundBrush}"
-                BorderBrush="{StaticResource BorderLightBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="16,10"
-                Margin="0,0,0,10">
-            <Grid>
+                Background="{StaticResource NavyDarkBrush}"
+                Padding="14,0"
+                BorderBrush="#1E293B"
+                BorderThickness="0,0,0,1">
+            <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
+                    <!-- لوگو و برند مهرگان -->
                     <ColumnDefinition Width="Auto" />
+                    <!-- چیدمان‌های ماتریسی ۱x۱, ۲x۲, ۳x۳ و کنترل همگانی -->
+                    <ColumnDefinition Width="*" />
+                    <!-- ساعت زنده، وضعیت پروتکل و کشف هوشمند -->
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="سامانه نظارت تصویری هوشمند مهرگان (Mehrgan AI Surveillance)"
-                               FontSize="17"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="پخش زنده چنددوربینه ویندوز بر پایه موتور بومی LibVLCSharp و پروتکل RTSP over TCP با پشتیبانی از استریم اصلی و فرعی تیاندی"
-                               FontSize="11.5"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               Margin="0,2,0,0" />
+                <!-- برندینگ سامانه مهرگان -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <Border Width="30" Height="30"
+                            Background="{StaticResource PrimaryBrush}"
+                            CornerRadius="6"
+                            Margin="0,0,10,0">
+                        <TextBlock Text="🛡" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="سامانه نظارت تصویری مهرگان"
+                                   FontSize="14"
+                                   FontWeight="Bold"
+                                   Foreground="#F8FAFC" />
+                        <TextBlock Text="Mehrgan VMS Enterprise | RTSP TCP Engine"
+                                   FontSize="9"
+                                   FontFamily="JetBrains Mono, Consolas, Segoe UI"
+                                   Foreground="#94A3B8" />
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- دکمه کشف هوشمند دوربین‌ها -->
-                <Button Grid.Column="1"
-                        Content="🔍 کشف هوشمند دوربین‌ها (ONVIF &amp; Scan)"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Height="34"
-                        Padding="14,0"
-                        Margin="0,0,12,0"
-                        VerticalAlignment="Center"
-                        Click="OpenDiscoveryWindow_Click" />
+                <!-- کنترل‌های مرکزی: انتخاب چیدمان ماتریسی و عملیات گروهی -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- سوئیچرهای چیدمان (Segmented Layout Controls) -->
+                    <Border Background="#1E293B"
+                            BorderBrush="#334155"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="3"
+                            Margin="0,0,14,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="Layout1x1Button"
+                                    Content="⊞ ۱×۱"
+                                    ToolTip="چیدمان تک‌تصویر با حداکثر کیفیت (/1/1)"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Background="Transparent"
+                                    Foreground="#F1F5F9"
+                                    BorderThickness="0"
+                                    Padding="10,4"
+                                    Height="28"
+                                    Margin="0,0,2,0"
+                                    Click="Layout1x1Button_Click" />
 
-                <!-- برچسب امنیت DPAPI و وضعیت سامانه -->
-                <Border Grid.Column="2"
-                        Background="#F0FDF4"
-                        BorderBrush="#BBF7D0"
-                        BorderThickness="1"
-                        CornerRadius="20"
-                        Padding="12,5"
-                        VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse x:Name="GlobalStatusDot" Width="8" Height="8" Fill="#16A34A" Margin="0,0,6,0" />
-                        <TextBlock x:Name="GlobalStatusText"
-                                   Text="سامانه آماده به کار (DPAPI محافظت‌شده)"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="#166534" />
-                    </StackPanel>
-                </Border>
+                            <Button x:Name="Layout2x2Button"
+                                    Content="⊞ ۲×۲"
+                                    ToolTip="چیدمان ۴ تصویر با استریم فرعی (/1/2)"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Padding="12,4"
+                                    Height="28"
+                                    Margin="0,0,2,0"
+                                    Click="Layout2x2Button_Click" />
+
+                            <Button x:Name="Layout3x3Button"
+                                    Content="⊞ ۳×۳"
+                                    ToolTip="چیدمان ۹ تصویر با استریم فرعی (/1/2)"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Background="Transparent"
+                                    Foreground="#F1F5F9"
+                                    BorderThickness="0"
+                                    Padding="10,4"
+                                    Height="28"
+                                    Click="Layout3x3Button_Click" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- دکمه‌های کنترل همگانی استریم‌ها -->
+                    <Button x:Name="ConnectAllButton"
+                            Content="▶ اتصال همه"
+                            ToolTip="برقراری اتصال تمام استریم‌های فعال در چیدمان جاری"
+                            Style="{StaticResource SuccessButtonStyle}"
+                            Height="30"
+                            Padding="12,0"
+                            Margin="0,0,6,0"
+                            Click="ConnectAllButton_Click" />
+
+                    <Button x:Name="DisconnectAllButton"
+                            Content="⏹ قطع همه"
+                            ToolTip="قطع فوری کلیه استریم‌ها جهت کاهش مصرف شبکه و پردازنده"
+                            Style="{StaticResource DangerButtonStyle}"
+                            Height="30"
+                            Padding="10,0"
+                            Margin="0,0,14,0"
+                            Click="DisconnectAllButton_Click" />
+                </StackPanel>
+
+                <!-- ابزارهای سمت چپ: کشف هوشمند، وضعیت و ساعت -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- دکمه ماژول کشف هوشمند -->
+                    <Button Content="🔍 کشف هوشمند (ONVIF)"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Background="#0369A1"
+                            Height="30"
+                            Padding="12,0"
+                            Margin="0,0,12,0"
+                            Click="OpenDiscoveryWindow_Click" />
+
+                    <!-- نشانگر وضعیت موتور و شبکه -->
+                    <Border Background="#1E293B"
+                            BorderBrush="#334155"
+                            BorderThickness="1"
+                            CornerRadius="15"
+                            Padding="10,4"
+                            Margin="0,0,12,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="EngineStatusDot" Width="7" Height="7" Fill="#16A34A" Margin="0,0,5,0" />
+                            <TextBlock x:Name="EngineStatusText"
+                                       Text="موتور آماده (TCP)"
+                                       FontSize="10"
+                                       Foreground="#E2E8F0"
+                                       FontWeight="Medium" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ساعت زنده مانیتورینگ -->
+                    <TextBlock x:Name="LiveClockText"
+                               Text="--:--:--"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               FontFamily="JetBrains Mono, Consolas"
+                               Foreground="#38BDF8"
+                               VerticalAlignment="Center" />
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- ۲. نوار ابزار چیدمان چنددوربینه و مدیریت اسلات‌ها -->
-        <Border Grid.Row="1"
-                Background="{StaticResource CardBackgroundBrush}"
-                BorderBrush="{StaticResource BorderLightBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="14,10"
-                Margin="0,0,0,10">
-            <Grid>
+        <!-- ================================================================= -->
+        <!-- ۲. فضای کاری اصلی نظارت (Live Video Wall + Collapsible Sidebar)  -->
+        <!-- ================================================================= -->
+        <Grid Grid.Row="1" Margin="10,10,10,6">
+            <Grid.ColumnDefinitions>
+                <!-- ویدیو وال مرکزی مانیتورینگ (بزرگ‌ترین بخش صفحه) -->
+                <ColumnDefinition Width="*" />
+                <!-- پنل کناری تاشو جهت مدیریت دوربین‌ها و اسلات‌ها -->
+                <ColumnDefinition x:Name="SidebarColumn" Width="290" MinWidth="220" MaxWidth="380" />
+            </Grid.ColumnDefinitions>
+
+            <!-- بخش ویدیو وال مانیتورینگ -->
+            <Grid Grid.Column="0" Margin="0,0,8,0">
                 <Grid.RowDefinitions>
+                    <!-- بنر اطلاع‌رسانی حالت تمام‌صفحه (در زمان بزرگ‌نمایی) -->
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
+                    <!-- شبکه ماتریسی دوربین‌ها -->
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <!-- ردیف بالا: دکمه‌های سوئیچ چیدمان ۱x۱, ۲x۲, ۳x۳ و عملیات گروهی -->
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <!-- دکمه‌های چیدمان ماتریسی -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="انتخاب چیدمان نمایش:"
-                                   FontSize="11.5"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0" />
-
-                        <Button x:Name="Layout1x1Button"
-                                Content="۱×۱ (تک‌تصویر)"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Padding="12,6"
-                                Margin="0,0,6,0"
-                                Click="Layout1x1Button_Click" />
-
-                        <Button x:Name="Layout2x2Button"
-                                Content="۲×۲ (۴ تصویر)"
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Padding="12,6"
-                                Margin="0,0,6,0"
-                                Click="Layout2x2Button_Click" />
-
-                        <Button x:Name="Layout3x3Button"
-                                Content="۳×۳ (۹ تصویر)"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Padding="12,6"
-                                Margin="0,0,12,0"
-                                Click="Layout3x3Button_Click" />
-                    </StackPanel>
-
-                    <!-- دکمه‌های کنترل همگانی -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="ConnectAllButton"
-                                Content="▶ اتصال همه استریم‌های فعال"
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Background="#059669"
-                                Padding="12,6"
-                                Margin="0,0,6,0"
-                                Click="ConnectAllButton_Click" />
-
-                        <Button x:Name="DisconnectAllButton"
-                                Content="⏹ قطع همه"
-                                Style="{StaticResource DangerButtonStyle}"
-                                Padding="12,6"
-                                Margin="0,0,12,0"
-                                Click="DisconnectAllButton_Click" />
-                    </StackPanel>
-
-                    <!-- اطلاعات بهینه‌سازی منابع -->
-                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Background="#FEF3C7" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="4" Padding="8,4">
-                            <TextBlock Text="💡 در حالت ماتریسی استریم سبک فرعی (/1/2) و در تک‌تصویر استریم باکیفیت اصلی (/1/1) فعال می‌شود."
-                                       FontSize="10.5"
-                                       Foreground="#92400E" />
-                        </Border>
-                    </StackPanel>
-                </Grid>
-
-                <!-- ردیف پایین: تنظیم سریع و تخصیص دوربین برای اسلات انتخاب‌شده -->
-                <Border Grid.Row="1"
-                        Background="#F8FAFC"
-                        BorderBrush="{StaticResource BorderLightBrush}"
-                        BorderThickness="1"
+                <!-- بنر حالت تمام‌صفحه (Maximized State Floating Banner) -->
+                <Border x:Name="MaximizedBanner"
+                        Grid.Row="0"
+                        Background="#0F172A"
+                        BorderBrush="#0284C7"
+                        BorderThickness="1.5"
                         CornerRadius="6"
-                        Padding="10,8"
-                        Margin="0,8,0,0">
+                        Padding="12,6"
+                        Margin="0,0,0,8"
+                        Visibility="Collapsed">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="280" />
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- برچسب اسلات انتخاب شده -->
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
-                            <TextBlock Text="اسلات جاری:" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,4,0" />
-                            <TextBlock x:Name="ActiveSlotLabel" Text="کانال ۱" FontSize="11.5" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
-                        </StackPanel>
-
-                        <!-- انتخاب از دوربین‌های رجیستری -->
-                        <ComboBox x:Name="RegistrySelectComboBox"
-                                  Grid.Column="1"
-                                  Height="30"
-                                  FontSize="11"
-                                  Margin="0,0,8,0" />
-
-                        <Button Grid.Column="2"
-                                Content="تخصیص به این اسلات"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Height="30"
-                                Padding="8,0"
-                                Margin="0,0,12,0"
-                                Click="AssignSelectedRegistryCamera_Click" />
-
-                        <!-- ورودی آدرس دستی RTSP برای اسلات جاری -->
-                        <Grid Grid.Column="3" Margin="0,0,8,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="آدرس RTSP دستی:"
-                                       FontSize="11"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🔍" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock x:Name="MaximizedBannerText"
+                                       Text="حالت تمام‌صفحه با استریم باکیفیت اصلی (Main-Stream /1/1) فعال است."
+                                       FontSize="11.5"
+                                       FontWeight="Bold"
+                                       Foreground="#38BDF8"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="— برای بازگشت کلید Esc یا دابل‌کلیک کنید."
+                                       FontSize="10.5"
+                                       Foreground="#94A3B8"
                                        VerticalAlignment="Center"
-                                       Margin="0,0,6,0" />
-                            <TextBox x:Name="ManualRtspInput"
-                                     Grid.Column="1"
-                                     Height="30"
-                                     FontSize="11"
-                                     FontFamily="JetBrains Mono, Consolas"
-                                     FlowDirection="LeftToRight"
-                                     Padding="6,4"
-                                     VerticalContentAlignment="Center"
-                                     Text="rtsp://admin:password@192.168.1.168:554/1/1" />
-                        </Grid>
-
-                        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Content="اعمال آدرس"
-                                    Style="{StaticResource PrimaryButtonStyle}"
-                                    Height="30"
-                                    Padding="10,0"
-                                    Margin="0,0,4,0"
-                                    Click="ApplyManualRtsp_Click" />
-                            <Button Content="/1/1" Style="{StaticResource SecondaryButtonStyle}" Height="30" Padding="6,0" Margin="0,0,3,0" ToolTip="استریم اصلی تیاندی" Click="Preset11_Click" />
-                            <Button Content="/1/2" Style="{StaticResource SecondaryButtonStyle}" Height="30" Padding="6,0" Margin="0,0,3,0" ToolTip="استریم فرعی تیاندی" Click="Preset12_Click" />
-                            <Button Content="/1/3" Style="{StaticResource SecondaryButtonStyle}" Height="30" Padding="6,0" ToolTip="استریم سوم تیاندی" Click="Preset13_Click" />
+                                       Margin="8,0,0,0" />
                         </StackPanel>
+
+                        <Button Grid.Column="1"
+                                Content="بازگشت به چیدمان قبلی ❐"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Height="26"
+                                Padding="12,0"
+                                Click="RestoreMaximized_Click" />
                     </Grid>
                 </Border>
+
+                <!-- کادر تیره سینمایی برای وال دوربین‌ها -->
+                <Border Grid.Row="1"
+                        Background="#050811"
+                        BorderBrush="{StaticResource BorderStrongBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        ClipToBounds="True">
+                    <UniformGrid x:Name="CameraGrid"
+                                 Rows="2"
+                                 Columns="2"
+                                 Margin="2">
+                        <controls:CameraCell x:Name="CameraCell0" />
+                        <controls:CameraCell x:Name="CameraCell1" />
+                        <controls:CameraCell x:Name="CameraCell2" />
+                        <controls:CameraCell x:Name="CameraCell3" />
+                        <controls:CameraCell x:Name="CameraCell4" />
+                        <controls:CameraCell x:Name="CameraCell5" />
+                        <controls:CameraCell x:Name="CameraCell6" />
+                        <controls:CameraCell x:Name="CameraCell7" />
+                        <controls:CameraCell x:Name="CameraCell8" />
+                    </UniformGrid>
+                </Border>
             </Grid>
-        </Border>
 
-        <!-- ۳. نوار اعلان وضعیت حالت تمام‌صفحه (Maximized Banner) -->
-        <Border x:Name="MaximizedBanner"
-                Grid.Row="2"
-                Background="#EFF6FF"
-                BorderBrush="#93C5FD"
-                BorderThickness="1"
-                CornerRadius="6"
-                Padding="12,6"
-                Margin="0,0,0,10"
-                Visibility="Collapsed">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <!-- ============================================================= -->
+            <!-- پنل کناری تاشو: رجیستری دوربین‌ها و بازرس اسلات انتخابی       -->
+            <!-- ============================================================= -->
+            <Border Grid.Column="1"
+                    Background="{StaticResource CardBackgroundBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <!-- سربرگ سایدبار با دکمه جمع‌کردن -->
+                        <RowDefinition Height="Auto" />
+                        <!-- لیست جستجو و دوربین‌های رجیستری -->
+                        <RowDefinition Height="*" />
+                        <!-- بازرس و تنظیم اسلات انتخاب شده -->
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="🔍" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
-                    <TextBlock x:Name="MaximizedBannerText"
-                               Text="حالت تمام‌صفحه کانال ۱ فعال است (کیفیت حداکثر Main-Stream /1/1)."
-                               FontSize="12"
-                               FontWeight="Bold"
-                               Foreground="#1E40AF"
-                               VerticalAlignment="Center" />
-                    <TextBlock Text="— برای بازگشت، کلید Esc، دابل‌کلیک یا دکمه مقابل را بفشارید."
-                               FontSize="11"
-                               Foreground="#3B82F6"
-                               VerticalAlignment="Center"
-                               Margin="8,0,0,0" />
-                </StackPanel>
+                    <!-- سربرگ سایدبار -->
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="1"
-                        Content="بازگشت به چیدمان قبلی ❐"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Height="28"
-                        Padding="12,0"
-                        Click="RestoreMaximized_Click" />
-            </Grid>
-        </Border>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="دوربین‌های ثبت‌شده"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center" />
+                            <Border x:Name="RegistryCountBadge"
+                                    Background="#E0F2FE"
+                                    CornerRadius="10"
+                                    Padding="6,1"
+                                    Margin="6,0,0,0">
+                                <TextBlock x:Name="RegistryCountText" Text="۰" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
+                            </Border>
+                        </StackPanel>
 
-        <!-- ۴. ویوپورت شبکه ماتریسی دوربین‌ها (۱×۱، ۲×۲، ۳×۳) -->
-        <Border Grid.Row="3"
-                Background="#020617"
-                BorderBrush="{StaticResource BorderLightBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                ClipToBounds="True"
-                Margin="0,0,0,10">
-            <!-- چیدمان یکنواخت با UniformGrid برای ماتریس ۱×۱، ۲×۲ و ۳×۳ -->
-            <UniformGrid x:Name="CameraGrid"
-                         Rows="2"
-                         Columns="2"
-                         Margin="2">
-                <controls:CameraCell x:Name="CameraCell0" />
-                <controls:CameraCell x:Name="CameraCell1" />
-                <controls:CameraCell x:Name="CameraCell2" />
-                <controls:CameraCell x:Name="CameraCell3" />
-                <controls:CameraCell x:Name="CameraCell4" />
-                <controls:CameraCell x:Name="CameraCell5" />
-                <controls:CameraCell x:Name="CameraCell6" />
-                <controls:CameraCell x:Name="CameraCell7" />
-                <controls:CameraCell x:Name="CameraCell8" />
-            </UniformGrid>
-        </Border>
+                        <!-- دکمه به‌روزرسانی لیست -->
+                        <Button Grid.Column="1"
+                                ToolTip="بارگذاری مجدد رجیستری"
+                                Style="{StaticResource IconToolButtonStyle}"
+                                Width="24" Height="24"
+                                Click="ReloadRegistryButton_Click">
+                            <TextBlock Text="🔄" FontSize="10" />
+                        </Button>
+                    </Grid>
 
-        <!-- ۵. پنل وقایع حقیقی LibVLC و گزارشات فنی -->
-        <Border Grid.Row="4"
+                    <!-- لیست دوربین‌های رجیستری -->
+                    <Border Grid.Row="1"
+                            Background="#F8FAFC"
+                            BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Margin="0,0,0,8">
+                        <ListBox x:Name="RegistryCamerasListBox"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 SelectionChanged="RegistryCamerasListBox_SelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FFFFFF"
+                                            BorderBrush="#E2E8F0"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="8,6"
+                                            Margin="0,2">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="11" Foreground="#0F172A" TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="{Binding Brand}" FontSize="9.5" Foreground="#64748B" />
+                                                    <TextBlock Text=" - " FontSize="9" Foreground="#94A3B8" />
+                                                    <TextBlock Text="{Binding IpAddress}" FontSize="9.5" FontFamily="JetBrains Mono, Consolas" Foreground="#0284C7" FlowDirection="LeftToRight" />
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- دکمه تخصیص سریع به اسلات فعال -->
+                                            <Button Grid.Column="1"
+                                                    Content="تخصیص"
+                                                    ToolTip="تخصیص این دوربین به اسلات جاری"
+                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                    FontSize="9.5"
+                                                    Padding="6,2"
+                                                    Height="22"
+                                                    VerticalAlignment="Center"
+                                                    Click="AssignCurrentItemToActiveSlot_Click" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+
+                    <!-- بازرس اسلات انتخابی و تنظیم دستی RTSP -->
+                    <Border Grid.Row="2"
+                            Background="#F8FAFC"
+                            BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            Padding="8">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="اسلات انتخابی:" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,4,0" />
+                                    <TextBlock x:Name="ActiveSlotLabel" Text="کانال ۱" FontSize="11" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
+                                </StackPanel>
+
+                                <Border Grid.Column="1" Background="#DCFCE7" CornerRadius="3" Padding="5,1">
+                                    <TextBlock Text="DPAPI امن" FontSize="8.5" FontWeight="Bold" Foreground="#15803D" />
+                                </Border>
+                            </Grid>
+
+                            <!-- آدرس دستی RTSP -->
+                            <TextBlock Text="آدرس استریم RTSP اسلات جاری:" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                            <TextBox x:Name="ManualRtspInput"
+                                     Height="28"
+                                     FontSize="10"
+                                     FontFamily="JetBrains Mono, Consolas"
+                                     Padding="4,2"
+                                     FlowDirection="LeftToRight"
+                                     Margin="0,0,0,5" />
+
+                            <!-- پریست‌های سریع تیاندی و اعمال -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Content="/1/1" Style="{StaticResource SecondaryButtonStyle}" Padding="5,2" Height="22" FontSize="9" Margin="0,0,2,0" ToolTip="پریست استریم اصلی تیاندی" Click="Preset11_Click" />
+                                    <Button Content="/1/2" Style="{StaticResource SecondaryButtonStyle}" Padding="5,2" Height="22" FontSize="9" Margin="0,0,2,0" ToolTip="پریست استریم فرعی تیاندی" Click="Preset12_Click" />
+                                    <Button Content="/1/3" Style="{StaticResource SecondaryButtonStyle}" Padding="5,2" Height="22" FontSize="9" ToolTip="پریست استریم سوم تیاندی" Click="Preset13_Click" />
+                                </StackPanel>
+
+                                <Button Grid.Column="1"
+                                        Content="اعمال آدرس"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Height="22"
+                                        Padding="8,0"
+                                        FontSize="9.5"
+                                        Click="ApplyManualRtsp_Click" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ================================================================= -->
+        <!-- ۳. نوار وضعیت و پنل کشویی لاگ‌های بومی (Collapsible Diagnostics)  -->
+        <!-- ================================================================= -->
+        <Border Grid.Row="2"
                 Background="{StaticResource CardBackgroundBrush}"
                 BorderBrush="{StaticResource BorderLightBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="14,10">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <Grid Grid.Row="0" Margin="0,0,0,6">
+                BorderThickness="0,1,0,0"
+                Padding="12,4">
+            <StackPanel>
+                <!-- ردیف فشرده وضعیت دائمی -->
+                <Grid Height="24">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="وقایع حقیقی دیکودر LibVLC (بدون تلـه‌متری ساختگی):"
-                                   FontSize="11.5"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,12,0" />
-                        <TextBlock x:Name="HardwareAccelerationNote"
-                                   Text="دیکود سخت‌افزاری خودکار فعال است (--avcodec-hw=any | RTSP over TCP)"
-                                   FontSize="10"
-                                   Foreground="#16A34A"
-                                   VerticalAlignment="Center" />
+                        <TextBlock Text="وضعیت پایش:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,4,0" />
+                        <TextBlock x:Name="ActiveStreamsSummaryText" Text="در حال آماده‌سازی..." FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,16,0" />
+
+                        <TextBlock Text="پروتکل انتقال:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,4,0" />
+                        <TextBlock Text="RTSP over TCP (--rtsp-tcp)" FontSize="10" FontFamily="Consolas" Foreground="#16A34A" FontWeight="Bold" Margin="0,0,16,0" />
+
+                        <TextBlock Text="شتاب‌دهنده گرافیکی:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,4,0" />
+                        <TextBlock Text="Direct3D11 / DirectX (--avcodec-hw=any)" FontSize="10" FontFamily="Consolas" Foreground="#0284C7" FontWeight="Bold" />
                     </StackPanel>
 
-                    <Button Grid.Column="1"
-                            Content="پاک‌سازی لاگ‌ها"
-                            Style="{StaticResource SecondaryButtonStyle}"
-                            Height="24"
-                            FontSize="10"
-                            Padding="8,0"
-                            Click="ClearLogs_Click" />
+                    <!-- دکمه تاگل نمایش لاگ‌های LibVLC -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="ToggleLogPanelButton"
+                                Content="📋 وقایع حقیقی LibVLC ▲"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Height="22"
+                                Padding="8,1"
+                                FontSize="9.5"
+                                Margin="0,0,6,0"
+                                Click="ToggleLogPanelButton_Click" />
+                    </StackPanel>
                 </Grid>
 
-                <!-- فهرست لاگ‌های متنی با رمز عبور ماسک شده -->
-                <ListBox x:Name="EventLogListBox"
-                         Grid.Row="1"
-                         BorderBrush="{StaticResource BorderLightBrush}"
-                         BorderThickness="1"
-                         Background="#F8FAFC"
-                         FontFamily="JetBrains Mono, Consolas, Courier New"
-                         FontSize="10.5"
-                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                         FlowDirection="LeftToRight" />
-            </Grid>
+                <!-- پنل بازشونده لاگ‌ها (به صورت پیش‌فرض بسته است تا ۱۰۰٪ فضا به ویدیو تعلق گیرد) -->
+                <Border x:Name="DiagnosticsDrawer"
+                        Height="120"
+                        Margin="0,4,0,0"
+                        Background="#F8FAFC"
+                        BorderBrush="{StaticResource BorderLightBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Visibility="Collapsed">
+                    <Grid Margin="6">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="گزارشات فنی موتور LibVLC (بدون شبیه‌سازی | پسوردها با ماسک •••••••• محافظت شده‌اند):" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                            <Button Grid.Column="1" Content="پاک‌سازی" Style="{StaticResource SecondaryButtonStyle}" Height="18" Padding="6,0" FontSize="8.5" Click="ClearLogs_Click" />
+                        </Grid>
+
+                        <ListBox x:Name="EventLogListBox"
+                                 Grid.Row="1"
+                                 Background="#FFFFFF"
+                                 BorderBrush="{StaticResource BorderLightBrush}"
+                                 BorderThickness="1"
+                                 FontFamily="JetBrains Mono, Consolas"
+                                 FontSize="9.5"
+                                 FlowDirection="LeftToRight" />
+                    </Grid>
+                </Border>
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

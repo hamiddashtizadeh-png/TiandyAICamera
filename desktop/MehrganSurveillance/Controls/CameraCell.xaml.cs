@@ -12,12 +12,11 @@ using VlcMediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 namespace MehrganSurveillance.Controls
 {
     /// <summary>
-    /// کنترل اختصاصی هر اسلات دوربین در چیدمان‌های ۱×۱، ۲×۲ و ۳×۳
-    /// هر سلول دارای VlcMediaPlayer مستقل بوده اما همگی از یک نمونه اشتراکی LibVLC استفاده می‌نمایند.
+    /// کنترل بهینه‌شده اختصاصی هر اسلات دوربین در چیدمان‌های ۱×۱، ۲×۲ و ۳×۳
+    /// مجهز به بافرینگ ریت‌لیمیت شده و جلوگیری از اشباع ترد رابط کاربری (UI Thread Dispatcher)
     /// </summary>
     public partial class CameraCell : UserControl
     {
-        // رفرنس به نمونه اشتراکی سراسری موتور LibVLC (هرگز نباید توسط سلول Dispose شود)
         private LibVLC? _sharedLibVlc;
         private VlcMediaPlayer? _mediaPlayer;
 
@@ -32,45 +31,39 @@ namespace MehrganSurveillance.Controls
         public event EventHandler<CameraCell>? CellSelected;
         public event EventHandler<string>? LogMessage;
 
+        // کنترل فرکانس بافرینگ جهت حذف لگ و ترافیک دیسپچر
+        private float _lastLoggedBuffering = -1;
+
         public CameraCell()
         {
             InitializeComponent();
         }
 
-        /// <summary>
-        /// تزریق رفرنس نمونه اشتراکی LibVLC از فرم اصلی
-        /// </summary>
         public void SetSharedLibVlc(LibVLC libVlc)
         {
             _sharedLibVlc = libVlc;
         }
 
-        /// <summary>
-        /// انتساب کانال مشخص به این سلول و به‌روزرسانی اولیه برچسب‌ها
-        /// </summary>
         public void BindChannel(CameraChannel channel, bool useSubStream = true)
         {
             Channel = channel ?? new CameraChannel();
             IsUsingSubStream = useSubStream;
 
-            SlotBadgeText.Text = $"کانال {Channel.SlotIndex + 1}";
+            SlotBadgeText.Text = $"CH {(Channel.SlotIndex + 1):D2}";
             CameraTitleText.Text = string.IsNullOrWhiteSpace(Channel.DisplayName) ? $"دوربین {Channel.SlotIndex + 1}" : Channel.DisplayName;
-            CameraTitleText.ToolTip = $"{Channel.DisplayName}\nIP: {Channel.IpAddress}:{Channel.RtspPort}\nBrand: {Channel.Brand}";
+            CameraTitleText.ToolTip = $"{Channel.DisplayName}\nآدرس: {Channel.IpAddress}:{Channel.RtspPort}\nبرند: {Channel.Brand}";
 
             UpdateStreamQualityBadge();
-            UpdateStatusUI("آماده اتصال", "#64748B");
+            UpdateStatusUI("آماده", "#64748B");
             PlaceholderMessage.Text = Channel.IsAssigned ? "در انتظار اتصال..." : "دوربینی به این اسلات اختصاص نیافته است";
             PlaceholderSubText.Text = Channel.IsAssigned
                 ? "برای برقراری ارتباط، دکمه اتصال را بفشارید"
-                : "با کلیک روی آیکون چرخ‌دنده (⚙️) دوربینی از رجیستری انتخاب فرمایید";
+                : "با دکمه ⚙ دوربینی از رجیستری انتخاب فرمایید";
 
             string activeUrl = Channel.GetEffectiveStreamUrl(IsUsingSubStream);
             MaskedUrlText.Text = string.IsNullOrWhiteSpace(activeUrl) ? "بدون آدرس" : CredentialProtectionService.MaskRtspUrl(activeUrl);
         }
 
-        /// <summary>
-        /// آغاز پخش ویدیوی واقعی بر بستر RTSP TCP
-        /// </summary>
         public void StartPlayback(bool? forceSubStream = null)
         {
             if (forceSubStream.HasValue)
@@ -80,41 +73,39 @@ namespace MehrganSurveillance.Controls
 
             if (_sharedLibVlc == null)
             {
-                OnLog($"[کانال {Channel.SlotIndex + 1}] خطا: موتور هسته LibVLC در دسترس نیست.");
-                UpdateStatusUI("خطای هسته LibVLC", "#DC2626");
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] خطا: موتور LibVLC هنوز آماده نیست.");
+                UpdateStatusUI("هسته غیرفعال", "#DC2626");
                 return;
             }
 
             string targetUrl = Channel.GetEffectiveStreamUrl(IsUsingSubStream);
             if (string.IsNullOrWhiteSpace(targetUrl))
             {
-                OnLog($"[کانال {Channel.SlotIndex + 1}] آدرس RTSP برای این اسلات تنظیم نشده است.");
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] آدرس RTSP تنظیم نشده است.");
                 UpdateStatusUI("آدرس خالی", "#DC2626");
                 PlaceholderMessage.Text = "آدرس RTSP تعیین نشده است";
-                PlaceholderSubText.Text = "لطفاً با دکمه ⚙️ دوربینی را به این اسلات تخصیص دهید";
+                PlaceholderSubText.Text = "با کلیک روی دکمه ⚙ دوربینی به این اسلات اختصاص دهید";
                 PlaceholderOverlay.Visibility = Visibility.Visible;
                 return;
             }
 
-            // متوقف‌سازی و آزادسازی ایمن مدیاپلیر قبلی در صورت وجود
             StopPlaybackInternal();
 
             try
             {
+                _lastLoggedBuffering = -1;
                 UpdateStreamQualityBadge();
                 string masked = CredentialProtectionService.MaskRtspUrl(targetUrl);
                 MaskedUrlText.Text = masked;
 
-                OnLog($"[کانال {Channel.SlotIndex + 1}] در حال اتصال به: {masked} (حالت: {(IsUsingSubStream ? "Sub-Stream" : "Main-Stream")})");
-                UpdateStatusUI("در حال اتصال...", "#D97706");
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] اتصال به {masked} (پروفایل: {(IsUsingSubStream ? "Sub /1/2" : "Main /1/1")})");
+                UpdateStatusUI("اتصال...", "#D97706");
                 PlaceholderMessage.Text = "در حال برقراری ارتباط با دوربین...";
                 PlaceholderSubText.Text = masked;
                 PlaceholderOverlay.Visibility = Visibility.Visible;
 
-                // ایجاد نمونه مدیاپلیر مستقل از LibVLC اشتراکی
                 _mediaPlayer = new VlcMediaPlayer(_sharedLibVlc);
 
-                // ثبت رویدادهای حقیقی بدون شبیه‌سازی
                 _mediaPlayer.Opening += MediaPlayer_Opening;
                 _mediaPlayer.Buffering += MediaPlayer_Buffering;
                 _mediaPlayer.Playing += MediaPlayer_Playing;
@@ -129,30 +120,27 @@ namespace MehrganSurveillance.Controls
 
                 _mediaPlayer.Play(media);
 
-                PlayPauseButtonText.Text = "⏹ قطع";
+                PlayPauseButtonText.Text = "⏹";
                 Channel.IsConnected = true;
             }
             catch (Exception ex)
             {
-                OnLog($"[کانال {Channel.SlotIndex + 1}] خطا در راه‌اندازی مدیاپلیر: {ex.Message}");
-                UpdateStatusUI("خطا در ایجاد نشست", "#DC2626");
-                PlaceholderMessage.Text = "خطا در اتصال به دوربین";
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] خطا در راه‌اندازی استریم: {ex.Message}");
+                UpdateStatusUI("خطا", "#DC2626");
+                PlaceholderMessage.Text = "خطا در اتصال به استریم";
                 PlaceholderSubText.Text = ex.Message;
                 PlaceholderOverlay.Visibility = Visibility.Visible;
             }
         }
 
-        /// <summary>
-        /// متوقف‌سازی و آزادسازی کامل منابع مدیاپلیر بدون دستکاری LibVLC اشتراکی
-        /// </summary>
         public void StopPlayback()
         {
             StopPlaybackInternal();
-            UpdateStatusUI("اتصال قطع شد", "#64748B");
+            UpdateStatusUI("قطع", "#64748B");
             PlaceholderMessage.Text = "تصویر زنده غیرفعال است";
             PlaceholderSubText.Text = "جهت شروع مجدد پخش، روی دکمه اتصال کلیک فرمایید";
             PlaceholderOverlay.Visibility = Visibility.Visible;
-            PlayPauseButtonText.Text = "▶ اتصال";
+            PlayPauseButtonText.Text = "▶";
             SpecsText.Text = "-- x --";
             Channel.IsConnected = false;
         }
@@ -178,7 +166,6 @@ namespace MehrganSurveillance.Controls
                 }
                 catch
                 {
-                    // نادیده‌گیری خطاهای احتمالی هنگام آزادسازی
                 }
                 finally
                 {
@@ -188,9 +175,6 @@ namespace MehrganSurveillance.Controls
             }
         }
 
-        /// <summary>
-        /// تعویض کیفیت استریم بین فرعی و اصلی (مثلاً هنگام تمام‌صفحه شدن یا بازگشت)
-        /// </summary>
         public void SwitchStreamQuality(bool useSubStream)
         {
             if (IsUsingSubStream == useSubStream) return;
@@ -198,7 +182,6 @@ namespace MehrganSurveillance.Controls
             IsUsingSubStream = useSubStream;
             UpdateStreamQualityBadge();
 
-            // اگر در حال حاضر تصویر در حال پخش است، با آدرس جدید ری‌استارت می‌شود
             if (Channel.IsConnected)
             {
                 StartPlayback(useSubStream);
@@ -215,7 +198,7 @@ namespace MehrganSurveillance.Controls
             IsMaximized = maximized;
             MaximizeIconText.Text = maximized ? "❐" : "⛶";
             MaximizeButton.ToolTip = maximized ? "بازگشت به چیدمان قبلی" : "بزرگ‌نمایی این تصویر (دابل‌کلیک)";
-            RootBorder.BorderThickness = maximized ? new Thickness(2.5) : new Thickness(1.5);
+            RootBorder.BorderThickness = maximized ? new Thickness(2) : new Thickness(1.5);
             RootBorder.BorderBrush = maximized ? (Brush)FindResource("PrimaryBrush") : (Brush)FindResource("BorderLightBrush");
         }
 
@@ -234,14 +217,14 @@ namespace MehrganSurveillance.Controls
         {
             if (IsUsingSubStream)
             {
-                StreamProfileBadge.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FEF3C7")); // Amber
-                StreamProfileBadgeText.Text = "Sub-Stream (/1/2)";
+                StreamProfileBadge.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FEF3C7"));
+                StreamProfileBadgeText.Text = "Sub /1/2";
                 StreamProfileBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#92400E"));
             }
             else
             {
-                StreamProfileBadge.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DBEAFE")); // Blue
-                StreamProfileBadgeText.Text = "Main-Stream (/1/1)";
+                StreamProfileBadge.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DBEAFE"));
+                StreamProfileBadgeText.Text = "Main /1/1";
                 StreamProfileBadgeText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E40AF"));
             }
         }
@@ -263,80 +246,85 @@ namespace MehrganSurveillance.Controls
             }
         }
 
-        #region وقایع حقیقی دیکود LibVLC (بدون شبیه‌سازی)
+        #region وقایع حقیقی LibVLC با نرخ بهینه‌سازی شده
 
         private void MediaPlayer_Opening(object? sender, EventArgs e)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
-                UpdateStatusUI("هندشیک RTSP...", "#D97706");
-                OnLog($"[کانال {Channel.SlotIndex + 1}] هندشیک سوکت RTSP و درخواست DESCRIBE...");
+                UpdateStatusUI("هندشیک...", "#D97706");
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] هندشیک RTSP و درخواست DESCRIBE...");
             });
         }
 
         private void MediaPlayer_Buffering(object? sender, MediaPlayerBufferingEventArgs e)
         {
-            Dispatcher.Invoke(() =>
+            // جلوگیری از ارسال ۱۰۰ درخواست در ثانیه به دیسپچر؛ فقط تغییرات ۱۰ درصدی منعکس می‌شوند
+            if (e.Cache < 100)
             {
-                if (e.Cache < 100)
+                if (Math.Abs(e.Cache - _lastLoggedBuffering) >= 15f)
                 {
-                    UpdateStatusUI($"بافرینگ ({e.Cache:F0}%)...", "#D97706");
+                    _lastLoggedBuffering = e.Cache;
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        UpdateStatusUI($"بافر {e.Cache:F0}%", "#D97706");
+                    });
                 }
-            });
+            }
         }
 
         private void MediaPlayer_Playing(object? sender, EventArgs e)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
                 UpdateStatusUI("پخش زنده", "#16A34A");
                 PlaceholderOverlay.Visibility = Visibility.Collapsed;
-                PlayPauseButtonText.Text = "⏹ قطع";
+                PlayPauseButtonText.Text = "⏹";
                 Channel.IsConnected = true;
-                OnLog($"[کانال {Channel.SlotIndex + 1}] پخش ویدیوی واقعی آغاز شد.");
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] دیکود فریم‌های واقعی با موفقیت آغاز شد.");
             });
         }
 
         private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
-                UpdateStatusUI("خطا در ارتباط", "#DC2626");
-                PlaceholderMessage.Text = "خطا در دریافت یا دیکود استریم RTSP";
-                PlaceholderSubText.Text = "اتصال شبکه و نام کاربری/کلمه عبور دوربین را بررسی فرمایید";
+                UpdateStatusUI("خطا در استریم", "#DC2626");
+                PlaceholderMessage.Text = "خطا در برقراری ارتباط با دوربین";
+                PlaceholderSubText.Text = "اتصال شبکه و مشخصات احراز هویت را بررسی فرمایید";
                 PlaceholderOverlay.Visibility = Visibility.Visible;
-                PlayPauseButtonText.Text = "▶ اتصال";
+                PlayPauseButtonText.Text = "▶";
                 Channel.IsConnected = false;
-                OnLog($"[کانال {Channel.SlotIndex + 1}] خطا در استریم ویدیوی LibVLC رخ داد.");
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] خطای LibVLC در ارتباط یا دیکود رخ داد.");
             });
         }
 
         private void MediaPlayer_Stopped(object? sender, EventArgs e)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
-                UpdateStatusUI("متوقف شد", "#64748B");
+                UpdateStatusUI("قطع", "#64748B");
                 PlaceholderOverlay.Visibility = Visibility.Visible;
-                PlayPauseButtonText.Text = "▶ اتصال";
+                PlayPauseButtonText.Text = "▶";
                 Channel.IsConnected = false;
             });
         }
 
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
                 UpdateStatusUI("پایان استریم", "#64748B");
                 PlaceholderOverlay.Visibility = Visibility.Visible;
-                PlayPauseButtonText.Text = "▶ اتصال";
+                PlayPauseButtonText.Text = "▶";
                 Channel.IsConnected = false;
-                OnLog($"[کانال {Channel.SlotIndex + 1}] پایان استریم یا قطع شدن دوربین.");
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] پایان یا قطع موقت استریم.");
             });
         }
 
         private void Media_ParsedChanged(object? sender, MediaParsedChangedEventArgs e)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
                 if (sender is Media media && media.ParsedStatus == MediaParsedStatus.Done)
                 {
@@ -347,7 +335,7 @@ namespace MehrganSurveillance.Controls
                             var v = track.Data.Video;
                             string fourcc = GetFourCCString(track.Codec);
                             SpecsText.Text = $"{v.Width}x{v.Height} | {fourcc}";
-                            OnLog($"[کانال {Channel.SlotIndex + 1}] ابعاد واقعی: {v.Width}x{v.Height} | کدک: {fourcc}");
+                            OnLog($"[اسلات {Channel.SlotIndex + 1}] متادیتای واقعی: {v.Width}x{v.Height} | {fourcc}");
                         }
                     }
                 }
@@ -367,7 +355,7 @@ namespace MehrganSurveillance.Controls
 
         #endregion
 
-        #region رخدادهای کاربر و کنترل‌ها
+        #region تعاملات کاربر
 
         private void PlayPauseButton_Click(object sender, RoutedEventArgs e)
         {

@@ -5,70 +5,79 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         mc:Ignorable="d"
-        Title="سامانه نظارت تصویری مهرگان - کشف هوشمند و مدیریت دوربین‌ها (Smart Camera Discovery)"
-        Height="820" Width="1340"
+        Title="کشف هوشمند و مدیریت دوربین‌ها | Mehrgan VMS Discovery"
+        Height="840" Width="1360"
         MinWidth="1100" MinHeight="700"
         FlowDirection="RightToLeft"
         FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif"
         Background="{StaticResource BackgroundLightBrush}"
         WindowStartupLocation="CenterOwner">
 
-    <Grid Margin="16">
+    <Grid>
         <Grid.RowDefinitions>
-            <!-- ۱. سربرگ پنجره و راهنما -->
+            <!-- ۱. سربرگ سازمانی پنجره کشف (48px) -->
+            <RowDefinition Height="48" />
+            <!-- ۲. نوار ابزار دستورات کشف شبکه و زیرشبکه -->
             <RowDefinition Height="Auto" />
-            <!-- ۲. نوار ابزار دستورات کشف شبکه -->
-            <RowDefinition Height="Auto" />
-            <!-- ۳. محتوای اصلی (لیست دوربین‌های کشف‌شده + پنل اعتبارسنجی و تست پخش) -->
+            <!-- ۳. محتوای اصلی (لیست تجهیزات شناسایی‌شده + پنل اعتبارسنجی و تست پخش) -->
             <RowDefinition Height="*" />
-            <!-- ۴. نوار لاگ و گزارش‌های امن فرآیند کشف -->
-            <RowDefinition Height="140" />
+            <!-- ۴. گزارش وقایع امن کشف شبکه -->
+            <RowDefinition Height="120" />
         </Grid.RowDefinitions>
 
-        <!-- ۱. سربرگ پنجره -->
+        <!-- ================================================================= -->
+        <!-- ۱. سربرگ سازمانی پنجره کشف (Enterprise Discovery Header)          -->
+        <!-- ================================================================= -->
         <Border Grid.Row="0"
-                Background="{StaticResource CardBackgroundBrush}"
-                BorderBrush="{StaticResource BorderLightBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="16,12"
-                Margin="0,0,0,12">
-            <Grid>
+                Background="{StaticResource NavyDarkBrush}"
+                Padding="16,0"
+                BorderBrush="#1E293B"
+                BorderThickness="0,0,0,1">
+            <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="کشف هوشمند دوربین‌های تحت شبکه (ONVIF WS-Discovery &amp; Subnet Scan)"
-                               FontSize="16"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="شناسایی خودکار تجهیزات تیاندی، هایک‌ویژن، داهوا و استانداردهای ONVIF در شبکه محلی، اعتبارسنجی مستقل و تست زنده استریم"
-                               FontSize="11"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               Margin="0,3,0,0" />
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="28" Height="28"
+                            Background="{StaticResource PrimaryBrush}"
+                            CornerRadius="5"
+                            Margin="0,0,10,0">
+                        <TextBlock Text="🔍" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="کشف هوشمند و مدیریت دوربین‌های مداربسته (Smart Discovery)"
+                                   FontSize="13.5"
+                                   FontWeight="Bold"
+                                   Foreground="#F8FAFC" />
+                        <TextBlock Text="شناسایی ONVIF WS-Discovery، اسکن کمکی زیرشبکه، تست زنده LibVLC و ثبت با DPAPI"
+                                   FontSize="9.5"
+                                   Foreground="#94A3B8" />
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- دکمه بستن/بازگشت -->
                 <Button Grid.Column="1"
-                        Content="بستن و بازگشت به سامانه"
+                        Content="بازگشت به نمایش زنده ✕"
                         Style="{StaticResource SecondaryButtonStyle}"
-                        Width="170"
-                        Height="34"
+                        Background="#1E293B"
+                        Foreground="#E2E8F0"
+                        BorderBrush="#334155"
+                        Height="28"
+                        Padding="12,0"
                         VerticalAlignment="Center"
                         Click="CloseButton_Click" />
             </Grid>
         </Border>
 
-        <!-- ۲. نوار ابزار دستورات کشف شبکه -->
+        <!-- ================================================================= -->
+        <!-- ۲. نوار ابزار دستورات کشف شبکه (Discovery Toolbar)                -->
+        <!-- ================================================================= -->
         <Border Grid.Row="1"
                 Background="{StaticResource CardBackgroundBrush}"
                 BorderBrush="{StaticResource BorderLightBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="14"
-                Margin="0,0,0,12">
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -81,79 +90,95 @@
                 <!-- دکمه کشف خودکار ONVIF -->
                 <Button x:Name="StartOnvifDiscoveryButton"
                         Grid.Column="0"
-                        Content="🔍 کشف خودکار ONVIF (WS-Discovery)"
+                        Content="🔍 کشف خودکار ONVIF"
+                        ToolTip="ارسال پروب‌های WS-Discovery در شبکه محلی"
                         Style="{StaticResource PrimaryButtonStyle}"
-                        Height="36"
+                        Height="32"
                         Padding="14,0"
                         Margin="0,0,10,0"
                         Click="StartOnvifDiscoveryButton_Click" />
 
-                <!-- بخش اسکن زیرشبکه -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <TextBlock Text="زیرشبکه:" FontSize="11" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0" />
-                    <TextBox x:Name="SubnetPrefixInput"
-                             Text="192.168.1"
-                             Width="95"
-                             Height="34"
-                             FontSize="12"
-                             FontFamily="JetBrains Mono, Consolas"
-                             Padding="6,6"
-                             VerticalContentAlignment="Center"
-                             FlowDirection="LeftToRight"
-                             Margin="0,0,6,0" />
-                    <Button x:Name="StartSubnetScanButton"
-                            Content="📡 اسکن کمکی زیرشبکه (IP Scan)"
-                            Style="{StaticResource SecondaryButtonStyle}"
-                            Height="36"
-                            Padding="12,0"
-                            Click="StartSubnetScanButton_Click" />
-                </StackPanel>
+                <!-- بخش اسکن کمکی زیرشبکه -->
+                <Border Grid.Column="1"
+                        Background="#F8FAFC"
+                        BorderBrush="{StaticResource BorderLightBrush}"
+                        BorderThickness="1"
+                        CornerRadius="5"
+                        Padding="6,3"
+                        Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="زیرشبکه:" FontSize="10.5" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0" />
+                        <TextBox x:Name="SubnetPrefixInput"
+                                 Text="192.168.1"
+                                 Width="90"
+                                 Height="26"
+                                 FontSize="11"
+                                 FontFamily="JetBrains Mono, Consolas"
+                                 Padding="4,2"
+                                 VerticalContentAlignment="Center"
+                                 FlowDirection="LeftToRight"
+                                 Margin="0,0,6,0" />
+                        <Button x:Name="StartSubnetScanButton"
+                                Content="📡 اسکن پورت‌های دوربین"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Height="26"
+                                Padding="10,0"
+                                FontSize="10.5"
+                                Click="StartSubnetScanButton_Click" />
+                    </StackPanel>
+                </Border>
 
                 <!-- دکمه افزودن دستی -->
                 <Button x:Name="ManualAddButton"
                         Grid.Column="2"
-                        Content="➕ افزودن دستی (Manual Add)"
+                        Content="➕ افزودن دستی (Manual)"
                         Style="{StaticResource SecondaryButtonStyle}"
-                        Height="36"
+                        Height="32"
                         Padding="12,0"
-                        Margin="0,0,10,0"
+                        Margin="0,0,12,0"
                         Click="ManualAddButton_Click" />
 
-                <!-- نوار پیشرفت و وضعیت -->
-                <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="10,0">
+                <!-- نوار پیشرفت و گزارش وضعیت عملیات -->
+                <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="6,0">
                     <ProgressBar x:Name="DiscoveryProgressBar"
-                                 Height="8"
+                                 Height="5"
                                  IsIndeterminate="False"
                                  Value="0"
                                  Maximum="100"
+                                 Foreground="{StaticResource PrimaryBrush}"
                                  Visibility="Collapsed" />
                     <TextBlock x:Name="DiscoveryStatusText"
-                               Text="آماده آغاز عملیات کشف دوربین‌ها در شبکه محلی"
-                               FontSize="11"
+                               Text="آماده آغاز عملیات کشف تجهیزات در شبکه محلی"
+                               FontSize="10"
                                Foreground="{StaticResource TextSecondaryBrush}"
-                               Margin="0,4,0,0" />
+                               Margin="0,3,0,0"
+                               TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
-                <!-- آمار دستگاه‌های کشف‌شده -->
+                <!-- آمار تعداد دوربین‌های کشف‌شده -->
                 <Border Grid.Column="4"
-                        Background="#F1F5F9"
-                        CornerRadius="6"
-                        Padding="10,6"
+                        Background="#F0F9FF"
+                        BorderBrush="#BAE6FD"
+                        BorderThickness="1"
+                        CornerRadius="5"
+                        Padding="10,4"
                         VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="تعداد کشف‌شده: " FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                        <TextBlock x:Name="DiscoveredCountText" Text="۰" FontWeight="Bold" FontSize="12" Foreground="{StaticResource PrimaryBrush}" />
+                        <TextBlock Text="دستگاه‌های شناسایی‌شده: " FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                        <TextBlock x:Name="DiscoveredCountText" Text="۰" FontWeight="Bold" FontSize="11.5" Foreground="{StaticResource PrimaryBrush}" />
                     </StackPanel>
                 </Border>
             </Grid>
         </Border>
 
-        <!-- ۳. محتوای اصلی: تفکیک دو ستونه (لیست دستگاه‌ها + پنل اعتبارسنجی، پروفایل و تست پخش) -->
-        <Grid Grid.Row="2" Margin="0,0,0,12">
+        <!-- ================================================================= -->
+        <!-- ۳. محتوای اصلی: تفکیک دو ستونه (لیست دستگاه‌ها + پنل پیکربندی)      -->
+        <!-- ================================================================= -->
+        <Grid Grid.Row="2" Margin="12,10">
             <Grid.ColumnDefinitions>
-                <!-- ستون راست: لیست دوربین‌های شناسایی‌شده (Master) -->
-                <ColumnDefinition Width="460" MinWidth="380" />
-                <!-- ستون چپ: پنل جزئیات، احراز هویت، پروفایل و تست تصویر (Detail) -->
+                <!-- ستون راست: لیست دوربین‌های شناسایی‌شده (Master - 440px) -->
+                <ColumnDefinition Width="440" MinWidth="360" />
+                <!-- ستون چپ: پنل جزئیات، احراز هویت، انتخاب استریم و تست پخش (Detail) -->
                 <ColumnDefinition Width="*" MinWidth="520" />
             </Grid.ColumnDefinitions>
 
@@ -162,9 +187,9 @@
                     Background="{StaticResource CardBackgroundBrush}"
                     BorderBrush="{StaticResource BorderLightBrush}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="12"
-                    Margin="0,0,12,0">
+                    CornerRadius="6"
+                    Padding="10"
+                    Margin="0,0,10,0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -172,13 +197,13 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0"
-                               Text="فهرست تجهیزات شناسایی‌شده در شبکه:"
-                               FontSize="12"
+                               Text="تجهیزات کشف‌شده در شبکه محلی:"
+                               FontSize="11.5"
                                FontWeight="Bold"
                                Foreground="{StaticResource TextPrimaryBrush}"
                                Margin="0,0,0,8" />
 
-                    <!-- لیست سفارشی دوربین‌ها -->
+                    <!-- لیست سفارشی با طراحی کارت‌های مدرن مانیتورینگ -->
                     <ListBox x:Name="CamerasListBox"
                              Grid.Row="1"
                              BorderBrush="{StaticResource BorderLightBrush}"
@@ -191,9 +216,9 @@
                                 <Border Background="#FFFFFF"
                                         BorderBrush="#E2E8F0"
                                         BorderThickness="1"
-                                        CornerRadius="6"
-                                        Padding="10"
-                                        Margin="0,3">
+                                        CornerRadius="5"
+                                        Padding="10,8"
+                                        Margin="0,2">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
@@ -207,39 +232,40 @@
 
                                         <!-- عنوان برند و آدرس IP -->
                                         <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Brand}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                                            <TextBlock Text=" - " FontSize="12" Foreground="#94A3B8" />
-                                            <TextBlock Text="{Binding IpAddress}" FontFamily="JetBrains Mono, Consolas" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B" FlowDirection="LeftToRight" />
+                                            <Border Background="#F1F5F9" CornerRadius="3" Padding="5,1" Margin="0,0,6,0">
+                                                <TextBlock Text="{Binding Brand}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource NavyDarkBrush}" />
+                                            </Border>
+                                            <TextBlock Text="{Binding IpAddress}" FontFamily="JetBrains Mono, Consolas" FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" FlowDirection="LeftToRight" VerticalAlignment="Center" />
                                         </StackPanel>
 
-                                        <!-- برچسب وضعیت دستگاه -->
+                                        <!-- بج وضعیت دستگاه -->
                                         <Border Grid.Row="0" Grid.Column="1"
                                                 Background="#F8FAFC"
                                                 BorderBrush="#CBD5E1"
                                                 BorderThickness="1"
-                                                CornerRadius="12"
+                                                CornerRadius="10"
                                                 Padding="8,2">
                                             <TextBlock Text="{Binding StatePersianText}"
-                                                       FontSize="10"
+                                                       FontSize="9.5"
                                                        FontWeight="Bold"
                                                        Foreground="{Binding StatusColorHex}" />
                                         </Border>
 
-                                        <!-- مدل و نوع کشف -->
+                                        <!-- مدل و نوع متد کشف -->
                                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,4,0,0">
-                                            <TextBlock Text="مدل: " FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
-                                            <TextBlock Text="{Binding Model}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-                                            <TextBlock Text=" | متد: " FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="8,0,0,0" />
-                                            <TextBlock Text="{Binding DiscoverySource}" FontSize="10" FontFamily="Consolas" Foreground="#0284C7" />
+                                            <TextBlock Text="مدل: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <TextBlock Text="{Binding Model}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                            <TextBlock Text=" | پروتکل: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="8,0,0,0" />
+                                            <TextBlock Text="{Binding DiscoverySource}" FontSize="9.5" FontFamily="Consolas" Foreground="#0284C7" />
                                         </StackPanel>
 
                                         <!-- پیام وضعیت -->
                                         <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
                                                    Text="{Binding StateMessage}"
-                                                   FontSize="10"
+                                                   FontSize="9.5"
                                                    Foreground="{StaticResource TextSecondaryBrush}"
                                                    TextTrimming="CharacterEllipsis"
-                                                   Margin="0,4,0,0" />
+                                                   Margin="0,3,0,0" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -253,29 +279,29 @@
                     Background="{StaticResource CardBackgroundBrush}"
                     BorderBrush="{StaticResource BorderLightBrush}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="14">
+                    CornerRadius="6"
+                    Padding="12">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="CameraDetailPanel" Visibility="Visible">
                         <!-- هدر دوربین انتخابی -->
-                        <Border Background="#F0F9FF" BorderBrush="#BAE6FD" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                        <Border Background="#F0F9FF" BorderBrush="#BAE6FD" BorderThickness="1" CornerRadius="5" Padding="10" Margin="0,0,0,10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock x:Name="SelectedCameraTitleText" Text="لطفاً یک دوربین را از لیست راست انتخاب نمایید" FontSize="14" FontWeight="Bold" Foreground="#0369A1" />
-                                    <TextBlock x:Name="SelectedCameraSubText" Text="مشخصات اتصال، اطلاعات ONVIF و امکان تست زنده تصویر در این بخش نمایش می‌یابد." FontSize="11" Foreground="#0284C7" Margin="0,3,0,0" />
+                                    <TextBlock x:Name="SelectedCameraTitleText" Text="یک دوربین را از لیست سمت راست انتخاب فرمایید" FontSize="13" FontWeight="Bold" Foreground="#0369A1" />
+                                    <TextBlock x:Name="SelectedCameraSubText" Text="اطلاعات احراز هویت و استخراج استریم‌های ONVIF و RTSP در این بخش انجام می‌شود." FontSize="10.5" Foreground="#0284C7" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <TextBlock x:Name="SelectedCameraIpBadge" Grid.Column="1" Text="--" FontFamily="JetBrains Mono, Consolas" FontSize="12" FontWeight="Bold" Foreground="#0369A1" VerticalAlignment="Center" FlowDirection="LeftToRight" />
                             </Grid>
                         </Border>
 
-                        <!-- بخش ۱: فرم ورود نام کاربری و رمز عبور -->
-                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                        <!-- بخش ۱: اطلاعات کاربری و اعتبارسنجی دستگاه -->
+                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="5" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="۱. اطلاعات کاربری و اعتبارسنجی دستگاه (Credentials):" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <TextBlock Text="۱. اطلاعات کاربری و احراز هویت (Device Credentials):" FontWeight="Bold" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6" />
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -285,22 +311,22 @@
 
                                     <!-- نام کاربری -->
                                     <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                        <TextBlock Text="نام کاربری (Username):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
-                                        <TextBox x:Name="UsernameInput" Text="admin" Height="32" Padding="6,4" FlowDirection="LeftToRight" />
+                                        <TextBlock Text="نام کاربری (Username):" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                                        <TextBox x:Name="UsernameInput" Text="admin" Height="28" Padding="6,2" FlowDirection="LeftToRight" />
                                     </StackPanel>
 
                                     <!-- کلمه عبور -->
                                     <StackPanel Grid.Column="1" Margin="0,0,8,0">
-                                        <TextBlock Text="کلمه عبور (Password):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
-                                        <PasswordBox x:Name="PasswordInput" Height="32" Padding="6,4" FlowDirection="LeftToRight" />
+                                        <TextBlock Text="کلمه عبور (Password):" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                                        <PasswordBox x:Name="PasswordInput" Height="28" Padding="6,2" FlowDirection="LeftToRight" />
                                     </StackPanel>
 
-                                    <!-- دکمه احراز هویت و دریافت پروفایل‌ها -->
+                                    <!-- دکمه اعتبارسنجی -->
                                     <Button x:Name="AuthenticateButton"
                                             Grid.Column="2"
-                                            Content="🔑 تست هویت و دریافت استریم‌ها"
+                                            Content="🔑 احراز هویت ONVIF"
                                             Style="{StaticResource PrimaryButtonStyle}"
-                                            Height="32"
+                                            Height="28"
                                             VerticalAlignment="Bottom"
                                             Padding="12,0"
                                             Click="AuthenticateButton_Click" />
@@ -309,52 +335,53 @@
                         </Border>
 
                         <!-- بخش ۲: اطلاعات فنی دستگاه و پروفایل‌های استریم کشف‌شده -->
-                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="5" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="۲. اطلاعات شناسایی دستگاه و پروفایل‌های ویدیویی (ONVIF Profiles):" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
-                                
-                                <Grid Margin="0,0,0,8">
+                                <TextBlock Text="۲. پروفایل‌های استریم شناسایی‌شده (Video Profiles):" FontWeight="Bold" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6" />
+
+                                <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="مدل دستگاه:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        <TextBlock x:Name="DeviceModelText" Text="--" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        <TextBlock Text="مدل دستگاه:" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBlock x:Name="DeviceModelText" Text="--" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="نسخه سفت‌افزار (Firmware):" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        <TextBlock x:Name="DeviceFirmwareText" Text="--" FontSize="11" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        <TextBlock Text="سفت‌افزار (Firmware):" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBlock x:Name="DeviceFirmwareText" Text="--" FontSize="10.5" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="شماره سریال:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
-                                        <TextBlock x:Name="DeviceSerialText" Text="--" FontSize="11" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        <TextBlock Text="شماره سریال:" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBlock x:Name="DeviceSerialText" Text="--" FontSize="10.5" FontFamily="Consolas" Foreground="{StaticResource TextPrimaryBrush}" />
                                     </StackPanel>
                                 </Grid>
 
-                                <!-- انتخاب پروفایل استریم اصلی یا فرعی -->
-                                <TextBlock Text="انتخاب پروفایل جهت اتصال:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,4" />
+                                <!-- انتخاب پروفایل استریم -->
+                                <TextBlock Text="پروفایل استریم فعال:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,3" />
                                 <ComboBox x:Name="ProfilesComboBox"
-                                          Height="32"
+                                          Height="28"
+                                          FontSize="10.5"
                                           SelectionChanged="ProfilesComboBox_SelectionChanged" />
 
-                                <!-- نمایش امن آدرس RTSP استریم انتخابی با ماسک پسورد -->
-                                <StackPanel Margin="0,8,0,0">
-                                    <TextBlock Text="آدرس استریم تولیدشده (محافظت‌شده با ماسک کلمه عبور):" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2" />
+                                <!-- نمایش امن آدرس RTSP با ماسک پسورد -->
+                                <StackPanel Margin="0,6,0,0">
+                                    <TextBlock Text="آدرس RTSP استخراج‌شده (محافظت‌شده):" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2" />
                                     <TextBox x:Name="MaskedRtspUrlBox"
                                              IsReadOnly="True"
                                              Background="#F8FAFC"
                                              FontFamily="JetBrains Mono, Consolas"
-                                             FontSize="11"
-                                             Padding="6,4"
+                                             FontSize="10"
+                                             Padding="6,3"
                                              FlowDirection="LeftToRight" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
 
-                        <!-- بخش ۳: تست پخش زنده ویدیوی واقعی قبل از ثبت (Live Preview Test) -->
-                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12">
+                        <!-- بخش ۳: تست پخش زنده با LibVLC -->
+                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="5" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
                                 <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
@@ -363,42 +390,39 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Column="0" Text="۳. تست پخش زنده تصویر با موتور بومی LibVLC (RTSP over TCP):" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="0" Text="۳. تست پخش زنده تصویر با موتور بومی LibVLC (TCP):" FontWeight="Bold" FontSize="11.5" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
 
-                                    <!-- دکمه تست زنده -->
                                     <Button x:Name="PreviewPlayButton"
                                             Grid.Column="1"
-                                            Content="▶ تست زنده تصویر"
+                                            Content="▶ تست زنده"
                                             Style="{StaticResource PrimaryButtonStyle}"
-                                            Height="30"
+                                            Height="26"
                                             Padding="10,0"
                                             Margin="0,0,6,0"
                                             Click="PreviewPlayButton_Click" />
 
-                                    <!-- دکمه قطع تست -->
                                     <Button x:Name="PreviewStopButton"
                                             Grid.Column="2"
                                             Content="⏹ قطع تست"
                                             Style="{StaticResource DangerButtonStyle}"
-                                            Height="30"
+                                            Height="26"
                                             Padding="10,0"
                                             IsEnabled="False"
                                             Click="PreviewStopButton_Click" />
                                 </Grid>
 
-                                <!-- ویوپورت کوچک تست پخش زنده -->
-                                <Border Height="220"
+                                <!-- ویوپورت تست پخش -->
+                                <Border Height="200"
                                         Background="#000000"
-                                        CornerRadius="6"
+                                        CornerRadius="5"
                                         ClipToBounds="True">
                                     <Grid>
                                         <vlc:VideoView x:Name="PreviewVideoView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
-                                        <!-- لایه پیام در زمان عدم اتصال -->
-                                        <Border x:Name="PreviewPlaceholder" Background="#0F172A" Visibility="Visible">
+                                        <Border x:Name="PreviewPlaceholder" Background="#090E1A" Visibility="Visible">
                                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <TextBlock Text="پیش‌نمایش تصویر غیرفعال است" FontSize="12" FontWeight="Bold" Foreground="#F8FAFC" HorizontalAlignment="Center" />
-                                                <TextBlock Text="پس از احراز هویت، روی «تست زنده تصویر» کلیک فرمایید تا فریم واقعی با LibVLC آزمایش شود." FontSize="10" Foreground="#94A3B8" Margin="0,4,0,0" HorizontalAlignment="Center" />
+                                                <TextBlock Text="پیش‌نمایش زنده غیرفعال است" FontSize="11" FontWeight="Bold" Foreground="#F8FAFC" HorizontalAlignment="Center" />
+                                                <TextBlock Text="جهت آزمایش دیکود تصویر واقعی، روی «تست زنده» کلیک فرمایید." FontSize="9.5" Foreground="#94A3B8" Margin="0,3,0,0" HorizontalAlignment="Center" />
                                             </StackPanel>
                                         </Border>
                                     </Grid>
@@ -406,8 +430,8 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- بخش ۴: افزودن دوربین تاییدشده به رجیستری پایدار مهرگان -->
-                        <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="6" Padding="12">
+                        <!-- بخش ۴: افزودن به رجیستری پایدار مهرگان با DPAPI -->
+                        <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="5" Padding="10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -415,17 +439,16 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="۴. ثبت رسمی دوربین در رجیستری پایدار سامانه مهرگان" FontWeight="Bold" FontSize="12" Foreground="#166534" />
-                                    <TextBlock Text="اطلاعات کاربری با مکانیزم امن Windows DPAPI رمزنگاری شده و برای استفاده در نمایش تک‌دوربینه و چنددوربینه آماده می‌گردد." FontSize="10" Foreground="#15803D" Margin="0,2,0,0" />
+                                    <TextBlock Text="۴. ثبت رسمی دوربین در رجیستری پایدار مهرگان" FontWeight="Bold" FontSize="11.5" Foreground="#166534" />
+                                    <TextBlock Text="رمز عبور با استاندارد Windows DPAPI رمزنگاری شده و دوربین بلافاصله در پنل چنددوربینه آماده بهره‌برداری می‌شود." FontSize="9.5" Foreground="#15803D" Margin="0,2,0,0" />
                                 </StackPanel>
 
                                 <Button x:Name="RegisterCameraButton"
                                         Grid.Column="1"
-                                        Content="✔ افزودن به سامانه (ثبت دوربین)"
-                                        Style="{StaticResource PrimaryButtonStyle}"
-                                        Background="#16A34A"
-                                        Height="36"
-                                        Padding="16,0"
+                                        Content="✔ ثبت دوربین در سامانه"
+                                        Style="{StaticResource SuccessButtonStyle}"
+                                        Height="32"
+                                        Padding="14,0"
                                         Click="RegisterCameraButton_Click" />
                             </Grid>
                         </Border>
@@ -434,35 +457,37 @@
             </Border>
         </Grid>
 
-        <!-- ۴. نوار گزارش وقایع تشخیصی و لاگ امن فرآیند کشف -->
+        <!-- ================================================================= -->
+        <!-- ۴. لاگ وقایع تشخیصی و فرآیند کشف                                  -->
+        <!-- ================================================================= -->
         <Border Grid.Row="3"
                 Background="{StaticResource CardBackgroundBrush}"
                 BorderBrush="{StaticResource BorderLightBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="12,8">
+                BorderThickness="0,1,0,0"
+                Padding="12,6">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0" Margin="0,0,0,4">
+                <Grid Grid.Row="0" Margin="0,0,0,3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="لاگ تشخیصی و رویدادهای کشف شبکه (فاقد اطلاعات حساس و کلمه عبور):"
-                               FontSize="11"
-                               FontWeight="Bold"
+                    <TextBlock Text="گزارشات تشخیصی کشف و اعتبارسنجی شبکه (محافظت‌شده با ماسک کلمات عبور):"
+                               FontSize="9.5"
+                               FontWeight="SemiBold"
                                Foreground="{StaticResource TextSecondaryBrush}" />
 
                     <Button Grid.Column="1"
-                            Content="پاک‌سازی گزارش"
+                            Content="پاک‌سازی"
                             Style="{StaticResource SecondaryButtonStyle}"
-                            FontSize="10"
-                            Padding="6,2"
+                            FontSize="9"
+                            Padding="6,1"
+                            Height="20"
                             Click="ClearLogButton_Click" />
                 </Grid>
 
@@ -472,7 +497,7 @@
                          BorderThickness="1"
                          Background="#F8FAFC"
                          FontFamily="JetBrains Mono, Consolas"
-                         FontSize="10"
+                         FontSize="9.5"
                          FlowDirection="LeftToRight" />
             </Grid>
         </Border>

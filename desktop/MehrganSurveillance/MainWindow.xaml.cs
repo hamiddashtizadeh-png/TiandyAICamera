@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using LibVLCSharp.Shared;
 using MehrganSurveillance.Controls;
 using MehrganSurveillance.Models;
@@ -14,12 +17,11 @@ using MehrganSurveillance.Services;
 namespace MehrganSurveillance
 {
     /// <summary>
-    /// پنجره اصلی سامانه نظارت تصویری هوشمند مهرگان
-    /// مدیریت پخش چنددوربینه زنده در چیدمان‌های ۱×۱، ۲×۲ و ۳×۳ با LibVLCSharp و RTSP over TCP
+    /// منطق تجاری فرم اصلی سامانه نظارت تصویری هوشمند مهرگان (VMS Enterprise)
+    /// بهینه‌سازی شده با لودینگ غیرمسدودکننده (Non-blocking Async)، صف لاگ‌های باچ‌شده و حذف کامل لگ رابط کاربری
     /// </summary>
     public partial class MainWindow : Window
     {
-        // نمونه اشتراکی سراسری موتور LibVLC (تنها یک نمونه در کل برنامه ساخته و نگهداری می‌شود)
         private LibVLC? _sharedLibVlc;
         private readonly CameraRegistryService _registryService = new();
         private List<RegisteredCamera> _registeredCameras = new();
@@ -32,56 +34,87 @@ namespace MehrganSurveillance
         private int? _maximizedSlotIndex = null;
         private int _selectedSlotIndex = 0;
 
+        // صف لاگ‌های باچ‌شده و تایمر اختصاصی جهت جلوگیری از فریز UI
+        private readonly ConcurrentQueue<string> _logQueue = new();
+        private readonly DispatcherTimer _logBatchTimer = new();
+        private readonly DispatcherTimer _clockTimer = new();
+
         public MainWindow()
         {
             InitializeComponent();
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
             KeyDown += MainWindow_KeyDown;
+
+            // راه‌اندازی تایمر ساعت زنده مانیتورینگ
+            _clockTimer.Interval = TimeSpan.FromSeconds(1);
+            _clockTimer.Tick += (s, e) => LiveClockText.Text = DateTime.Now.ToString("HH:mm:ss");
+            _clockTimer.Start();
+
+            // راه‌اندازی تایمر باچینگ لاگ‌ها (هر ۲۵۰ میلی‌ثانیه یک‌بار لاگ‌های انباشته درج می‌شوند)
+            _logBatchTimer.Interval = TimeSpan.FromMilliseconds(250);
+            _logBatchTimer.Tick += LogBatchTimer_Tick;
+            _logBatchTimer.Start();
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            RegisterCells();
+            SelectSlot(0);
+
+            // نمایش سریع وضعیت در حال بارگذاری بدون فریز پنجره
+            EngineStatusText.Text = "در حال راه‌اندازی موتور...";
+            EngineStatusDot.Fill = Brushes.Amber;
+            ActiveStreamsSummaryText.Text = "در حال بارگذاری بدون وقفه هسته LibVLC و رجیستری...";
+
             try
             {
-                // ۱. مقداردهی اولیه هسته باینری نیتیو LibVLC
-                Core.Initialize();
-                LogEvent("هسته بومی LibVLC با موفقیت در ویندوز بارگذاری گردید.");
-
-                // ۲. ایجاد نمونه اشتراکی سراسری LibVLC با تنظیمات RTSP over TCP و کدک سخت‌افزاری
-                string[] options = new[]
+                // ۱. مقداردهی اولیه LibVLC به صورت ناهمگام در پس‌زمینه (جلوگیری قطعی از فریز باز شدن برنامه)
+                await Task.Run(() =>
                 {
-                    "--rtsp-tcp",               // پروتکل لایه انتقال قطعی TCP
-                    "--network-caching=300",     // بافر بهینه شبکه
-                    "--avcodec-hw=any",          // شتاب‌دهنده گرافیکی خودکار (D3D11VA/DirectX) با بازگشت نرم‌افزاری
-                    "--no-video-title-show",     // عدم نمایش نام ویدیو روی فریم
-                    "--no-sub-autodetect-file",
-                    "--clock-jitter=0"
-                };
+                    Core.Initialize();
+                    string[] options = new[]
+                    {
+                        "--rtsp-tcp",
+                        "--network-caching=300",
+                        "--avcodec-hw=any",
+                        "--no-video-title-show",
+                        "--no-sub-autodetect-file",
+                        "--clock-jitter=0"
+                    };
+                    _sharedLibVlc = new LibVLC(options);
+                });
 
-                _sharedLibVlc = new LibVLC(options);
-                LogEvent("نمونه اشتراکی موتور LibVLC (Shared Instance) با پارامترهای کم‌تاخیر راه‌اندازی شد.");
+                LogEvent("هسته بومی LibVLC و شتاب‌دهنده گرافیکی با موفقیت در پس‌زمینه راه‌اندازی شد.");
+                EngineStatusText.Text = "موتور فعال (TCP)";
+                EngineStatusDot.Fill = (Brush)FindResource("SuccessBrush");
 
-                // ۳. ثبت ۹ سلول کنترل و تزریق LibVLC اشتراکی به هر یک
-                RegisterCells();
+                // ۲. تزریق نمونه اشتراکی به تمام ۹ سلول
+                if (_sharedLibVlc != null)
+                {
+                    foreach (var cell in _cells)
+                    {
+                        cell.SetSharedLibVlc(_sharedLibVlc);
+                    }
+                }
 
-                // ۴. بارگذاری اطلاعات دوربین‌ها از رجیستری پایدار و انتساب اولیه اسلات‌ها
-                LoadRegisteredCameras();
+                // ۳. بارگذاری لیست دوربین‌های ثبت‌شده در رجیستری به صورت غیرهمگام
+                await LoadRegisteredCamerasAsync();
+
+                // ۴. مقداردهی اسلات‌های ۹ گانه
                 InitializeCameraSlots();
 
-                // ۵. تنظیم چیدمان پیش‌فرض ۲×۲ (چهار تصویر)
+                // ۵. تنظیم چیدمان پیش‌فرض ۲×۲
                 SetLayout(4);
 
-                SelectSlot(0);
+                ActiveStreamsSummaryText.Text = "چیدمان ۲×۲ فعال (۴ اسلات آماده پایش زنده)";
             }
             catch (Exception ex)
             {
-                LogEvent($"خطا در راه‌اندازی موتور چنددوربینه LibVLC: {ex.Message}");
-                MessageBox.Show(
-                    $"خطا در راه‌اندازی موتور ویدیویی LibVLC:\n{ex.Message}\n\nلطفاً اطمینان حاصل کنید پیش‌نیازهای VideoLAN.LibVLC.Windows در دسترس هستند.",
-                    "خطای راه‌اندازی",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                EngineStatusText.Text = "خطای هسته";
+                EngineStatusDot.Fill = (Brush)FindResource("DangerBrush");
+                LogEvent($"خطا در راه‌اندازی پس‌زمینه LibVLC: {ex.Message}");
+                ActiveStreamsSummaryText.Text = "خطا در بارگذاری موتور ویدیویی";
             }
         }
 
@@ -98,11 +131,6 @@ namespace MehrganSurveillance
             for (int i = 0; i < _cells.Count; i++)
             {
                 var cell = _cells[i];
-                if (_sharedLibVlc != null)
-                {
-                    cell.SetSharedLibVlc(_sharedLibVlc);
-                }
-
                 cell.RequestMaximize += Cell_RequestMaximize;
                 cell.RequestRestore += Cell_RequestRestore;
                 cell.RequestAssignCamera += Cell_RequestAssignCamera;
@@ -123,7 +151,6 @@ namespace MehrganSurveillance
                     DisplayName = $"دوربین اسلات {i + 1}"
                 };
 
-                // اگر در رجیستری دوربینی متناظر با این اسلات وجود دارد، تخصیص داده می‌شود
                 if (i < _registeredCameras.Count)
                 {
                     var reg = _registeredCameras[i];
@@ -138,7 +165,6 @@ namespace MehrganSurveillance
                 }
                 else
                 {
-                    // اسلات‌های بعدی در صورت خالی بودن، با الگوی پیش‌فرض تیاندی آماده نگه داشته می‌شوند
                     channel.IpAddress = $"192.168.1.{100 + i}";
                     channel.MainStreamUrl = $"rtsp://admin:password@192.168.1.{100 + i}:554/1/1";
                     channel.SubStreamUrl = $"rtsp://admin:password@192.168.1.{100 + i}:554/1/2";
@@ -176,7 +202,6 @@ namespace MehrganSurveillance
 
         public void SetLayout(int count)
         {
-            // اگر در حالت تمام‌صفحه بودیم، ابتدا از تمام‌صفحه خارج می‌شویم
             if (_maximizedSlotIndex.HasValue)
             {
                 ExitMaximizedInternal();
@@ -187,76 +212,71 @@ namespace MehrganSurveillance
 
             UpdateLayoutButtonStyles();
 
-            bool isMultiCamera = count > 1;
-
             if (count == 1)
             {
                 CameraGrid.Rows = 1;
                 CameraGrid.Columns = 1;
 
-                // در حالت ۱×۱ تنها سلول اول (یا سلول فعال) با کیفیت اصلی Main-stream نمایش می‌یابد
                 for (int i = 0; i < 9; i++)
                 {
                     if (i == 0)
                     {
                         _cells[i].Visibility = Visibility.Visible;
-                        _cells[i].SwitchStreamQuality(useSubStream: false); // استریم اصلی باکیفیت /1/1
+                        _cells[i].SwitchStreamQuality(useSubStream: false);
                     }
                     else
                     {
                         _cells[i].Visibility = Visibility.Collapsed;
-                        _cells[i].StopPlayback(); // آزادسازی منابع سلول‌های نامرئی
+                        _cells[i].StopPlayback();
                     }
                 }
-
-                LogEvent("چیدمان به حالت تک‌تصویر (۱×۱) تغییر یافت. استریم اصلی (/1/1) با رزولوشن کامل فعال شد.");
+                ActiveStreamsSummaryText.Text = "چیدمان ۱×۱ فعال (استریم باکیفیت اصلی /1/1)";
+                LogEvent("چیدمان به تک‌تصویر (۱×۱) سوئیچ شد.");
             }
             else if (count == 4)
             {
                 CameraGrid.Rows = 2;
                 CameraGrid.Columns = 2;
 
-                // در حالت ۲×۲ سلول‌های ۰ تا ۳ فعال شده و برای بهینه‌سازی منابع به Sub-stream سوئیچ می‌نمایند
                 for (int i = 0; i < 9; i++)
                 {
                     if (i < 4)
                     {
                         _cells[i].Visibility = Visibility.Visible;
-                        _cells[i].SwitchStreamQuality(useSubStream: true); // استریم سبک فرعی /1/2
+                        _cells[i].SwitchStreamQuality(useSubStream: true);
                     }
                     else
                     {
                         _cells[i].Visibility = Visibility.Collapsed;
-                        _cells[i].StopPlayback(); // توقف سلول‌های غیرفعال جهت حفظ GPU/CPU
+                        _cells[i].StopPlayback();
                     }
                 }
-
-                LogEvent("چیدمان به حالت ۴ تصویر (۲×۲) تغییر یافت. استریم‌های فرعی (/1/2) جهت مدیریت پهنای‌باند فعال شدند.");
+                ActiveStreamsSummaryText.Text = "چیدمان ۲×۲ فعال (۴ اسلات با استریم بهینه فرعی /1/2)";
+                LogEvent("چیدمان به ۴ تصویر (۲×۲) سوئیچ شد.");
             }
             else if (count == 9)
             {
                 CameraGrid.Rows = 3;
                 CameraGrid.Columns = 3;
 
-                // در حالت ۳×۳ تمام ۹ سلول با Sub-stream برای جلوگیری از اشباع کارت گرافیک اجرا می‌شوند
                 for (int i = 0; i < 9; i++)
                 {
                     _cells[i].Visibility = Visibility.Visible;
                     _cells[i].SwitchStreamQuality(useSubStream: true);
                 }
-
-                LogEvent("چیدمان به حالت ۹ تصویر (۳×۳) تغییر یافت. استریم‌های فرعی (/1/2) برای حداکثر ۹ دوربین همزمان فعال شدند.");
+                ActiveStreamsSummaryText.Text = "چیدمان ۳×۳ فعال (۹ اسلات نظارت همزمان)";
+                LogEvent("چیدمان به ۹ تصویر (۳×۳) سوئیچ شد.");
             }
         }
 
         private void UpdateLayoutButtonStyles()
         {
-            var activeStyle = (Style)FindResource("PrimaryButtonStyle");
-            var inactiveStyle = (Style)FindResource("SecondaryButtonStyle");
+            var activeBrush = (Brush)FindResource("PrimaryBrush");
+            var inactiveBrush = Brushes.Transparent;
 
-            Layout1x1Button.Style = (_currentLayout == 1 && !_maximizedSlotIndex.HasValue) ? activeStyle : inactiveStyle;
-            Layout2x2Button.Style = (_currentLayout == 4 && !_maximizedSlotIndex.HasValue) ? activeStyle : inactiveStyle;
-            Layout3x3Button.Style = (_currentLayout == 9 && !_maximizedSlotIndex.HasValue) ? activeStyle : inactiveStyle;
+            Layout1x1Button.Background = (_currentLayout == 1 && !_maximizedSlotIndex.HasValue) ? activeBrush : inactiveBrush;
+            Layout2x2Button.Background = (_currentLayout == 4 && !_maximizedSlotIndex.HasValue) ? activeBrush : inactiveBrush;
+            Layout3x3Button.Background = (_currentLayout == 9 && !_maximizedSlotIndex.HasValue) ? activeBrush : inactiveBrush;
         }
 
         #endregion
@@ -266,7 +286,7 @@ namespace MehrganSurveillance
         private void Cell_RequestMaximize(object? sender, CameraCell cell)
         {
             int slot = cell.Channel.SlotIndex;
-            LogEvent($"درخواست بزرگ‌نمایی کانال {slot + 1} دریافت گردید.");
+            LogEvent($"درخواست بزرگ‌نمایی کانال {slot + 1} دریافت شد.");
 
             _previousLayout = _currentLayout;
             _maximizedSlotIndex = slot;
@@ -280,7 +300,6 @@ namespace MehrganSurveillance
                 {
                     _cells[i].Visibility = Visibility.Visible;
                     _cells[i].SetMaximizedState(true);
-                    // سوئیچ به استریم اصلی (/1/1) با وضوح بالا
                     _cells[i].SwitchStreamQuality(useSubStream: false);
                 }
                 else
@@ -290,34 +309,27 @@ namespace MehrganSurveillance
                 }
             }
 
-            MaximizedBannerText.Text = $"حالت تمام‌صفحه «{cell.Channel.DisplayName}» (کانال {slot + 1}) فعال است — استریم باکیفیت اصلی (Main-Stream /1/1).";
+            MaximizedBannerText.Text = $"حالت تمام‌صفحه «{cell.Channel.DisplayName}» (کانال {slot + 1}) فعال است — استریم اصلی (Main-Stream /1/1).";
             MaximizedBanner.Visibility = Visibility.Visible;
+            ActiveStreamsSummaryText.Text = $"حالت تمام‌صفحه کانال {slot + 1} با رزولوشن کامل";
 
             UpdateLayoutButtonStyles();
         }
 
-        private void Cell_RequestRestore(object? sender, CameraCell cell)
-        {
-            ExitMaximizedInternal();
-        }
-
-        private void RestoreMaximized_Click(object sender, RoutedEventArgs e)
-        {
-            ExitMaximizedInternal();
-        }
+        private void Cell_RequestRestore(object? sender, CameraCell cell) => ExitMaximizedInternal();
+        private void RestoreMaximized_Click(object sender, RoutedEventArgs e) => ExitMaximizedInternal();
 
         private void ExitMaximizedInternal()
         {
             if (!_maximizedSlotIndex.HasValue) return;
 
             int slot = _maximizedSlotIndex.Value;
-            LogEvent($"خروج از حالت تمام‌صفحه کانال {slot + 1} و بازگشت به چیدمان قبلی ({_previousLayout} تایی).");
+            LogEvent($"خروج از تمام‌صفحه کانال {slot + 1} و بازگشت به چیدمان {_previousLayout} تایی.");
 
             _cells[slot].SetMaximizedState(false);
             _maximizedSlotIndex = null;
             MaximizedBanner.Visibility = Visibility.Collapsed;
 
-            // بازگرداندن چیدمان قبلی
             SetLayout(_previousLayout);
         }
 
@@ -332,7 +344,7 @@ namespace MehrganSurveillance
 
         #endregion
 
-        #region کنترل و انتساب اسلات‌ها (Slot Selection & Assignment)
+        #region انتخاب و تخصیص اسلات (Slot Selection & Inspection)
 
         private void Cell_CellSelected(object? sender, CameraCell cell)
         {
@@ -357,19 +369,25 @@ namespace MehrganSurveillance
         private void Cell_RequestAssignCamera(object? sender, CameraCell cell)
         {
             SelectSlot(cell.Channel.SlotIndex);
-            // باز کردن لیست کشویی انتخاب دوربین
-            RegistrySelectComboBox.IsDropDownOpen = true;
+            RegistryCamerasListBox.Focus();
         }
 
-        private void AssignSelectedRegistryCamera_Click(object sender, RoutedEventArgs e)
+        private void AssignCurrentItemToActiveSlot_Click(object sender, RoutedEventArgs e)
         {
-            if (RegistrySelectComboBox.SelectedItem is not RegisteredCamera reg)
+            if (sender is Button btn && btn.DataContext is RegisteredCamera reg)
             {
-                MessageBox.Show("لطفاً ابتدا یک دوربین از فهرست ثبت‌شده انتخاب فرمایید.", "پیام", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                AssignCameraToSlot(reg, _selectedSlotIndex);
             }
+        }
 
-            var channel = _channels[_selectedSlotIndex];
+        private void RegistryCamerasListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // انتخاب در لیست
+        }
+
+        private void AssignCameraToSlot(RegisteredCamera reg, int slotIndex)
+        {
+            var channel = _channels[slotIndex];
             channel.DisplayName = reg.Name;
             channel.IpAddress = reg.IpAddress;
             channel.RtspPort = reg.RtspPort;
@@ -380,12 +398,12 @@ namespace MehrganSurveillance
             channel.SubStreamUrl = BuildFullRtspUrl(reg.SubStreamRtspUri, reg.IpAddress, reg.RtspPort, reg.Username, decPass, "/1/2");
 
             bool useSub = _currentLayout > 1 && !_maximizedSlotIndex.HasValue;
-            _cells[_selectedSlotIndex].BindChannel(channel, useSubStream: useSub);
+            _cells[slotIndex].BindChannel(channel, useSubStream: useSub);
 
             ManualRtspInput.Text = channel.MainStreamUrl;
-            ActiveSlotLabel.Text = $"کانال {_selectedSlotIndex + 1} ({channel.DisplayName})";
+            ActiveSlotLabel.Text = $"کانال {slotIndex + 1} ({channel.DisplayName})";
 
-            LogEvent($"دوربین «{reg.Name}» ({reg.IpAddress}) به اسلات کانال {_selectedSlotIndex + 1} اختصاص یافت.");
+            LogEvent($"دوربین «{reg.Name}» به اسلات کانال {slotIndex + 1} اختصاص یافت.");
         }
 
         private void ApplyManualRtsp_Click(object sender, RoutedEventArgs e)
@@ -393,36 +411,24 @@ namespace MehrganSurveillance
             string url = ManualRtspInput.Text.Trim();
             if (string.IsNullOrWhiteSpace(url))
             {
-                MessageBox.Show("لطفاً آدرس RTSP معتبر وارد نمایید.", "خطا", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("لطفاً آدرس RTSP معتبر وارد فرمایید.", "پیام", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             var channel = _channels[_selectedSlotIndex];
             channel.MainStreamUrl = url;
-            // اشتقاق خودکار استریم فرعی برای تیاندی
             channel.SubStreamUrl = channel.GetEffectiveStreamUrl(useSubStream: true);
 
             bool useSub = _currentLayout > 1 && !_maximizedSlotIndex.HasValue;
             _cells[_selectedSlotIndex].BindChannel(channel, useSubStream: useSub);
 
             string masked = CredentialProtectionService.MaskRtspUrl(url);
-            LogEvent($"آدرس دستی {masked} به اسلات کانال {_selectedSlotIndex + 1} اعمال شد.");
+            LogEvent($"آدرس دستی {masked} به اسلات کانال {_selectedSlotIndex + 1} اعمال گردید.");
         }
 
-        private void Preset11_Click(object sender, RoutedEventArgs e)
-        {
-            SetStreamPathInManualInput("/1/1");
-        }
-
-        private void Preset12_Click(object sender, RoutedEventArgs e)
-        {
-            SetStreamPathInManualInput("/1/2");
-        }
-
-        private void Preset13_Click(object sender, RoutedEventArgs e)
-        {
-            SetStreamPathInManualInput("/1/3");
-        }
+        private void Preset11_Click(object sender, RoutedEventArgs e) => SetStreamPathInManualInput("/1/1");
+        private void Preset12_Click(object sender, RoutedEventArgs e) => SetStreamPathInManualInput("/1/2");
+        private void Preset13_Click(object sender, RoutedEventArgs e) => SetStreamPathInManualInput("/1/3");
 
         private void SetStreamPathInManualInput(string newPath)
         {
@@ -445,12 +451,11 @@ namespace MehrganSurveillance
 
         #endregion
 
-        #region عملیات گروهی اتصال / قطع (Connect / Disconnect All)
+        #region کنترل گروهی استریم‌ها
 
         private void ConnectAllButton_Click(object sender, RoutedEventArgs e)
         {
-            LogEvent($"کاربر دستور اتصال همه استریم‌های چیدمان فعال ({(_maximizedSlotIndex.HasValue ? "تمام‌صفحه" : _currentLayout + " تایی")}) را صادر کرد.");
-
+            LogEvent("کاربر دکمه اتصال همه استریم‌های فعال را فشرد.");
             for (int i = 0; i < 9; i++)
             {
                 if (_cells[i].Visibility == Visibility.Visible)
@@ -462,7 +467,7 @@ namespace MehrganSurveillance
 
         private void DisconnectAllButton_Click(object sender, RoutedEventArgs e)
         {
-            LogEvent("کاربر دستور قطع همه استریم‌ها را صادر کرد.");
+            LogEvent("کاربر دکمه قطع کلیه استریم‌ها را فشرد.");
             for (int i = 0; i < 9; i++)
             {
                 _cells[i].StopPlayback();
@@ -471,90 +476,119 @@ namespace MehrganSurveillance
 
         #endregion
 
-        #region لاگ‌ها، رجیستری و پنجره کشف
+        #region رجیستری و پنجره کشف هوشمند
 
-        private void OpenDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        private async void ReloadRegistryButton_Click(object sender, RoutedEventArgs e)
         {
-            LogEvent("کاربر پنجره کشف هوشمند دوربین‌ها (ONVIF & Scan) را گشود.");
+            await LoadRegisteredCamerasAsync();
+        }
+
+        private async Task LoadRegisteredCamerasAsync()
+        {
+            try
+            {
+                _registeredCameras = await Task.Run(() => _registryService.GetAllCameras());
+                RegistryCamerasListBox.ItemsSource = null;
+                RegistryCamerasListBox.ItemsSource = _registeredCameras;
+                RegistryCountText.Text = _registeredCameras.Count.ToString();
+
+                LogEvent($"تعداد {_registeredCameras.Count} دوربین از رجیستری پایدار با موفقیت فراخوانی شد.");
+            }
+            catch (Exception ex)
+            {
+                LogEvent($"خطا در فراخوانی رجیستری: {ex.Message}");
+            }
+        }
+
+        private async void OpenDiscoveryWindow_Click(object sender, RoutedEventArgs e)
+        {
+            LogEvent("کاربر پنجره کشف هوشمند دوربین‌ها را گشود.");
             var discoveryWin = new DiscoveryWindow
             {
                 Owner = this
             };
 
             discoveryWin.ShowDialog();
-
-            // پس از بستن پنجره، دوربین‌های جدید به رجیستری و لیست اضافه می‌شوند
-            LoadRegisteredCameras();
+            await LoadRegisteredCamerasAsync();
         }
 
-        private void LoadRegisteredCameras()
-        {
-            try
-            {
-                _registeredCameras = _registryService.GetAllCameras();
-                RegistrySelectComboBox.ItemsSource = null;
+        #endregion
 
-                if (_registeredCameras.Count > 0)
-                {
-                    RegistrySelectComboBox.ItemsSource = _registeredCameras;
-                    RegistrySelectComboBox.DisplayMemberPath = "DisplaySummary";
-                    RegistrySelectComboBox.SelectedIndex = 0;
-                    LogEvent($"تعداد {_registeredCameras.Count} دوربین از رجیستری پایدار مهرگان فراخوانی شد.");
-                }
-                else
-                {
-                    RegistrySelectComboBox.ItemsSource = new[] { "دوربینی ثبت نشده است (روی کشف هوشمند کلیک فرمایید)" };
-                    RegistrySelectComboBox.SelectedIndex = 0;
-                }
-            }
-            catch (Exception ex)
+        #region لاگ‌های باچ‌شده با عملکرد بالا (High-Performance Batched Logging)
+
+        private void LogEvent(string message)
+        {
+            string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            _logQueue.Enqueue($"[{timestamp}] {message}");
+        }
+
+        private void LogBatchTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_logQueue.IsEmpty) return;
+
+            int processed = 0;
+            string? lastItem = null;
+
+            while (_logQueue.TryDequeue(out string? item) && processed < 30)
             {
-                LogEvent($"خطا در بارگذاری رجیستری: {ex.Message}");
+                EventLogListBox.Items.Add(item);
+                lastItem = item;
+                processed++;
+            }
+
+            // نگه داشتن حداکثر ۱۵۰ ردیف لاگ در حافظه جهت تضمین سرعت و عدم افت فریم
+            while (EventLogListBox.Items.Count > 150)
+            {
+                EventLogListBox.Items.RemoveAt(0);
+            }
+
+            if (lastItem != null && DiagnosticsDrawer.Visibility == Visibility.Visible)
+            {
+                EventLogListBox.ScrollIntoView(lastItem);
+            }
+        }
+
+        private void ToggleLogPanelButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (DiagnosticsDrawer.Visibility == Visibility.Visible)
+            {
+                DiagnosticsDrawer.Visibility = Visibility.Collapsed;
+                ToggleLogPanelButton.Content = "📋 وقایع حقیقی LibVLC ▲";
+            }
+            else
+            {
+                DiagnosticsDrawer.Visibility = Visibility.Visible;
+                ToggleLogPanelButton.Content = "📋 وقایع حقیقی LibVLC ▼";
             }
         }
 
         private void ClearLogs_Click(object sender, RoutedEventArgs e)
         {
             EventLogListBox.Items.Clear();
-            LogEvent("تاریخچه لاگ‌ها پاک‌سازی گردید.");
-        }
-
-        private void LogEvent(string message)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-                string entry = $"[{timestamp}] {message}";
-                EventLogListBox.Items.Add(entry);
-                EventLogListBox.ScrollIntoView(entry);
-            });
+            LogEvent("تاریخچه لاگ‌های LibVLC پاک‌سازی شد.");
         }
 
         #endregion
 
-        #region خروج و آزادسازی ایمن منابع
+        #region خروج ایمن
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
-            LogEvent("در حال بستن سامانه و آزادسازی امن منابع پردازش ویدیو...");
+            _clockTimer.Stop();
+            _logBatchTimer.Stop();
 
-            // ۱. توقف تمام ۹ سلول و آزادسازی مدیاپلیرهای مربوطه
             foreach (var cell in _cells)
             {
                 cell.StopPlayback();
             }
 
-            // ۲. آزادسازی موتور اشتراکی LibVLC (تنها در این بخش و به صورت سراسری انجام می‌شود)
             if (_sharedLibVlc != null)
             {
                 try
                 {
                     _sharedLibVlc.Dispose();
                 }
-                catch
-                {
-                    // نادیده‌گیری خطای احتمالی در زمان بسته‌شدن برنامه
-                }
+                catch { }
                 finally
                 {
                     _sharedLibVlc = null;

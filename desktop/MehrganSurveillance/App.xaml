@@ -3,41 +3,84 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <!-- پالت رنگی تم روشن (Light Theme) مطابق الزامات نظارت هوشمند مهرگان -->
-        <Color x:Key="PrimaryColor">#0284C7</Color>
-        <Color x:Key="PrimaryHoverColor">#0369A1</Color>
-        <Color x:Key="DangerColor">#DC2626</Color>
-        <Color x:Key="SuccessColor">#16A34A</Color>
-        <Color x:Key="BackgroundLightColor">#F8FAFC</Color>
-        <Color x:Key="CardBackgroundColor">#FFFFFF</Color>
-        <Color x:Key="BorderLightColor">#E2E8F0</Color>
-        <Color x:Key="TextPrimaryColor">#0F172A</Color>
-        <Color x:Key="TextSecondaryColor">#64748B</Color>
+        <!-- ================================================================= -->
+        <!-- سیستم طراحی مدرن سازمانی سامانه نظارت تصویری هوشمند مهرگان (VMS)  -->
+        <!-- پالت رنگی خنثی، حرفه‌ای، تم روشن سازمانی مطابق استانداردهای Enterprise -->
+        <!-- ================================================================= -->
 
+        <!-- رنگ‌های پایه و پس‌زمینه‌ها -->
+        <Color x:Key="BackgroundLightColor">#F1F5F9</Color>       <!-- خاکستری بسیار ملایم سازمانی -->
+        <Color x:Key="SurfaceCardColor">#FFFFFF</Color>           <!-- سفید کارت‌ها و پنل‌ها -->
+        <Color x:Key="SurfaceSidebarColor">#F8FAFC</Color>        <!-- پس‌زمینه پنل‌های جانبی -->
+        <Color x:Key="BorderLightColor">#E2E8F0</Color>           <!-- خطوط جداکننده ملایم -->
+        <Color x:Key="BorderStrongColor">#CBD5E1</Color>          <!-- کادرهای تاکید شده -->
+
+        <!-- رنگ‌های برند و ناوبری -->
+        <Color x:Key="NavyDarkColor">#0F172A</Color>              <!-- سرمه‌ای تیره هدر و بدنه اصلی -->
+        <Color x:Key="NavyLightColor">#1E293B</Color>             <!-- سرمه‌ای روشن‌تر برای هاور -->
+        <Color x:Key="PrimaryColor">#0284C7</Color>               <!-- آبی تخصصی مهرگان -->
+        <Color x:Key="PrimaryHoverColor">#0369A1</Color>
+        <Color x:Key="AccentCyanColor">#0EA5E9</Color>
+
+        <!-- رنگ‌های نشانگر وضعیت عملیاتی (Status Colors) -->
+        <Color x:Key="SuccessColor">#16A34A</Color>               <!-- سبز پخش زنده موفق -->
+        <Color x:Key="SuccessBgColor">#F0FDF4</Color>
+        <Color x:Key="WarningColor">#D97706</Color>               <!-- کهربایی بافرینگ و اتصال -->
+        <Color x:Key="WarningBgColor">#FEF3C7</Color>
+        <Color x:Key="DangerColor">#DC2626</Color>                <!-- قرمز خطا و قطع اضطراری -->
+        <Color x:Key="DangerBgColor">#FEF2F2</Color>
+        <Color x:Key="MutedColor">#64748B</Color>                 <!-- خاکستری وضعیت غیرفعال -->
+
+        <!-- رنگ‌های متون -->
+        <Color x:Key="TextPrimaryColor">#0F172A</Color>
+        <Color x:Key="TextSecondaryColor">#475569</Color>
+        <Color x:Key="TextMutedColor">#94A3B8</Color>
+
+        <!-- SolidColorBrush Resources -->
+        <SolidColorBrush x:Key="BackgroundLightBrush" Color="{StaticResource BackgroundLightColor}" />
+        <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource SurfaceCardColor}" />
+        <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="{StaticResource SurfaceSidebarColor}" />
+        <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource BorderLightColor}" />
+        <SolidColorBrush x:Key="BorderStrongBrush" Color="{StaticResource BorderStrongColor}" />
+
+        <SolidColorBrush x:Key="NavyDarkBrush" Color="{StaticResource NavyDarkColor}" />
+        <SolidColorBrush x:Key="NavyLightBrush" Color="{StaticResource NavyLightColor}" />
         <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
         <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{StaticResource PrimaryHoverColor}" />
-        <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+        <SolidColorBrush x:Key="AccentCyanBrush" Color="{StaticResource AccentCyanColor}" />
+
         <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
-        <SolidColorBrush x:Key="BackgroundLightBrush" Color="{StaticResource BackgroundLightColor}" />
-        <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackgroundColor}" />
-        <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource BorderLightColor}" />
+        <SolidColorBrush x:Key="SuccessBgBrush" Color="{StaticResource SuccessBgColor}" />
+        <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+        <SolidColorBrush x:Key="WarningBgBrush" Color="{StaticResource WarningBgColor}" />
+        <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+        <SolidColorBrush x:Key="DangerBgBrush" Color="{StaticResource DangerBgColor}" />
+        <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
+
         <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
         <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+        <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
 
-        <!-- استایل دکمه‌های تم روشن -->
+        <!-- ================================================================= -->
+        <!-- استایل‌های دکمه‌های سازمانی و مدرن (Modern Enterprise Buttons)     -->
+        <!-- ================================================================= -->
+
+        <!-- ۱. دکمه اصلی (Primary Action) -->
         <Style TargetType="Button" x:Key="PrimaryButtonStyle">
             <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Padding" Value="14,6" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                     </ControlTemplate>
@@ -48,18 +91,20 @@
                     <Setter Property="Background" Value="{StaticResource PrimaryHoverBrush}" />
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.5" />
-                    <Setter Property="Cursor" Value="No" />
+                    <Setter Property="Opacity" Value="0.45" />
+                    <Setter Property="Cursor" Value="Arrow" />
                 </Trigger>
             </Style.Triggers>
         </Style>
 
+        <!-- ۲. دکمه ثانویه (Secondary Action) -->
         <Style TargetType="Button" x:Key="SecondaryButtonStyle">
-            <Setter Property="Background" Value="#F1F5F9" />
+            <Setter Property="Background" Value="#F8FAFC" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="Padding" Value="12,6" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="12,5" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
@@ -68,8 +113,9 @@
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                     </ControlTemplate>
@@ -78,33 +124,163 @@
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#E2E8F0" />
+                    <Setter Property="BorderBrush" Value="#94A3B8" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.45" />
+                    <Setter Property="Cursor" Value="Arrow" />
                 </Trigger>
             </Style.Triggers>
         </Style>
 
+        <!-- ۳. دکمه خطر / قطع (Danger Action) -->
         <Style TargetType="Button" x:Key="DangerButtonStyle">
             <Setter Property="Background" Value="{StaticResource DangerBrush}" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="12,5" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#B91C1C" />
+                </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.5" />
+                    <Setter Property="Opacity" Value="0.45" />
+                    <Setter Property="Cursor" Value="Arrow" />
                 </Trigger>
             </Style.Triggers>
+        </Style>
+
+        <!-- ۴. دکمه موفقیت / اتصال سبز (Success Action) -->
+        <Style TargetType="Button" x:Key="SuccessButtonStyle">
+            <Setter Property="Background" Value="{StaticResource SuccessBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="12,5" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#15803D" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.45" />
+                    <Setter Property="Cursor" Value="Arrow" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ۵. دکمه آیکونی کوچک و فشرده (Compact Tool Icon Button) -->
+        <Style TargetType="Button" x:Key="IconToolButtonStyle">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F1F5F9" />
+                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- استایل مدرن کادرهای متنی (Modern TextBox) -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="2" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- استایل مدرن اسکرول‌بار بسیار ظریف (Slim Modern ScrollBar) -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false" />
+            <Setter Property="Stylus.IsFlicksEnabled" Value="false" />
+            <Setter Property="Width" Value="7" />
+            <Setter Property="Height" Value="7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid SnapsToDevicePixels="true" Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="true">
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Background="#CBD5E1" CornerRadius="3" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Application.Resources>
 </Application>

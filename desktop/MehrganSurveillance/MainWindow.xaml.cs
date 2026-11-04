@@ -60,7 +60,6 @@ namespace MehrganSurveillance
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             RegisterCells();
-            SelectSlot(0);
 
             // نمایش سریع وضعیت در حال بارگذاری بدون فریز پنجره
             EngineStatusText.Text = "در حال راه‌اندازی موتور...";
@@ -104,7 +103,10 @@ namespace MehrganSurveillance
                 // ۴. مقداردهی اسلات‌های ۹ گانه
                 InitializeCameraSlots();
 
-                // ۵. تنظیم چیدمان پیش‌فرض ۲×۲
+                // ۵. انتخاب اسلات اولیه پس از ایجاد کامل کانال‌ها
+                SelectSlot(0);
+
+                // ۶. تنظیم چیدمان پیش‌فرض ۲×۲
                 SetLayout(4);
 
                 ActiveStreamsSummaryText.Text = "چیدمان ۲×۲ فعال (۴ اسلات آماده پایش زنده)";
@@ -165,9 +167,9 @@ namespace MehrganSurveillance
                 }
                 else
                 {
-                    channel.IpAddress = $"192.168.1.{100 + i}";
-                    channel.MainStreamUrl = $"rtsp://admin:password@192.168.1.{100 + i}:554/1/1";
-                    channel.SubStreamUrl = $"rtsp://admin:password@192.168.1.{100 + i}:554/1/2";
+                    channel.IpAddress = string.Empty;
+                    channel.MainStreamUrl = string.Empty;
+                    channel.SubStreamUrl = string.Empty;
                 }
 
                 _channels.Add(channel);
@@ -353,7 +355,7 @@ namespace MehrganSurveillance
 
         private void SelectSlot(int index)
         {
-            if (index < 0 || index >= _cells.Count) return;
+            if (index < 0 || index >= _cells.Count || index >= _channels.Count) return;
 
             _selectedSlotIndex = index;
             for (int i = 0; i < _cells.Count; i++)

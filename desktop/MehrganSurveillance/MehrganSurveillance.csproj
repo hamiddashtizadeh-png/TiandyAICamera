@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ApplicationTitle>سامانه نظارت تصویری مهرگان</ApplicationTitle>
+    <RootNamespace>MehrganSurveillance</RootNamespace>
+    <AssemblyName>MehrganSurveillance</AssemblyName>
+    <!-- تضمین بیلد در حالت 64 بیتی هماهنگ با کتابخانه‌های محلی LibVLC -->
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- پکیج رسمی LibVLCSharp برای WPF -->
+    <PackageReference Include="LibVLCSharp.WPF" Version="3.9.0" />
+    <!-- کتابخانه‌های باینری نیتیو ویندوز LibVLC (شامل libvlc.dll و تمام پلاگین‌های دیکودر) -->
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
+  </ItemGroup>
+
+</Project>

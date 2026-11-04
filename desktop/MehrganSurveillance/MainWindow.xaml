@@ -1,0 +1,284 @@
+<Window x:Class="MehrganSurveillance.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
+        mc:Ignorable="d"
+        Title="سامانه نظارت تصویری مهرگان - نسخه آزمایشی پخش زنده ویندوز (فاز ۱)"
+        Height="840" Width="1300"
+        MinWidth="1050" MinHeight="720"
+        FlowDirection="RightToLeft"
+        FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif"
+        Background="{StaticResource BackgroundLightBrush}"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <!-- ۱. سربرگ برنامه -->
+            <RowDefinition Height="Auto" />
+            <!-- ۲. نوار آدرس RTSP و کنترل‌ها -->
+            <RowDefinition Height="Auto" />
+            <!-- ۳. ویوپورت اصلی پخش ویدیوی واقعی -->
+            <RowDefinition Height="*" />
+            <!-- ۴. نوار وضعیت و لاگ رویدادهای حقیقی LibVLC -->
+            <RowDefinition Height="180" />
+        </Grid.RowDefinitions>
+
+        <!-- ۱. سربرگ برنامه -->
+        <Border Grid.Row="0"
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderLightBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,12"
+                Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="سامانه نظارت تصویری مهرگان (Mehrgan AI Surveillance)"
+                               FontSize="17"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="پایلوت ویندوزی پخش زنده تصویر با موتور بومی LibVLCSharp بر بستر RTSP روی پروتکل TCP"
+                               FontSize="12"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,3,0,0" />
+                </StackPanel>
+
+                <!-- برچسب وضعیت زنده -->
+                <Border Grid.Column="1"
+                        Background="#F0FDF4"
+                        BorderBrush="#BBF7D0"
+                        BorderThickness="1"
+                        CornerRadius="20"
+                        Padding="14,6"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="#16A34A" Margin="0,0,6,0" />
+                        <TextBlock x:Name="StatusBadgeText"
+                                   Text="آماده اتصال"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="#166534" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ۲. نوار آدرس RTSP و کنترل‌های اتصال -->
+        <Border Grid.Row="1"
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderLightBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,0,0,12">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- فیلد ورودی آدرس RTSP -->
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                        <TextBlock Text="آدرس استریم RTSP دوربین تیاندی (فرمت: rtsp://USER:PASS@IP:PORT/CHANNEL/STREAM):"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   Margin="0,0,0,6" />
+                        <TextBox x:Name="RtspUrlInput"
+                                 Text="rtsp://admin:password@192.168.1.168:554/1/1"
+                                 FontSize="13"
+                                 FontFamily="JetBrains Mono, Consolas, Courier New"
+                                 Padding="10,8"
+                                 BorderBrush="{StaticResource BorderLightBrush}"
+                                 BorderThickness="1"
+                                 FlowDirection="LeftToRight"
+                                 HorizontalContentAlignment="Left" />
+                    </StackPanel>
+
+                    <!-- دکمه اتصال -->
+                    <Button x:Name="ConnectButton"
+                            Grid.Column="1"
+                            Content="اتصال به استریم"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Width="140"
+                            Height="38"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,8,0"
+                            Click="ConnectButton_Click" />
+
+                    <!-- دکمه قطع اتصال -->
+                    <Button x:Name="DisconnectButton"
+                            Grid.Column="2"
+                            Content="قطع اتصال"
+                            Style="{StaticResource DangerButtonStyle}"
+                            Width="110"
+                            Height="38"
+                            VerticalAlignment="Bottom"
+                            IsEnabled="False"
+                            Click="DisconnectButton_Click" />
+                </Grid>
+
+                <!-- ردیف انتخاب سریع استریم‌های تیاندی و تنظیمات شبکه -->
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- دکمه‌های سریع ۳ استریم مستند تیاندی -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="انتخاب سریع مسیر تیاندی:"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0" />
+                        <Button Content="استریم ۱ (اصلی /1/1)"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                FontSize="11"
+                                Padding="8,4"
+                                Margin="0,0,6,0"
+                                Click="Stream1Preset_Click" />
+                        <Button Content="استریم ۲ (فرعی وب /1/2)"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                FontSize="11"
+                                Padding="8,4"
+                                Margin="0,0,6,0"
+                                Click="Stream2Preset_Click" />
+                        <Button Content="استریم ۳ (سوم /1/3)"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                FontSize="11"
+                                Padding="8,4"
+                                Click="Stream3Preset_Click" />
+                    </StackPanel>
+
+                    <!-- چک‌باکس اجبار به TCP و اسلایدر کش شبکه -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <CheckBox x:Name="ForceTcpCheckBox"
+                                  Content="اجبار به پروتکل TCP (--rtsp-tcp)"
+                                  IsChecked="True"
+                                  IsEnabled="False"
+                                  FontSize="11"
+                                  FontWeight="SemiBold"
+                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,16,0" />
+
+                        <TextBlock Text="بافر شبکه (ms):"
+                                   FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,6,0" />
+                        <TextBox x:Name="NetworkCachingInput"
+                                 Text="300"
+                                 Width="55"
+                                 FontSize="11"
+                                 FontFamily="JetBrains Mono, Consolas"
+                                 Padding="6,4"
+                                 FlowDirection="LeftToRight"
+                                 HorizontalContentAlignment="Center"
+                                 VerticalAlignment="Center" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ۳. ویوپورت اصلی رندرینگ تصویر زنده با LibVLCSharp -->
+        <Border Grid.Row="2"
+                Background="#000000"
+                BorderBrush="{StaticResource BorderLightBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                ClipToBounds="True"
+                Margin="0,0,0,12">
+            <Grid>
+                <!-- کنترل اصلی رندر ویدیو نیتیو LibVLCSharp -->
+                <vlc:VideoView x:Name="VlcVideoView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+                <!-- لایه پیام در زمان عدم اتصال یا خطا -->
+                <Border x:Name="PlaceholderOverlay"
+                        Background="#0F172A"
+                        Opacity="0.95"
+                        Visibility="Visible">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="تصویر زنده دوربین غیرفعال است"
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   Foreground="#F8FAFC"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="آدرس استریم دوربین تیاندی را بررسی کرده و روی دکمه «اتصال به استریم» کلیک نمایید."
+                                   FontSize="12"
+                                   Foreground="#94A3B8"
+                                   Margin="0,8,0,0"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="توجه: تصویر با کامپوننت بومی LibVLC و کدک سخت‌افزاری ویندوز نمایش داده می‌شود (بدون شبیه‌سازی یا Canvas)."
+                                   FontSize="11"
+                                   Foreground="#38BDF8"
+                                   Margin="0,14,0,0"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ۴. نوار وضعیت و گزارش وقایع حقیقی دیکودر -->
+        <Border Grid.Row="3"
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderLightBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="وقایع حقیقی دیکود و ارتباط LibVLC (بدون تلـه‌متری ساختگی):"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}" />
+
+                    <!-- اطلاعات مدیا و کدک دریافت شده از LibVLC -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock Text="مشخصات استریم دریافتی: "
+                                   FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                        <TextBlock x:Name="StreamSpecsText"
+                                   Text="در انتظار برقراری اتصال..."
+                                   FontSize="11"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryBrush}" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- لیست لاگ‌های حقیقی LibVLC -->
+                <ListBox x:Name="EventLogListBox"
+                         Grid.Row="1"
+                         BorderBrush="{StaticResource BorderLightBrush}"
+                         BorderThickness="1"
+                         Background="#F8FAFC"
+                         FontFamily="JetBrains Mono, Consolas, Courier New"
+                         FontSize="11"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         FlowDirection="LeftToRight" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,6 @@
+{
+  "name": "Tiandy Camera Streaming POC Test Suite",
+  "description": "POC test plan and execution platform for Tiandy IP camera streaming comparing Direct Camera vs NVR RTSP via MediaMTX with FFprobe/FFmpeg decoding verification, WebRTC, HLS, and Windows playback diagnostics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

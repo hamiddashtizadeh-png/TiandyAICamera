@@ -64,7 +64,7 @@ namespace MehrganSurveillance
 
             // نمایش سریع وضعیت در حال بارگذاری بدون فریز پنجره
             EngineStatusText.Text = "در حال راه‌اندازی موتور...";
-            EngineStatusDot.Fill = Brushes.Amber;
+            EngineStatusDot.Fill = new SolidColorBrush(Color.FromRgb(217, 119, 6));
             ActiveStreamsSummaryText.Text = "در حال بارگذاری بدون وقفه هسته LibVLC و رجیستری...";
 
             try

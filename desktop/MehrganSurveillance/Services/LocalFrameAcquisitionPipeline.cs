@@ -103,7 +103,7 @@ public class LocalFrameAcquisitionPipeline : IAsyncDisposable
         if (_capacityPolicy != null)
         {
             int currentActiveCount = _activeChannels.Count;
-            int recommendedLimit = _capacityPolicy.RecommendedChannelsFor(AiWorkloadType.Combined);
+            int recommendedLimit = _capacityPolicy.CombinedCapacity.RecommendedChannels;
             if (recommendedLimit > 0 && currentActiveCount >= recommendedLimit)
             {
                 Log($"[هشدار خط‌مشی ظرفیت] تعداد کانال‌های هوش مصنوعی فعال ({currentActiveCount}) به سقف توصیه شده خط‌مشی ({recommendedLimit}) رسیده است. فعال‌سازی با نرخ فریم کنترل‌شده انجام می‌شود.");

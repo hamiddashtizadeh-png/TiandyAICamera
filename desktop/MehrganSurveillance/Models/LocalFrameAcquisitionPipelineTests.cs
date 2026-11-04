@@ -169,10 +169,10 @@ public static class LocalFrameAcquisitionPipelineTests
     /// <summary>
     /// آزمون ۵: Rejected queue writes do not leak leases
     /// </summary>
-    public static (bool Passed, string Message) Test_RejectedQueueWrites_DoNotLeakLeases()
+    public static async Task<(bool Passed, string Message)> Test_RejectedQueueWrites_DoNotLeakLeases()
     {
         var faceConfig = new FaceDetectionConfig { IsEnabled = false }; // غیرفعال
-        using var facePipeline = new FaceDetectionPipeline(faceConfig);
+        await using var facePipeline = new FaceDetectionPipeline(faceConfig);
         facePipeline.Initialize();
 
         byte[] rented = ArrayPool<byte>.Shared.Rent(100);
@@ -235,7 +235,7 @@ public static class LocalFrameAcquisitionPipelineTests
         var t4 = await Test_CancellationAndExceptions_ReleaseAllLeasesSafely();
         results.Add(("Test_CancellationAndExceptions_ReleaseAllLeasesSafely", t4.Passed, t4.Message));
 
-        var t5 = Test_RejectedQueueWrites_DoNotLeakLeases();
+        var t5 = await Test_RejectedQueueWrites_DoNotLeakLeases();
         results.Add(("Test_RejectedQueueWrites_DoNotLeakLeases", t5.Passed, t5.Message));
 
         var t6 = Test_DoubleDisposal_CannotCauseDoubleReturn();

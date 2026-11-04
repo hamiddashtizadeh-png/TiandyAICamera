@@ -47,7 +47,7 @@ public static class AiCapacityPolicyTests
 
             UiDispatcherLagP95Ms = 8.0,
             InvariantsVerified = true,
-            ConcurrencyMode = ExecutionConcurrencyMode.TrueConcurrent,
+            ConcurrencyMode = ExecutionConcurrencyMode.ConcurrentOverlap,
             ConcurrencyOverlapRatio = 0.85,
 
             MemoryMetrics = new MemoryStabilityMetrics

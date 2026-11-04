@@ -107,6 +107,9 @@ public class FrameAccountingMetrics
         Interlocked.Increment(ref _inFlight);
     }
 
+    public void OnDequeued() => Interlocked.Decrement(ref _pendingInQueue);
+    public void OnInFlightStarted() => Interlocked.Increment(ref _inFlight);
+
     public void OnProcessingSucceeded()
     {
         Interlocked.Decrement(ref _inFlight);
@@ -117,6 +120,14 @@ public class FrameAccountingMetrics
     {
         Interlocked.Decrement(ref _inFlight);
         Interlocked.Increment(ref _failed);
+    }
+
+    public void OnInFlightCompleted(bool success)
+    {
+        if (success)
+            OnProcessingSucceeded();
+        else
+            OnProcessingFailed();
     }
 
     /// <summary>

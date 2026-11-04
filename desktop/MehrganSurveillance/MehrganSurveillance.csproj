@@ -17,6 +17,8 @@
     <PackageReference Include="LibVLCSharp.WPF" Version="3.9.0" />
     <!-- کتابخانه‌های باینری نیتیو ویندوز LibVLC (شامل libvlc.dll و تمام پلاگین‌های دیکودر) -->
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
+    <!-- کتابخانه رسمی ONNX Runtime با شتاب‌دهنده سخت‌افزاری DirectML و پشتیبانی از CPU EP -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.20.1" />
   </ItemGroup>
 
 </Project>

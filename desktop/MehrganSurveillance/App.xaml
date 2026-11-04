@@ -9,18 +9,21 @@
         <!-- ================================================================= -->
 
         <!-- رنگ‌های پایه و پس‌زمینه‌ها -->
-        <Color x:Key="BackgroundLightColor">#F1F5F9</Color>       <!-- خاکستری بسیار ملایم سازمانی -->
+        <Color x:Key="BackgroundLightColor">#F8FAFC</Color>       <!-- خاکستری بسیار ملایم سازمانی -->
         <Color x:Key="SurfaceCardColor">#FFFFFF</Color>           <!-- سفید کارت‌ها و پنل‌ها -->
-        <Color x:Key="SurfaceSidebarColor">#F8FAFC</Color>        <!-- پس‌زمینه پنل‌های جانبی -->
+        <Color x:Key="SurfaceSidebarColor">#FFFFFF</Color>        <!-- پس‌زمینه پنل‌های جانبی تمیز و روشن -->
         <Color x:Key="BorderLightColor">#E2E8F0</Color>           <!-- خطوط جداکننده ملایم -->
         <Color x:Key="BorderStrongColor">#CBD5E1</Color>          <!-- کادرهای تاکید شده -->
 
-        <!-- رنگ‌های برند و ناوبری -->
+        <!-- رنگ‌های برند و ناوبری با طیف مدرن بنفش و آبی (Purple/Blue VMS Accent) -->
         <Color x:Key="NavyDarkColor">#0F172A</Color>              <!-- سرمه‌ای تیره هدر و بدنه اصلی -->
         <Color x:Key="NavyLightColor">#1E293B</Color>             <!-- سرمه‌ای روشن‌تر برای هاور -->
-        <Color x:Key="PrimaryColor">#0284C7</Color>               <!-- آبی تخصصی مهرگان -->
-        <Color x:Key="PrimaryHoverColor">#0369A1</Color>
-        <Color x:Key="AccentCyanColor">#0EA5E9</Color>
+        <Color x:Key="PrimaryColor">#4F46E5</Color>               <!-- بنفش-آبی تخصصی اینترپرایز (Indigo Accent) -->
+        <Color x:Key="PrimaryHoverColor">#4338CA</Color>
+        <Color x:Key="AccentPurpleColor">#6366F1</Color>          <!-- بنفش روشن هایلایت -->
+        <Color x:Key="AccentBlueColor">#2563EB</Color>            <!-- آبی کبالت ناوبری -->
+        <Color x:Key="AccentCyanColor">#06B6D4</Color>
+        <Color x:Key="DarkVideoWallColor">#030712</Color>         <!-- وال ویدیویی تیره سینمایی -->
 
         <!-- رنگ‌های نشانگر وضعیت عملیاتی (Status Colors) -->
         <Color x:Key="SuccessColor">#16A34A</Color>               <!-- سبز پخش زنده موفق -->
@@ -47,7 +50,10 @@
         <SolidColorBrush x:Key="NavyLightBrush" Color="{StaticResource NavyLightColor}" />
         <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
         <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{StaticResource PrimaryHoverColor}" />
+        <SolidColorBrush x:Key="AccentPurpleBrush" Color="{StaticResource AccentPurpleColor}" />
+        <SolidColorBrush x:Key="AccentBlueBrush" Color="{StaticResource AccentBlueColor}" />
         <SolidColorBrush x:Key="AccentCyanBrush" Color="{StaticResource AccentCyanColor}" />
+        <SolidColorBrush x:Key="DarkVideoWallBrush" Color="{StaticResource DarkVideoWallColor}" />
 
         <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
         <SolidColorBrush x:Key="SuccessBgBrush" Color="{StaticResource SuccessBgColor}" />
@@ -224,6 +230,71 @@
                     <Setter Property="Background" Value="#F1F5F9" />
                     <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
                     <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ۶. استایل تب‌های فوقانی ناوبری VMS (Compact Top Navigation Tabs) -->
+        <Style TargetType="Button" x:Key="NavTabButtonStyle">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#475569" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+                    <Setter Property="Background" Value="#F8FAFC" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ۷. دکمه‌های کنترل نوار تایم‌لاین پایینی (Timeline Action Button) -->
+        <Style TargetType="Button" x:Key="TimelineButtonStyle">
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="Foreground" Value="#E2E8F0" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#334155" />
+                    <Setter Property="Foreground" Value="#FFFFFF" />
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentPurpleBrush}" />
                 </Trigger>
             </Style.Triggers>
         </Style>

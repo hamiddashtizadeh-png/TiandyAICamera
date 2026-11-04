@@ -273,39 +273,39 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
           </h2>
         </div>
 
-        {/* سوییچر کلاینت پخش */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-lg">
+        {/* سوییچر کلاینت پخش با چیدمان شبکه‌ای انطباق‌پذیر در نمایشگرهای کوچک */}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] sm:flex items-center gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-lg">
           <button
             onClick={() => setPlaybackClient('webrtc')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${
               playbackClient === 'webrtc'
                 ? 'bg-white text-cyan-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Globe className="w-3.5 h-3.5" />
+            <Globe className="w-3.5 h-3.5 shrink-0" />
             <span>مرورگر: WebRTC (WHEP)</span>
           </button>
           <button
             onClick={() => setPlaybackClient('hls')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${
               playbackClient === 'hls'
                 ? 'bg-white text-indigo-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Radio className="w-3.5 h-3.5" />
+            <Radio className="w-3.5 h-3.5 shrink-0" />
             <span>مرورگر: HLS (fMP4)</span>
           </button>
           <button
             onClick={() => setPlaybackClient('windows')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap ${
               playbackClient === 'windows'
                 ? 'bg-white text-emerald-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Monitor className="w-3.5 h-3.5" />
+            <Monitor className="w-3.5 h-3.5 shrink-0" />
             <span>ویندوز: VLC / FFplay</span>
           </button>
         </div>
@@ -315,7 +315,46 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
       <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="leading-relaxed">
-          <strong>یادداشت ممیزی آزمون فیزیکی:</strong> موفقیت قطعی آزمون منوط به دریافت و دیکود فریم‌های واقعی با FFmpeg روی شبکه محلی کاربر است (<code className="font-mono font-bold bg-amber-100 px-1 py-0.5 rounded text-[11px]">ffmpeg -rtsp_transport tcp -i rtsp://... -vframes 50 -f null -</code>). پیش‌نمایش زیر رفتار دیکودر، تایم‌استمپ‌ها و برچسب‌های I/P-frame را مصورسازی می‌کند.
+          <strong>یادداشت ممیزی آزمون فیزیکی:</strong> موفقیت قطعی آزمون منوط به دریافت و دیکود فریم‌های واقعی با FFmpeg روی شبکه محلی کاربر است (<code className="font-mono font-bold bg-amber-100 px-1 py-0.5 rounded text-[11px]" dir="ltr">ffmpeg -rtsp_transport tcp -i rtsp://... -vframes 50 -f null -</code>). پیش‌نمایش زیر رفتار دیکودر، تایم‌استمپ‌ها و برچسب‌های I/P-frame را مصورسازی می‌کند.
+        </div>
+      </div>
+
+      {/* مشخصات استریم فعال تیاندی با چیدمان شبکه‌ای انطباق‌پذیر (Auto-Fit Grid) */}
+      <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+          <div className="text-xs font-bold text-slate-800 flex items-center gap-2">
+            <Radio className="w-4 h-4 text-cyan-700" />
+            <span>مشخصات فنی استریم فعال تیاندی: <span className="text-cyan-800">{streamSpecs.name}</span></span>
+          </div>
+          <span className="text-[11px] text-slate-500 font-mono" dir="ltr">
+            مسیر فعال: /1/{activeStreamNum}
+          </span>
+        </div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3 text-xs">
+          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 transition-colors hover:bg-slate-50/90">
+            <span className="text-slate-500 block text-[11px] mb-0.5">وضوح تصویر (Resolution)</span>
+            <span className="font-mono font-bold text-slate-900 text-xs block" dir="ltr">{streamSpecs.res}</span>
+          </div>
+          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 transition-colors hover:bg-slate-50/90">
+            <span className="text-slate-500 block text-[11px] mb-0.5">نرخ فریم استریم</span>
+            <span className="font-mono font-bold text-cyan-700 text-xs block" dir="ltr">{streamSpecs.fps} FPS</span>
+          </div>
+          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 transition-colors hover:bg-slate-50/90">
+            <span className="text-slate-500 block text-[11px] mb-0.5">نرخ بیت نامی (Bitrate)</span>
+            <span className="font-mono font-bold text-slate-900 text-xs block" dir="ltr">{streamSpecs.bitrate}</span>
+          </div>
+          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 transition-colors hover:bg-slate-50/90">
+            <span className="text-slate-500 block text-[11px] mb-0.5">فاصله فریم کلیدی (GOP)</span>
+            <span className="font-mono font-bold text-emerald-700 text-xs block" dir="ltr">{streamSpecs.gop} فریم</span>
+          </div>
+          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 transition-colors hover:bg-slate-50/90">
+            <span className="text-slate-500 block text-[11px] mb-0.5">کدک ویدیویی دیکود شده</span>
+            <span className="font-mono font-bold text-indigo-700 text-xs block" dir="ltr">{activeCodec}</span>
+          </div>
+        </div>
+        <div className="text-[11px] text-slate-600 bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/70 flex items-center gap-2">
+          <span className="font-bold text-slate-700 shrink-0">سناریوی استفاده:</span>
+          <span>{streamSpecs.desc}</span>
         </div>
       </div>
 
@@ -328,109 +367,120 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
           className="w-full aspect-video bg-black block"
         />
 
-        {/* نوار کنترل پایین پلیر */}
-        <div className="p-3 bg-slate-900 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-white">
+        {/* نوار کنترل پایین پلیر با چیدمان شبکه‌ای انطباق‌پذیر (Auto-Fit Grid) */}
+        <div className="p-3 bg-slate-900 border-t border-slate-800 grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3 text-xs text-white items-center">
           {/* توقف / اجرا و استخراج فریم */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white transition-colors"
+              className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white transition-colors shrink-0"
               title={isPlaying ? 'توقف موقت فریم‌ها' : 'ادامه پخش'}
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
             <button
               onClick={handleCaptureSnapshot}
-              className="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors font-medium"
+              className="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors font-medium whitespace-nowrap"
             >
-              <Camera className="w-3.5 h-3.5 text-cyan-400" />
-              <span>استخراج تصویر تک‌فریم مرجع</span>
+              <Camera className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>استخراج تک‌فریم مرجع</span>
             </button>
           </div>
 
           {/* سوییچر ۳ استریم مستند تیاندی */}
           <div className="flex items-center gap-1.5 p-1 bg-slate-950 border border-slate-800 rounded-md">
-            <span className="text-[11px] text-slate-400 px-1 font-bold">انتخاب استریم:</span>
-            <button
-              onClick={() => setActiveStreamNum(1)}
-              className={`px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors ${
-                activeStreamNum === 1
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              /1/1 اصلی
-            </button>
-            <button
-              onClick={() => setActiveStreamNum(2)}
-              className={`px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors ${
-                activeStreamNum === 2
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              /1/2 فرعی
-            </button>
-            <button
-              onClick={() => setActiveStreamNum(3)}
-              className={`px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors ${
-                activeStreamNum === 3
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              /1/3 سوم
-            </button>
+            <span className="text-[11px] text-slate-400 px-1 font-bold shrink-0">استریم:</span>
+            <div className="flex items-center gap-1 w-full justify-between">
+              <button
+                onClick={() => setActiveStreamNum(1)}
+                className={`px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors flex-1 text-center ${
+                  activeStreamNum === 1
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                dir="ltr"
+              >
+                /1/1
+              </button>
+              <button
+                onClick={() => setActiveStreamNum(2)}
+                className={`px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors flex-1 text-center ${
+                  activeStreamNum === 2
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                dir="ltr"
+              >
+                /1/2
+              </button>
+              <button
+                onClick={() => setActiveStreamNum(3)}
+                className={`px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors flex-1 text-center ${
+                  activeStreamNum === 3
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                dir="ltr"
+              >
+                /1/3
+              </button>
+            </div>
           </div>
 
           {/* سوییچر منبع اتصال */}
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">منبع:</span>
-            <button
-              onClick={() => setMethod('direct')}
-              className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
-                method === 'direct'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              دوربین مستقیم (A)
-            </button>
-            <button
-              onClick={() => setMethod('nvr')}
-              className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
-                method === 'nvr'
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              کانال NVR (B)
-            </button>
+            <span className="text-slate-400 shrink-0">منبع:</span>
+            <div className="flex items-center gap-1 w-full">
+              <button
+                onClick={() => setMethod('direct')}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition-colors flex-1 text-center whitespace-nowrap ${
+                  method === 'direct'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                مستقیم (A)
+              </button>
+              <button
+                onClick={() => setMethod('nvr')}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition-colors flex-1 text-center whitespace-nowrap ${
+                  method === 'nvr'
+                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                کانال NVR (B)
+              </button>
+            </div>
           </div>
 
           {/* نوع پروتکل لایه انتقال */}
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">انتقال:</span>
-            <button
-              onClick={() => setTransportMode('tcp')}
-              className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors ${
-                transportMode === 'tcp'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              TCP (اینترلیود)
-            </button>
-            <button
-              onClick={() => setTransportMode('udp')}
-              className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors ${
-                transportMode === 'udp'
-                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                  : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              UDP (اتلاف پکت)
-            </button>
+            <span className="text-slate-400 shrink-0">انتقال:</span>
+            <div className="flex items-center gap-1 w-full">
+              <button
+                onClick={() => setTransportMode('tcp')}
+                className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors flex-1 text-center ${
+                  transportMode === 'tcp'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+                dir="ltr"
+              >
+                TCP
+              </button>
+              <button
+                onClick={() => setTransportMode('udp')}
+                className={`px-2 py-1 rounded text-xs font-mono font-bold transition-colors flex-1 text-center ${
+                  transportMode === 'udp'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+                dir="ltr"
+              >
+                UDP
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -450,30 +500,31 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
               بستن پیش‌نمایش
             </button>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 items-start">
+          <div className="flex flex-col md:flex-row gap-4 items-start">
             <img
               src={snapshotUrl}
               alt="فریم استخراج شده از تصویر"
               referrerPolicy="no-referrer"
-              className="w-full sm:w-64 rounded-lg border border-slate-300 shadow-xs"
+              className="w-full md:w-64 rounded-lg border border-slate-300 shadow-xs shrink-0"
             />
-            <div className="space-y-1.5 text-xs text-slate-700">
-              <div>
-                <span className="text-slate-500">زمان استخراج: </span>
-                <span className="font-mono font-bold">{new Date().toLocaleString('fa-IR')}</span>
+            <div className="flex-1 w-full grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2.5 text-xs text-slate-700">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-slate-500 block text-[11px] mb-0.5">زمان استخراج فریم</span>
+                <span className="font-mono font-bold text-slate-900 text-xs block" dir="ltr">{new Date().toLocaleString('fa-IR')}</span>
               </div>
-              <div>
-                <span className="text-slate-500">آدرس RTSP منبع: </span>
-                <span className="font-mono font-bold">{currentSanitizedUrl}</span>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-slate-500 block text-[11px] mb-0.5">آدرس RTSP منبع</span>
+                <span className="font-mono font-bold text-slate-900 text-xs truncate block" dir="ltr">{currentSanitizedUrl}</span>
               </div>
-              <div>
-                <span className="text-slate-500">رزولوشن استریم: </span>
-                <span className="font-mono font-bold">{streamSpecs.res}</span>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-slate-500 block text-[11px] mb-0.5">رزولوشن استریم</span>
+                <span className="font-mono font-bold text-slate-900 text-xs block" dir="ltr">{streamSpecs.res}</span>
               </div>
-              <div>
-                <span className="text-slate-500">وضعیت دیکود: </span>
-                <span className="text-emerald-700 font-bold">
-                  فریم کلیدی با سلامت ماکروبلاک‌ها تایید شد.
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-slate-500 block text-[11px] mb-0.5">وضعیت سلامت فریم</span>
+                <span className="text-emerald-700 font-bold text-xs flex items-center gap-1.5 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  سلامت ماکروبلاک‌ها تایید شد
                 </span>
               </div>
             </div>
@@ -481,12 +532,12 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
         </div>
       )}
 
-      {/* ۴ کارت متریک زنده */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1">
+      {/* ۴ کارت متریک زنده با چیدمان شبکه‌ای انطباق‌پذیر (Auto-Fit Grid) */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-4 text-xs">
+        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1 hover:border-slate-300 transition-colors">
           <div className="text-slate-500 font-medium">تاخیر تصویر (Glass-to-Glass)</div>
-          <div className="text-xl font-bold font-mono text-cyan-700 tabular-nums">
-            {baseLatency} میلی‌ثانیه
+          <div className="text-xl font-bold font-mono text-cyan-700 tabular-nums" dir="ltr">
+            {baseLatency} ms
           </div>
           <div className="text-[11px] text-slate-500">
             {playbackClient === 'webrtc'
@@ -497,20 +548,21 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1">
+        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1 hover:border-slate-300 transition-colors">
           <div className="text-slate-500 font-medium">شمارنده فریم‌های دیکود شده</div>
-          <div className="text-xl font-bold font-mono text-emerald-700 tabular-nums">
+          <div className="text-xl font-bold font-mono text-emerald-700 tabular-nums" dir="ltr">
             {frameCounter.toLocaleString('fa-IR')}
           </div>
           <div className="text-[11px] text-slate-500">{streamSpecs.fps} فریم بر ثانیه ممتد</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1">
+        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1 hover:border-slate-300 transition-colors">
           <div className="text-slate-500 font-medium">پروتکل لایه انتقال</div>
           <div
             className={`text-xl font-bold font-mono ${
               transportMode === 'tcp' ? 'text-emerald-700' : 'text-rose-700'
             }`}
+            dir="ltr"
           >
             {transportMode.toUpperCase()}
           </div>
@@ -519,9 +571,9 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1">
+        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-1 hover:border-slate-300 transition-colors">
           <div className="text-slate-500 font-medium">پورت وب دوربین</div>
-          <div className="text-xl font-bold font-mono text-cyan-700 tabular-nums">
+          <div className="text-xl font-bold font-mono text-cyan-700 tabular-nums" dir="ltr">
             3000 (HTTP GUI)
           </div>
           <div className="text-[11px] text-slate-500">پورت RTSP مجزا است (554)</div>

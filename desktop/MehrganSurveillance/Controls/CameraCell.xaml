@@ -9,28 +9,28 @@
              FlowDirection="RightToLeft"
              FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif">
 
-    <!-- کادر اصلی سلول با استایل مانیتورینگ پیشرفته سازمانی -->
+    <!-- کادر اصلی سلول با استایل مانیتورینگ پیشرفته سازمانی و حاشیه‌های فشرده (Tight Spacing) -->
     <Border x:Name="RootBorder"
-            Background="#FFFFFF"
-            BorderBrush="{StaticResource BorderLightBrush}"
-            BorderThickness="1.5"
-            CornerRadius="6"
-            Margin="2"
+            Background="#060913"
+            BorderBrush="{StaticResource BorderStrongBrush}"
+            BorderThickness="1"
+            CornerRadius="3"
+            Margin="1"
             ClipToBounds="True">
         <Grid>
             <Grid.RowDefinitions>
-                <!-- سربرگ سلول: نوار فشرده و حرفه‌ای ۲۸ پیکسلی کاملاً مستقل از مستطیل HWND -->
-                <RowDefinition Height="28" />
+                <!-- سربرگ سلول: نوار فشرده و حرفه‌ای ۲۶ پیکسلی -->
+                <RowDefinition Height="26" />
                 <!-- ویوپورت رندر ویدیوی حقیقی بومی با پس‌زمینه سینمایی تیره -->
                 <RowDefinition Height="*" />
                 <!-- نوار زیرین متادیتای تکنیکال استریم (رزولوشن، کدک و آدرس محافظت‌شده) -->
-                <RowDefinition Height="22" />
+                <RowDefinition Height="20" />
             </Grid.RowDefinitions>
 
             <!-- ۱. سربرگ سلول -->
             <Border Grid.Row="0"
-                    Background="#F8FAFC"
-                    BorderBrush="{StaticResource BorderLightBrush}"
+                    Background="#0F172A"
+                    BorderBrush="#1E293B"
                     BorderThickness="0,0,0,1"
                     Padding="6,2">
                 <Grid>
@@ -47,25 +47,25 @@
                     <!-- نشانگر اسلات -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
                         <Border x:Name="SlotBadgeBorder"
-                                Background="{StaticResource NavyDarkBrush}"
-                                CornerRadius="3"
-                                Padding="5,1"
+                                Background="{StaticResource PrimaryBrush}"
+                                CornerRadius="2"
+                                Padding="4,1"
                                 Margin="0,0,5,0">
                             <TextBlock x:Name="SlotBadgeText"
                                        Text="CH 01"
                                        Foreground="White"
-                                       FontSize="9.5"
+                                       FontSize="9"
                                        FontWeight="Bold"
                                        FontFamily="JetBrains Mono, Consolas, Tahoma" />
                         </Border>
 
                         <TextBlock x:Name="CameraTitleText"
                                    Text="دوربین اسلات ۱"
-                                   FontSize="11"
+                                   FontSize="10.5"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   Foreground="#F8FAFC"
                                    VerticalAlignment="Center"
-                                   MaxWidth="140"
+                                   MaxWidth="130"
                                    TextTrimming="CharacterEllipsis" />
                     </StackPanel>
 
@@ -196,8 +196,8 @@
 
             <!-- ۳. نوار زیرین مشخصات تکنیکال استریم (خارج از مستطیل HWND) -->
             <Border Grid.Row="2"
-                    Background="#F8FAFC"
-                    BorderBrush="{StaticResource BorderLightBrush}"
+                    Background="#0B1120"
+                    BorderBrush="#1E293B"
                     BorderThickness="0,1,0,0"
                     Padding="6,1">
                 <Grid>
@@ -210,8 +210,8 @@
                     <TextBlock x:Name="MaskedUrlText"
                                Grid.Column="0"
                                Text="rtsp://---"
-                               FontSize="8.5"
-                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="8"
+                               Foreground="#64748B"
                                FontFamily="JetBrains Mono, Consolas, Courier New"
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"
@@ -221,9 +221,9 @@
                     <TextBlock x:Name="SpecsText"
                                Grid.Column="1"
                                Text="-- x --"
-                               FontSize="8.5"
+                               FontSize="8"
                                FontWeight="Bold"
-                               Foreground="{StaticResource PrimaryBrush}"
+                               Foreground="{StaticResource AccentPurpleBrush}"
                                FontFamily="JetBrains Mono, Consolas"
                                VerticalAlignment="Center"
                                Margin="4,0,0,0" />

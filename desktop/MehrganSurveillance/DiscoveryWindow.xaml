@@ -26,12 +26,11 @@
         </Grid.RowDefinitions>
 
         <!-- ================================================================= -->
-        <!-- ۱. سربرگ سازمانی پنجره کشف (Enterprise Discovery Header)          -->
-        <!-- ================================================================= -->
+        <!-- ۱. سربرگ سازمانی پنجره کشف (Clean White Enterprise Discovery Header) -->
         <Border Grid.Row="0"
-                Background="{StaticResource NavyDarkBrush}"
+                Background="#FFFFFF"
                 Padding="16,0"
-                BorderBrush="#1E293B"
+                BorderBrush="{StaticResource BorderLightBrush}"
                 BorderThickness="0,0,0,1">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
@@ -48,21 +47,18 @@
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="کشف هوشمند و مدیریت دوربین‌های مداربسته (Smart Discovery)"
-                                   FontSize="13.5"
+                                   FontSize="13"
                                    FontWeight="Bold"
-                                   Foreground="#F8FAFC" />
+                                   Foreground="{StaticResource TextPrimaryBrush}" />
                         <TextBlock Text="شناسایی ONVIF WS-Discovery، اسکن کمکی زیرشبکه، تست زنده LibVLC و ثبت با DPAPI"
                                    FontSize="9.5"
-                                   Foreground="#94A3B8" />
+                                   Foreground="{StaticResource TextMutedBrush}" />
                     </StackPanel>
                 </StackPanel>
 
                 <Button Grid.Column="1"
                         Content="بازگشت به نمایش زنده ✕"
                         Style="{StaticResource SecondaryButtonStyle}"
-                        Background="#1E293B"
-                        Foreground="#E2E8F0"
-                        BorderBrush="#334155"
                         Height="28"
                         Padding="12,0"
                         VerticalAlignment="Center"

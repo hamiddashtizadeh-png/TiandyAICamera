@@ -159,46 +159,46 @@ export const MethodExecutor: React.FC<MethodExecutorProps> = ({
         </div>
       </div>
 
-      {/* نوار پارامترهای تاییدشده و مستند */}
-      <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-xs">
-        <div>
-          <span className="text-slate-500 block">آدرس IP هدف</span>
-          <span className="font-mono font-bold text-slate-900">{currentConfig.host}</span>
+      {/* نوار پارامترهای تاییدشده و مستند با چیدمان شبکه‌ای انطباق‌پذیر (Auto-Fit Grid) */}
+      <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 text-xs">
+        <div className="p-3 rounded-lg bg-slate-50/80 border border-slate-200/70 transition-colors hover:bg-slate-50">
+          <span className="text-slate-500 block text-[11px] mb-0.5">آدرس IP هدف</span>
+          <span className="font-mono font-bold text-slate-900 text-xs truncate block" dir="ltr">{currentConfig.host}</span>
         </div>
-        <div>
-          <span className="text-slate-500 block">پورت ویدیویی RTSP</span>
-          <span className="font-mono font-bold text-slate-900">{currentConfig.rtspPort}</span>
+        <div className="p-3 rounded-lg bg-slate-50/80 border border-slate-200/70 transition-colors hover:bg-slate-50">
+          <span className="text-slate-500 block text-[11px] mb-0.5">پورت ویدیویی RTSP</span>
+          <span className="font-mono font-bold text-slate-900 text-xs block" dir="ltr">{currentConfig.rtspPort}</span>
         </div>
-        <div>
-          <span className="text-slate-500 block">پورت مدیریت وب دوربین</span>
-          <span className="font-mono font-bold text-cyan-700">3000 (HTTP Web GUI)</span>
+        <div className="p-3 rounded-lg bg-slate-50/80 border border-slate-200/70 transition-colors hover:bg-slate-50">
+          <span className="text-slate-500 block text-[11px] mb-0.5">پورت وب دوربین</span>
+          <span className="font-mono font-bold text-cyan-700 text-xs block" dir="ltr">3000 (HTTP GUI)</span>
         </div>
-        <div>
-          <span className="text-slate-500 block">مسیر مستند استریم ۱</span>
-          <span className="font-mono font-bold text-cyan-700">{currentConfig.resolvedRtspPath}</span>
+        <div className="p-3 rounded-lg bg-slate-50/80 border border-slate-200/70 transition-colors hover:bg-slate-50">
+          <span className="text-slate-500 block text-[11px] mb-0.5">مسیر استریم ۱</span>
+          <span className="font-mono font-bold text-cyan-700 text-xs block" dir="ltr">{currentConfig.resolvedRtspPath}</span>
         </div>
-        <div>
-          <span className="text-slate-500 block">پروتکل انتقال الزامی</span>
-          <span className="font-mono font-bold text-emerald-700">RTSP over TCP</span>
+        <div className="p-3 rounded-lg bg-slate-50/80 border border-slate-200/70 transition-colors hover:bg-slate-50">
+          <span className="text-slate-500 block text-[11px] mb-0.5">پروتکل انتقال الزامی</span>
+          <span className="font-mono font-bold text-emerald-700 text-xs block" dir="ltr">RTSP over TCP</span>
         </div>
-        <div>
-          <span className="text-slate-500 block">امنیت اعتبارنامه</span>
-          <span className="font-mono text-emerald-700 flex items-center gap-1 font-bold">
+        <div className="p-3 rounded-lg bg-slate-50/80 border border-slate-200/70 transition-colors hover:bg-slate-50">
+          <span className="text-slate-500 block text-[11px] mb-0.5">امنیت اعتبارنامه</span>
+          <span className="font-mono text-emerald-700 flex items-center gap-1 font-bold text-xs">
             <ShieldCheck className="w-3.5 h-3.5" />
-            ماسک‌شده در UI
+            ماسک در UI
           </span>
         </div>
       </div>
 
       {/* چیدمان ستونی: لیست مراحل در راست، جزئیات مرحله در چپ */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* لیست مراحل آزمون (۴ ستون) */}
+        {/* لیست مراحل آزمون (۴ ستون در دسکتاپ، شبکه انطباق‌پذیر در تبلت/موبایل) */}
         <div className="lg:col-span-4 space-y-2">
           <div className="text-xs font-bold text-slate-700 px-1 mb-2">
             مراحل آزمون مستقل و اعتبارسنجی
           </div>
 
-          <div className="space-y-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] lg:grid-cols-1 gap-2">
             {currentSteps.map((step) => {
               const isActive = step.id === activeStepId;
               return (
@@ -207,11 +207,11 @@ export const MethodExecutor: React.FC<MethodExecutorProps> = ({
                   onClick={() => setActiveStepId(step.id)}
                   className={`w-full text-right p-3.5 rounded-lg border transition-all flex items-start gap-3 ${
                     isActive
-                      ? 'bg-cyan-50/70 border-cyan-400 text-slate-900 shadow-xs'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      ? 'bg-cyan-50/70 border-cyan-400 text-slate-900 shadow-xs ring-1 ring-cyan-400/40'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                   }`}
                 >
-                  <div className="mt-0.5">
+                  <div className="mt-0.5 shrink-0">
                     {step.verificationState === 'verified' ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     ) : (
@@ -277,17 +277,17 @@ export const MethodExecutor: React.FC<MethodExecutorProps> = ({
                 </p>
               </div>
 
-              {/* پارامترهای فنی مرحله */}
+              {/* پارامترهای فنی مرحله با چیدمان انطباق‌پذیر شبکه‌ای (Auto-Fit Grid) */}
               <div className="space-y-2">
                 <div className="text-xs font-bold text-slate-700">پارامترهای فنی این مرحله</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-2.5 text-xs">
                   {Object.entries(activeStep.parameters).map(([key, val]: [string, string]) => (
                     <div
                       key={key}
-                      className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex justify-between gap-2 items-center"
+                      className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 flex justify-between gap-2 items-center hover:bg-slate-50/90 transition-colors"
                     >
                       <span className="text-slate-500 font-medium">{key}:</span>
-                      <span className="font-mono text-slate-900 font-bold text-left truncate">
+                      <span className="font-mono text-slate-900 font-bold text-left truncate" dir="ltr">
                         {String(val)}
                       </span>
                     </div>

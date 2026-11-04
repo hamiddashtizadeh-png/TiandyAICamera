@@ -502,6 +502,23 @@ namespace MehrganSurveillance
             }
         }
 
+        private void SearchCameraInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string query = SearchCameraInput.Text.Trim();
+            if (string.IsNullOrEmpty(query))
+            {
+                RegistryCamerasListBox.ItemsSource = _registeredCameras;
+            }
+            else
+            {
+                RegistryCamerasListBox.ItemsSource = _registeredCameras.Where(c =>
+                    (!string.IsNullOrEmpty(c.Name) && c.Name.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(c.Brand) && c.Brand.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(c.IpAddress) && c.IpAddress.Contains(query, StringComparison.OrdinalIgnoreCase))
+                ).ToList();
+            }
+        }
+
         private async void OpenDiscoveryWindow_Click(object sender, RoutedEventArgs e)
         {
             LogEvent("کاربر پنجره کشف هوشمند دوربین‌ها را گشود.");

@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Media;
 using LibVLCSharp.Shared;
+using VlcMediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace MehrganSurveillance
 {
@@ -13,7 +14,7 @@ namespace MehrganSurveillance
     public partial class MainWindow : Window
     {
         private LibVLC? _libVlc;
-        private MediaPlayer? _mediaPlayer;
+        private VlcMediaPlayer? _mediaPlayer;
 
         public MainWindow()
         {
@@ -77,7 +78,7 @@ namespace MehrganSurveillance
                 };
 
                 _libVlc = new LibVLC(options);
-                _mediaPlayer = new MediaPlayer(_libVlc);
+                _mediaPlayer = new VlcMediaPlayer(_libVlc);
 
                 // ثبت لیسنرهای وقایع حقیقی دیکود و ارتباط LibVLC
                 _mediaPlayer.Opening += MediaPlayer_Opening;

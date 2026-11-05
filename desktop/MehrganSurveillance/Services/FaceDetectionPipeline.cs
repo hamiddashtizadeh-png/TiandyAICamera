@@ -333,14 +333,14 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
             int step = 6; // هر ۶ پیکسل یک نمونه
             int totalSkinCount = 0;
 
-            for (int r = 0; r < gridRows; r++)
+            for (int row = 0; row < gridRows; row++)
             {
-                int startY = r * cellH;
+                int startY = row * cellH;
                 int endY = Math.Min(height, startY + cellH);
 
-                for (int c = 0; c < gridCols; c++)
+                for (int col = 0; col < gridCols; col++)
                 {
-                    int startX = c * cellW;
+                    int startX = col * cellW;
                     int endX = Math.Min(width, startX + cellW);
                     int count = 0;
 
@@ -352,13 +352,13 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                             int idx = rowOffset + (x * 4);
                             if (idx + 2 < span.Length)
                             {
-                                byte b = span[idx];
-                                byte g = span[idx + 1];
-                                byte r = span[idx + 2];
+                                byte blue = span[idx];
+                                byte green = span[idx + 1];
+                                byte red = span[idx + 2];
 
                                 // بازه کروماتیک پوست طبیعی در فضای RGB و نورهای اداری/فلورسنت
-                                if ((r > 50 && g > 30 && b > 15 && r > b && (r - g) >= 8 && (r - b) >= 10)
-                                    || (r > 80 && g > 55 && b > 35 && (r >= g) && (g > b)))
+                                if ((red > 50 && green > 30 && blue > 15 && red > blue && (red - green) >= 8 && (red - blue) >= 10)
+                                    || (red > 80 && green > 55 && blue > 35 && (red >= green) && (green > blue)))
                                 {
                                     count++;
                                 }
@@ -366,7 +366,7 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                         }
                     }
 
-                    skinDensity[r, c] = count;
+                    skinDensity[row, col] = count;
                     totalSkinCount += count;
                 }
             }

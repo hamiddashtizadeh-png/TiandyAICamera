@@ -58,7 +58,9 @@ public class LocalFrameAcquisitionPipeline : IAsyncDisposable
     private bool _isDisposed;
 
     public event Action<string>? LogMessage;
+#pragma warning disable CS0067
     public event Action<int, ChannelAcquisitionTelemetry>? TelemetryUpdated;
+#pragma warning restore CS0067
 
     public LocalFrameAcquisitionPipeline(
         LibVLC? sharedLibVlc = null,

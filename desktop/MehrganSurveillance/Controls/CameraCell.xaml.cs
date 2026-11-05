@@ -30,6 +30,11 @@ namespace MehrganSurveillance.Controls
         public event EventHandler<CameraCell>? RequestAssignCamera;
         public event EventHandler<CameraCell>? CellSelected;
         public event EventHandler<string>? LogMessage;
+        public event EventHandler<(CameraCell Cell, bool Enabled)>? FaceDetectionToggled;
+        public event EventHandler<(CameraCell Cell, bool Enabled)>? FaceArchiveToggled;
+        public event EventHandler<(CameraCell Cell, bool Enabled)>? AnprToggled;
+        public event EventHandler<CameraCell>? PlaybackStarted;
+        public event EventHandler<CameraCell>? PlaybackStopped;
 
         // کنترل فرکانس بافرینگ جهت حذف لگ و ترافیک دیسپچر
         private float _lastLoggedBuffering = -1;
@@ -122,6 +127,7 @@ namespace MehrganSurveillance.Controls
 
                 PlayPauseButtonText.Text = "⏹";
                 Channel.IsConnected = true;
+                PlaybackStarted?.Invoke(this, this);
             }
             catch (Exception ex)
             {
@@ -143,6 +149,7 @@ namespace MehrganSurveillance.Controls
             PlayPauseButtonText.Text = "▶";
             SpecsText.Text = "-- x --";
             Channel.IsConnected = false;
+            PlaybackStopped?.Invoke(this, this);
         }
 
         private void StopPlaybackInternal()
@@ -401,12 +408,14 @@ namespace MehrganSurveillance.Controls
         private void MenuFaceDetectionToggle_Click(object sender, RoutedEventArgs e)
         {
             Channel.IsFaceDetectionEnabled = MenuFaceDetectionToggle.IsChecked;
+            FaceDetectionToggled?.Invoke(this, (this, Channel.IsFaceDetectionEnabled));
             OnLog($"[کانال {Channel.SlotIndex + 1}] تشخیص چهره: {(Channel.IsFaceDetectionEnabled ? "فعال" : "غیرفعال")}");
         }
 
         private void MenuFaceArchiveToggle_Click(object sender, RoutedEventArgs e)
         {
             Channel.IsFaceArchiveEnabled = MenuFaceArchiveToggle.IsChecked;
+            FaceArchiveToggled?.Invoke(this, (this, Channel.IsFaceArchiveEnabled));
             OnLog($"[کانال {Channel.SlotIndex + 1}] آرشیو خودکار چهره: {(Channel.IsFaceArchiveEnabled ? "فعال" : "غیرفعال")}");
         }
 
@@ -418,6 +427,7 @@ namespace MehrganSurveillance.Controls
         private void MenuAnprToggle_Click(object sender, RoutedEventArgs e)
         {
             Channel.IsAnprEnabled = MenuAnprToggle.IsChecked;
+            AnprToggled?.Invoke(this, (this, Channel.IsAnprEnabled));
             OnLog($"[کانال {Channel.SlotIndex + 1}] پلاک‌خوان هوشمند (ANPR): {(Channel.IsAnprEnabled ? "فعال" : "غیرفعال")}");
         }
 

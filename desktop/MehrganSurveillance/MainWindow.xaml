@@ -602,6 +602,15 @@
                                     Margin="0,0,0,4"
                                     Click="OpenFaceArchiveWindow_Click" />
 
+                            <CheckBox x:Name="MasterFaceDetectionToggle"
+                                      Content="⚡ پردازش هوش مصنوعی چهره (فعال)"
+                                      IsChecked="True"
+                                      FontWeight="Bold"
+                                      Foreground="#15803D"
+                                      FontSize="10"
+                                      Margin="0,0,0,4"
+                                      Click="MasterFaceDetectionToggle_Click" />
+
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />

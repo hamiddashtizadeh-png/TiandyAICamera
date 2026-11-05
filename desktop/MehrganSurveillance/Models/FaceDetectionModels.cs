@@ -113,9 +113,9 @@ public class FaceDetectionResult : IDisposable
 public class FaceDetectionConfig
 {
     /// <summary>
-    /// وضعیت فعال‌بودن خط لوله. پیش‌فرض: غیرفعال (Disabled until explicitly enabled by administrator)
+    /// وضعیت فعال‌بودن خط لوله. پیش‌فرض: فعال (Enabled for live monitoring)
     /// </summary>
-    public bool IsEnabled { get; set; } = false;
+    public bool IsEnabled { get; set; } = true;
 
     /// <summary>
     /// مدل انتخاب‌شده: Ultra-Face (RFB-320)

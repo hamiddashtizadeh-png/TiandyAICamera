@@ -119,8 +119,9 @@ public class LocalFrameAcquisitionPipeline : IAsyncDisposable
             return false;
         }
 
-        // ایجاد منبع دریافت فریم (در صورت در دسترس بودن LibVLC از گربر بومی و در غیر این صورت از گربر سنتتیک شبیه‌سازی استفاده می‌شود)
-        IFrameGrabber grabber = _sharedLibVlc != null
+        // ایجاد منبع دریافت فریم (در صورت در دسترس بودن LibVLC و آدرس معتبر از گربر بومی، و در غیر این صورت از گربر سنتتیک شبیه‌سازی استفاده می‌شود)
+        string effectiveUrl = channel.GetEffectiveStreamUrl(config.PreferSubStream);
+        IFrameGrabber grabber = (_sharedLibVlc != null && !string.IsNullOrWhiteSpace(effectiveUrl))
             ? new LibVlcHeadlessFrameGrabber(channel.SlotIndex, channel.Id, _sharedLibVlc)
             : new SyntheticFrameGrabber(channel.SlotIndex, channel.Id);
 

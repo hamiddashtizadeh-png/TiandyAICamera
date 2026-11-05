@@ -36,6 +36,7 @@ namespace MehrganSurveillance
         private int _selectedSlotIndex = 0;
 
         // سرویس‌های هوش مصنوعی و آرشیو محلی چهره و پلاک‌خوان ANPR
+        private LocalFrameAcquisitionPipeline? _framePipeline;
         private readonly FaceDetectionPipeline _facePipeline = new();
         private FaceArchiveService? _archiveService;
         private readonly AnprPipeline _anprPipeline = new();
@@ -109,13 +110,21 @@ namespace MehrganSurveillance
                 // ۳. بارگذاری لیست دوربین‌های ثبت‌شده در رجیستری به صورت غیرهمگام
                 await LoadRegisteredCamerasAsync();
 
-                // ۴. مقداردهی اولیه پایپ‌لاین چهره و اتصال به سرویس آرشیو
+                // ۴. مقداردهی اولیه خط لوله دریافت فریم، پایپ‌لاین تشخیص چهره و آرشیو محلی
+                _framePipeline = new LocalFrameAcquisitionPipeline(_sharedLibVlc);
+                _framePipeline.LogMessage += (msg) => LogEvent(msg);
+
                 _facePipeline.Initialize();
+                _facePipeline.EnablePipeline();
+                _framePipeline.RegisterConsumer(_facePipeline);
+
                 _archiveService = new FaceArchiveService();
+                _archiveService.Config.IsEnabled = true;
                 await _archiveService.InitializeAsync();
 
                 // ۵. مقداردهی اولیه پایپ‌لاین پلاک‌خوان هوشمند و آرشیو محلی ANPR
                 _anprPipeline.Initialize();
+                _framePipeline.RegisterConsumer(_anprPipeline);
                 _anprArchiveService = new AnprArchiveService();
                 await _anprArchiveService.InitializeAsync();
 
@@ -209,6 +218,11 @@ namespace MehrganSurveillance
                 cell.RequestAssignCamera += Cell_RequestAssignCamera;
                 cell.CellSelected += Cell_CellSelected;
                 cell.LogMessage += (s, msg) => LogEvent(msg);
+                cell.PlaybackStarted += Cell_PlaybackStarted;
+                cell.PlaybackStopped += Cell_PlaybackStopped;
+                cell.FaceDetectionToggled += Cell_FaceDetectionToggled;
+                cell.FaceArchiveToggled += Cell_FaceArchiveToggled;
+                cell.AnprToggled += Cell_AnprToggled;
             }
         }
 
@@ -672,6 +686,11 @@ namespace MehrganSurveillance
                 cell.StopPlayback();
             }
 
+            if (_framePipeline != null)
+            {
+                _ = _framePipeline.DisposeAsync();
+            }
+
             if (_sharedLibVlc != null)
             {
                 try
@@ -750,6 +769,103 @@ namespace MehrganSurveillance
         private void ViewFaceInArchive_Click(object sender, RoutedEventArgs e)
         {
             OpenFaceArchiveWindow_Click(sender, e);
+        }
+
+        private void MasterFaceDetectionToggle_Click(object sender, RoutedEventArgs e)
+        {
+            bool isEnabled = MasterFaceDetectionToggle.IsChecked == true;
+            if (isEnabled)
+            {
+                _facePipeline.EnablePipeline();
+                FaceAiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(22, 163, 74));
+                FaceAiStatusText.Text = "هوش مصنوعی چهره فعال است";
+                LogEvent("پردازش هوش مصنوعی چهره توسط کاربر به صورت سراسری فعال شد.");
+
+                // راه‌اندازی استخراج فریم برای کانال‌های فعال
+                for (int i = 0; i < _cells.Count; i++)
+                {
+                    if (_channels[i].IsAssigned || _channels[i].IsConnected)
+                    {
+                        StartAiAcquisitionForChannel(_channels[i]);
+                    }
+                }
+            }
+            else
+            {
+                _facePipeline.DisablePipeline();
+                FaceAiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(100, 116, 139));
+                FaceAiStatusText.Text = "هوش مصنوعی چهره غیرفعال شد";
+                LogEvent("پردازش هوش مصنوعی چهره غیرفعال شد.");
+
+                foreach (var cell in _cells)
+                {
+                    cell.UpdateFaceDetections(new List<FaceBoundingBox>());
+                }
+            }
+        }
+
+        private void StartAiAcquisitionForChannel(CameraChannel channel)
+        {
+            if (_framePipeline == null || channel == null) return;
+            if (channel.IsFaceDetectionEnabled || channel.IsAnprEnabled)
+            {
+                _ = _framePipeline.StartChannelAcquisitionAsync(channel);
+            }
+        }
+
+        private void StopAiAcquisitionForChannel(int slotIndex)
+        {
+            if (_framePipeline == null) return;
+            _ = _framePipeline.StopChannelAcquisitionAsync(slotIndex);
+        }
+
+        private void Cell_PlaybackStarted(object? sender, CameraCell cell)
+        {
+            if (cell?.Channel != null)
+            {
+                StartAiAcquisitionForChannel(cell.Channel);
+            }
+        }
+
+        private void Cell_PlaybackStopped(object? sender, CameraCell cell)
+        {
+            if (cell?.Channel != null)
+            {
+                StopAiAcquisitionForChannel(cell.Channel.SlotIndex);
+            }
+        }
+
+        private void Cell_FaceDetectionToggled(object? sender, (CameraCell Cell, bool Enabled) args)
+        {
+            if (args.Enabled)
+            {
+                StartAiAcquisitionForChannel(args.Cell.Channel);
+            }
+            else if (!args.Cell.Channel.IsAnprEnabled)
+            {
+                StopAiAcquisitionForChannel(args.Cell.Channel.SlotIndex);
+                args.Cell.UpdateFaceDetections(new List<FaceBoundingBox>());
+            }
+        }
+
+        private void Cell_FaceArchiveToggled(object? sender, (CameraCell Cell, bool Enabled) args)
+        {
+            if (_archiveService != null)
+            {
+                _archiveService.Config.IsEnabled = args.Enabled;
+            }
+        }
+
+        private void Cell_AnprToggled(object? sender, (CameraCell Cell, bool Enabled) args)
+        {
+            if (args.Enabled)
+            {
+                StartAiAcquisitionForChannel(args.Cell.Channel);
+            }
+            else if (!args.Cell.Channel.IsFaceDetectionEnabled)
+            {
+                StopAiAcquisitionForChannel(args.Cell.Channel.SlotIndex);
+            }
         }
         #endregion
     }

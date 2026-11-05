@@ -78,9 +78,9 @@ public class FaceArchiveFilter
 public class FaceArchiveConfig
 {
     /// <summary>
-    /// آرشیو به صورت پیش‌فرض کاملاً غیرفعال است (Disabled by default)
+    /// آرشیو به صورت پیش‌فرض فعال است (Enabled for automated recording)
     /// </summary>
-    public bool IsEnabled { get; set; } = false;
+    public bool IsEnabled { get; set; } = true;
 
     /// <summary>
     /// مسیر دایرکتوری اصلی ذخیره محلی تصاویر

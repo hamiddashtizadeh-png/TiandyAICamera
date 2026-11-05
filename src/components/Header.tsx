@@ -1,9 +1,19 @@
 import React from 'react';
 import { ShieldCheck, Download, Video, CheckCircle2, FileText } from 'lucide-react';
 
+export type AppNavTab =
+  | 'plan'
+  | 'executor'
+  | 'player'
+  | 'faces'
+  | 'scanner'
+  | 'mediamtx'
+  | 'diagnostics'
+  | 'report';
+
 interface HeaderProps {
-  activeTab: 'plan' | 'executor' | 'player' | 'scanner' | 'mediamtx' | 'diagnostics' | 'report';
-  setActiveTab: (tab: 'plan' | 'executor' | 'player' | 'scanner' | 'mediamtx' | 'diagnostics' | 'report') => void;
+  activeTab: AppNavTab;
+  setActiveTab: (tab: AppNavTab) => void;
   onOpenExport: () => void;
 }
 
@@ -55,13 +65,24 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('player')}
-              className={`transition-colors whitespace-nowrap shrink-0 py-2 border-b-2 font-medium ${
+              className={`transition-colors whitespace-nowrap shrink-0 py-2 border-b-2 font-medium flex items-center gap-1.5 ${
                 activeTab === 'player'
                   ? 'border-cyan-600 text-cyan-800 font-bold'
                   : 'border-transparent text-slate-600 hover:text-slate-900'
               }`}
             >
-              آزمایشگاه دیکود فریم
+              <span>پخش زنده و دیکود فریم</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('faces')}
+              className={`transition-colors whitespace-nowrap shrink-0 py-2 border-b-2 font-medium flex items-center gap-1.5 ${
+                activeTab === 'faces'
+                  ? 'border-emerald-600 text-emerald-800 font-bold'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>رویدادهای چهره (AI)</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="سیستم فعال پایش چهره" />
             </button>
             <button
               onClick={() => setActiveTab('scanner')}

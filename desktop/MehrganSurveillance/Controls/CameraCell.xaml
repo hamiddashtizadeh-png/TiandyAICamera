@@ -9,14 +9,46 @@
              FlowDirection="RightToLeft"
              FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif">
 
-    <!-- کادر اصلی سلول با استایل مانیتورینگ پیشرفته سازمانی و حاشیه‌های فشرده (Tight Spacing) -->
+    <!-- کادر اصلی سلول با استایل مانیتورینگ پیشرفته سازمانی و منوی کلیک راست پیشرفته -->
     <Border x:Name="RootBorder"
             Background="#060913"
             BorderBrush="{StaticResource BorderStrongBrush}"
             BorderThickness="1"
             CornerRadius="3"
             Margin="1"
-            ClipToBounds="True">
+            ClipToBounds="True"
+            MouseLeftButtonDown="RootBorder_MouseLeftButtonDown"
+            MouseRightButtonDown="RootBorder_MouseRightButtonDown">
+        <Border.ContextMenu>
+            <ContextMenu x:Name="CellContextMenu" FlowDirection="RightToLeft" FontFamily="Vazirmatn, Tahoma, sans-serif">
+                <!-- حالت تمام‌صفحه -->
+                <MenuItem x:Name="MenuFullscreen" Header="⛶ تمام‌صفحه / بازگشت (دوبار کلیک)" Click="MenuFullscreen_Click" FontWeight="Bold" />
+                <Separator />
+                
+                <!-- هوش مصنوعی چهره و پلاک -->
+                <MenuItem Header="🧠 پردازش هوش مصنوعی (AI Analytics)">
+                    <MenuItem x:Name="MenuFaceDetectionToggle" Header="👤 تشخیص چهره (Face Detection)" IsCheckable="True" IsChecked="True" Click="MenuFaceDetectionToggle_Click" />
+                    <MenuItem x:Name="MenuFaceArchiveToggle" Header="💾 ذخیره و آرشیو چهره (Face Archive)" IsCheckable="True" IsChecked="False" Click="MenuFaceArchiveToggle_Click" />
+                    <MenuItem x:Name="MenuFaceOverlayToggle" Header="🟩 کادر سبز رنگ زنده چهره (Live Box)" IsCheckable="True" IsChecked="True" Click="MenuFaceOverlayToggle_Click" />
+                    <Separator />
+                    <MenuItem x:Name="MenuAnprToggle" Header="🚗 پلاک‌خوان هوشمند (ANPR)" IsCheckable="True" IsChecked="False" Click="MenuAnprToggle_Click" />
+                </MenuItem>
+                <Separator />
+
+                <!-- کنترل‌های تصویر و استریم -->
+                <MenuItem Header="📹 کیفیت و تنظیمات استریم">
+                    <MenuItem x:Name="MenuMainStream" Header="استریم اصلی باکیفیت (/1/1)" Click="MenuMainStream_Click" />
+                    <MenuItem x:Name="MenuSubStream" Header="استریم فرعی بهینه (/1/2)" Click="MenuSubStream_Click" />
+                </MenuItem>
+                <MenuItem x:Name="MenuDigitalZoom" Header="🔍 بزرگ‌نمایی دیجیتال (Digital Zoom)" Click="MenuDigitalZoom_Click" />
+                <MenuItem x:Name="MenuSnapshot" Header="📸 تصویربرداری لحظه‌ای (Snapshot)" Click="MenuSnapshot_Click" />
+                <Separator />
+                
+                <!-- اتصال و تخصیص -->
+                <MenuItem x:Name="MenuReconnect" Header="🔄 اتصال مجدد استریم" Click="MenuReconnect_Click" />
+                <MenuItem x:Name="MenuAssignCamera" Header="⚙ تخصیص یا ویرایش دوربین..." Click="MenuAssignCamera_Click" />
+            </ContextMenu>
+        </Border.ContextMenu>
         <Grid>
             <Grid.RowDefinitions>
                 <!-- سربرگ سلول: نوار فشرده و حرفه‌ای ۲۶ پیکسلی -->

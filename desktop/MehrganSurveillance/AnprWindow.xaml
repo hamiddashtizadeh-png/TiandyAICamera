@@ -1,0 +1,301 @@
+<Window x:Class="MehrganSurveillance.AnprWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="پلاک‌خوان هوشمند خودرو (ANPR) | سامانه نظارت تصویری مهرگان"
+        Height="840" Width="1280"
+        MinWidth="1000" MinHeight="680"
+        FlowDirection="RightToLeft"
+        FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif"
+        Background="{StaticResource BackgroundLightBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <!-- ۱. سربرگ و کنترل‌های مدیر -->
+            <RowDefinition Height="Auto" />
+            <!-- ۲. کادر فیلترهای جستجو و کیبورد سریع پلاک -->
+            <RowDefinition Height="Auto" />
+            <!-- ۳. محتوای اصلی: جدول رویدادها (راست) و پلاک گرافیکی و پیش‌نمایش (چپ) -->
+            <RowDefinition Height="*" />
+            <!-- ۴. نوار وضعیت و مشخصات مدل -->
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ۱. سربرگ و کلیدهای مدیریتی فعال‌سازی (Admin Controls) -->
+        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="🚗 پلاک‌خوان هوشمند خودرو (Iranian ANPR System)" FontSize="13.5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                        <Border Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="4" Padding="6,1" Margin="10,0,0,0">
+                            <TextBlock x:Name="AiEngineStatusBadge" Text="شتاب‌دهنده DirectML / محلی" FontSize="9.5" FontWeight="Bold" Foreground="#047857" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="تشخیص خودکار خودرو، تفکیک کادر پلاک و نویسه‌خوانی OCR با پشتیبانی کامل از حروف و ساختار پلاک‌های ملی ایران (بدون ارسال به Cloud)." FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+
+                <!-- سوئیچ‌های مدیریتی -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox x:Name="AnprEnableToggle" Content="فعال‌سازی موتور پلاک‌خوان" IsChecked="false" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="AnprEnableToggle_Click" />
+                    <CheckBox x:Name="AutoArchiveToggle" Content="ثبت خودکار در آرشیو محلی" IsChecked="true" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="AutoArchiveToggle_Click" />
+                    <Button Content="🔄 بروزرسانی" Style="{StaticResource SecondaryButtonStyle}" Height="26" Padding="10,0" FontSize="10.5" Click="RefreshButton_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ۲. نوار فیلترهای جستجو و کیبورد سریع پلاک -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <!-- جستجوی متن پلاک -->
+                        <ColumnDefinition Width="220" />
+                        <!-- فیلتر دوربین -->
+                        <ColumnDefinition Width="150" />
+                        <!-- تاریخ از -->
+                        <ColumnDefinition Width="140" />
+                        <!-- تاریخ تا -->
+                        <ColumnDefinition Width="140" />
+                        <!-- وضعیت اعتبار -->
+                        <ColumnDefinition Width="130" />
+                        <!-- دکمه اقدام -->
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <!-- دکمه حذف -->
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="شماره یا بخشی از پلاک:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <TextBox x:Name="PlateSearchBox" Height="26" FontSize="11" FontWeight="SemiBold" Padding="4,2" KeyDown="PlateSearchBox_KeyDown" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                        <TextBlock Text="دوربین:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <ComboBox x:Name="CameraFilterCombo" Height="26" FontSize="10" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                        <TextBlock Text="از تاریخ:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <DatePicker x:Name="FromDatePicker" Height="26" FontSize="10" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3" Margin="0,0,10,0">
+                        <TextBlock Text="تا تاریخ:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <DatePicker x:Name="ToDatePicker" Height="26" FontSize="10" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="4" Margin="0,0,10,0">
+                        <TextBlock Text="وضعیت اعتبار:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <ComboBox x:Name="StatusFilterCombo" Height="26" FontSize="10">
+                            <ComboBoxItem Content="همه وضعیت‌ها" IsSelected="True" />
+                            <ComboBoxItem Content="معتبر (Verified)" />
+                            <ComboBoxItem Content="ناقص (Partial)" />
+                            <ComboBoxItem Content="نامطمئن (Uncertain)" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <Button Grid.Column="5" Content="🔍 جستجو" Style="{StaticResource PrimaryButtonStyle}" Height="26" Padding="12,0" FontSize="10.5" VerticalAlignment="Bottom" Click="SearchButton_Click" />
+
+                    <Button Grid.Column="7" x:Name="BulkDeleteButton" Content="🗑 حذف انتخاب‌شده‌ها" Style="{StaticResource DangerButtonStyle}" Height="26" Padding="10,0" FontSize="10.5" VerticalAlignment="Bottom" Click="BulkDeleteButton_Click" />
+                </Grid>
+
+                <!-- ردیف حروف پرکاربرد پلاک ایران جهت درج سریع در جستجو -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="حروف سریع:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <Button Content="ب" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ج" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="د" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="س" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ص" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ط" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ع" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ق" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ل" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="م" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ن" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="و" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ه" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ی" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ت" ToolTip="تاکسی" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="4,0,1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="الف" ToolTip="دولتی" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="30" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="پ" ToolTip="پلیس" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ژ" ToolTip="معلولین / جانبازان" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ۳. محتوای اصلی: جدول رویدادها (راست) و پلاک گرافیکی و پیش‌نمایش تصویر (چپ) -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <!-- جدول رویدادها -->
+                <ColumnDefinition Width="*" />
+                <!-- پنل نمایش پلاک و جزئیات -->
+                <ColumnDefinition Width="400" />
+            </Grid.ColumnDefinitions>
+
+            <!-- جدول رویدادهای پلاک‌خوان -->
+            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Margin="0,0,8,0">
+                <DataGrid x:Name="AnprEventsGrid"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Extended"
+                          CanUserAddRows="False"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#F1F5F9"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          RowHeight="36"
+                          FontSize="10.5"
+                          SelectionChanged="AnprEventsGrid_SelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="پلاک استاندارد" Binding="{Binding Plate.NormalizedText}" Width="160" FontWeight="Bold" />
+                        <DataGridTextColumn Header="فرمت فشرده" Binding="{Binding Plate.CompactText}" Width="95" />
+                        <DataGridTextColumn Header="دوربین" Binding="{Binding CameraId}" Width="110" />
+                        <DataGridTextColumn Header="زمان ثبت" Binding="{Binding TimestampUtc, StringFormat='{}{0:yyyy/MM/dd HH:mm:ss}'}" Width="135" />
+                        <DataGridTextColumn Header="اطمینان دتکشن" Binding="{Binding PlateDetectionConfidence, StringFormat='{}{0:P0}'}" Width="90" />
+                        <DataGridTextColumn Header="اطمینان OCR" Binding="{Binding OcrConfidence, StringFormat='{}{0:P0}'}" Width="90" />
+                        <DataGridTextColumn Header="وضعیت اعتبار" Binding="{Binding Plate.ValidationStatus}" Width="95" />
+                        <DataGridTextColumn Header="نوع پلاک" Binding="{Binding Plate.PlateType}" Width="80" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <!-- پنل پیش‌نمایش گرافیکی پلاک و مشخصات فنی -->
+            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="پیش‌نمایش پلاک و مشخصات بیومتریک رویداد" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,10" />
+
+                        <!-- پلاک گرافیکی شبیه‌سازی‌شده رسمی ایران -->
+                        <Border x:Name="PlateVisualCard"
+                                Height="84"
+                                Background="#FFFFFF"
+                                BorderBrush="#0F172A"
+                                BorderThickness="3.5"
+                                CornerRadius="8"
+                                Margin="0,0,0,14"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <!-- نوار آبی سمت راست پلاک ملی با پرچم ایران و متن I.R. IRAN -->
+                                    <ColumnDefinition Width="38" />
+                                    <!-- ۲ رقم ابتدایی -->
+                                    <ColumnDefinition Width="65" />
+                                    <!-- حرف فارسی پلاک -->
+                                    <ColumnDefinition Width="65" />
+                                    <!-- ۳ رقم میانی -->
+                                    <ColumnDefinition Width="95" />
+                                    <!-- کد ۲ رقمی استان در کادر مربع -->
+                                    <ColumnDefinition Width="65" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- ۱. نوار آبی بین‌المللی پلاک ایران -->
+                                <Border Grid.Column="0" Background="#1D4ED8" CornerRadius="4,0,0,4">
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="🇮🇷" FontSize="12" HorizontalAlignment="Center" />
+                                        <TextBlock Text="I.R." FontSize="6.5" FontWeight="Bold" Foreground="#FFFFFF" HorizontalAlignment="Center" />
+                                        <TextBlock Text="IRAN" FontSize="6.5" FontWeight="Bold" Foreground="#FFFFFF" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- ۲. دو رقم سمت چپ پلاک -->
+                                <TextBlock Grid.Column="1" x:Name="PlatePart1Text" Text="۱۲" FontSize="26" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                                <!-- ۳. حرف فارسی پلاک -->
+                                <TextBlock Grid.Column="2" x:Name="PlateLetterText" Text="ب" FontSize="26" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                                <!-- ۴. سه رقم میانی پلاک -->
+                                <TextBlock Grid.Column="3" x:Name="PlatePart2Text" Text="۳۴۵" FontSize="26" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                                <!-- ۵. کادر مربع استان و متن ایران -->
+                                <Border Grid.Column="4" BorderBrush="#0F172A" BorderThickness="2,0,0,0" Padding="4,2">
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="ایران" FontSize="9.5" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" />
+                                        <TextBlock x:Name="PlateIranCodeText" Text="۶۷" FontSize="22" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- تصویر کراپ پلاک -->
+                        <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Height="90" Margin="0,0,0,10">
+                            <Image x:Name="PlateCropImage" Stretch="Uniform" />
+                        </Border>
+
+                        <!-- تصویر خودرو -->
+                        <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Height="140" Margin="0,0,0,12">
+                            <Image x:Name="VehicleCropImage" Stretch="Uniform" />
+                        </Border>
+
+                        <!-- مشخصات تفکیک‌شده رویداد -->
+                        <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="8">
+                            <StackPanel>
+                                <TextBlock Text="اطلاعات متادیتا و مدل هوش مصنوعی:" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
+
+                                <Grid Margin="0,0,0,4">
+                                    <TextBlock Text="متن خام OCR:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
+                                    <TextBlock x:Name="RawOcrValue" Text="-" FontSize="9.5" FontWeight="Bold" HorizontalAlignment="Left" />
+                                </Grid>
+
+                                <Grid Margin="0,0,0,4">
+                                    <TextBlock Text="شناسه رویداد:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
+                                    <TextBlock x:Name="EventIdValue" Text="-" FontSize="8.5" FontFamily="JetBrains Mono" HorizontalAlignment="Left" />
+                                </Grid>
+
+                                <Grid Margin="0,0,0,4">
+                                    <TextBlock Text="مدل و نسخه:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
+                                    <TextBlock x:Name="ModelInfoValue" Text="-" FontSize="9.5" HorizontalAlignment="Left" />
+                                </Grid>
+
+                                <Grid Margin="0,0,0,4">
+                                    <TextBlock Text="زمان استنتاج:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
+                                    <TextBlock x:Name="LatencyValue" Text="-" FontSize="9.5" HorizontalAlignment="Left" />
+                                </Grid>
+
+                                <Grid>
+                                    <TextBlock Text="شتاب‌دهنده فعال:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
+                                    <TextBlock x:Name="EpValue" Text="-" FontSize="9.5" FontWeight="Bold" Foreground="#047857" HorizontalAlignment="Left" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- ۴. نوار وضعیت و مصرف دیسک -->
+        <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="10,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="کل رویدادهای ثبت‌شده: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="TotalEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,14,0" />
+
+                    <TextBlock Text="پلاک‌های معتبر: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="VerifiedEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="#047857" Margin="0,0,14,0" />
+
+                    <TextBlock Text="رویدادهای امروز: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="TodayEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,14,0" />
+
+                    <TextBlock Text="میانگین اطمینان: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="AvgConfidenceText" Text="۰٪" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="ذخیره‌سازی محلی SQLite: " FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
+                    <TextBlock Text="archive/anpr_events.db" FontSize="9.5" FontFamily="JetBrains Mono" Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

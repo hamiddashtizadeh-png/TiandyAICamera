@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Header } from './components/Header';
+import { Header, AppNavTab } from './components/Header';
 import { TestPlanOverview } from './components/TestPlanOverview';
 import { MethodExecutor } from './components/MethodExecutor';
 import { VideoPlaybackHarness } from './components/VideoPlaybackHarness';
+import { FaceDetectionPanel } from './components/FaceDetectionPanel';
 import { RtspMatrixScanner } from './components/RtspMatrixScanner';
 import { MediaMTXConfigurator } from './components/MediaMTXConfigurator';
 import { CodecDiagnostics } from './components/CodecDiagnostics';
 import { ComparisonReportView } from './components/ComparisonReportView';
 import { ExportModal } from './components/ExportModal';
+import { DetectedFaceEvent, FaceDetectionSettings } from './types/faceDetection';
 
 import {
   INITIAL_DIRECT_CONFIG,
@@ -19,9 +21,7 @@ import { ConnectionMethod, StreamEndpointConfig, AuditStep, VerificationState } 
 import { generateTiandyRtspUrl } from './utils/tiandySpecs';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<
-    'plan' | 'executor' | 'player' | 'scanner' | 'mediamtx' | 'diagnostics' | 'report'
-  >('plan');
+  const [activeTab, setActiveTab] = useState<AppNavTab>('plan');
 
   const [activeMethod, setActiveMethod] = useState<ConnectionMethod>('direct');
   const [directConfig, setDirectConfig] = useState<StreamEndpointConfig>(INITIAL_DIRECT_CONFIG);
@@ -31,6 +31,55 @@ export default function App() {
   const [nvrSteps, setNvrSteps] = useState<AuditStep[]>(NVR_AUDIT_STEPS);
 
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
+
+  const [faceSettings, setFaceSettings] = useState<FaceDetectionSettings>({
+    enabled: true,
+    showOverlay: true,
+    showConfidenceLabel: true,
+    minConfidence: 75,
+    autoCaptureIntervalMs: 3200,
+    anprEnabled: false,
+    digitalZoom: 1.0,
+  });
+
+  const [faceEvents, setFaceEvents] = useState<DetectedFaceEvent[]>([
+    {
+      id: 'app-face-1',
+      timestamp: '14:28:12.430',
+      date: new Date().toISOString().split('T')[0],
+      channelId: 1,
+      channelName: 'CAM01 [تیاندی مستقیم]',
+      confidence: 96.4,
+      box: { x: 0.35, y: 0.42, width: 0.08, height: 0.14 },
+      trackId: 104,
+      qualityScore: 95,
+      pose: 'روبرو (Frontal)',
+    },
+    {
+      id: 'app-face-2',
+      timestamp: '14:28:07.120',
+      date: new Date().toISOString().split('T')[0],
+      channelId: 1,
+      channelName: 'CAM01 [تیاندی مستقیم]',
+      confidence: 92.1,
+      box: { x: 0.48, y: 0.45, width: 0.08, height: 0.14 },
+      trackId: 105,
+      qualityScore: 89,
+      pose: 'زاویه‌دار (Slight Tilt)',
+    },
+    {
+      id: 'app-face-3',
+      timestamp: '14:27:58.850',
+      date: new Date().toISOString().split('T')[0],
+      channelId: 1,
+      channelName: 'CAM01 [تیاندی مستقیم]',
+      confidence: 94.8,
+      box: { x: 0.22, y: 0.40, width: 0.08, height: 0.14 },
+      trackId: 103,
+      qualityScore: 92,
+      pose: 'روبرو (Frontal)',
+    },
+  ]);
 
   const handleUpdateStepStatus = (
     method: ConnectionMethod,
@@ -118,6 +167,71 @@ export default function App() {
             directUrl={directRtspUrl}
             nvrUrl={nvrRtspUrl}
           />
+        )}
+
+        {activeTab === 'faces' && (
+          <div className="space-y-6">
+            <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>سامانه مدیریت متمرکز رویدادهای چهره و هوش مصنوعی</span>
+                </div>
+                <h2 className="text-lg font-bold text-slate-900 font-display">
+                  آرشیو و نظارت بر تشخیص لحظه‌ای چهره دوربین‌های نظارتی
+                </h2>
+              </div>
+              <button
+                onClick={() => setActiveTab('player')}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 shrink-0 shadow-xs"
+              >
+                <span>مشاهده زنده بوم ویدیویی با کادر سبز</span>
+                <span className="text-emerald-400 font-mono">←</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8">
+                <FaceDetectionPanel
+                  events={faceEvents}
+                  settings={faceSettings}
+                  onUpdateSettings={(u) => setFaceSettings((prev) => ({ ...prev, ...u }))}
+                  onClearEvents={() => setFaceEvents([])}
+                  isStreamLive={true}
+                />
+              </div>
+              <div className="lg:col-span-4 space-y-4">
+                <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
+                  <h4 className="text-xs font-bold text-slate-800 border-b border-slate-100 pb-2">
+                    تنظیمات موتور تشخیص (Inference Engine)
+                  </h4>
+                  <div className="space-y-2.5 text-xs text-slate-600">
+                    <div className="flex items-center justify-between">
+                      <span>نرخ استخراج فریم:</span>
+                      <span className="font-mono font-bold text-cyan-800">25 FPS</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>حساسیت تشخیص (Min Confidence):</span>
+                      <span className="font-mono font-bold text-slate-800">{faceSettings.minConfidence}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>حفاظت از کپسول آرشیو:</span>
+                      <span className="font-bold text-emerald-700">AES-256-GCM / 96-bit</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+                  <div className="font-bold flex items-center gap-1.5 text-emerald-800">
+                    <span>پایش بدون اتلاف نرخ فریم (Zero Frame Drop)</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-emerald-700">
+                    با تفکیک بوم ویدیویی از بوم اورلی (Dual-Canvas Overlay)، پردازش کادرهای سبز و تله‌متری بیومتریک هیچ تاخیری در پایپ‌لاین دیکود فریم ایجاد نمی‌کند.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {activeTab === 'scanner' && <RtspMatrixScanner />}

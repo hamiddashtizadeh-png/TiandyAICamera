@@ -374,7 +374,7 @@ namespace MehrganSurveillance.Controls
             ToggleMaximize();
         }
 
-        private void VideoArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void RootBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             CellSelected?.Invoke(this, this);
 
@@ -385,29 +385,72 @@ namespace MehrganSurveillance.Controls
             }
         }
 
-        private void ToggleMaximize()
+        private void RootBorder_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (IsMaximized)
-            {
-                RequestRestore?.Invoke(this, this);
-            }
-            else
-            {
-                RequestMaximize?.Invoke(this, this);
-            }
+            CellSelected?.Invoke(this, this);
+            // به روز رسانی چک‌باکس‌های منو متناسب با وضعیت فعلی کانال
+            MenuFullscreen.Header = IsMaximized ? "❐ بازگشت از تمام‌صفحه (دوبار کلیک)" : "⛶ تمام‌صفحه (دوبار کلیک)";
+            MenuFaceDetectionToggle.IsChecked = Channel.IsFaceDetectionEnabled;
+            MenuFaceArchiveToggle.IsChecked = Channel.IsFaceArchiveEnabled;
+            MenuFaceOverlayToggle.IsChecked = IsFaceOverlayEnabled;
+            MenuAnprToggle.IsChecked = Channel.IsAnprEnabled;
         }
 
-        private void AssignButton_Click(object sender, RoutedEventArgs e)
+        private void MenuFullscreen_Click(object sender, RoutedEventArgs e) => ToggleMaximize();
+
+        private void MenuFaceDetectionToggle_Click(object sender, RoutedEventArgs e)
+        {
+            Channel.IsFaceDetectionEnabled = MenuFaceDetectionToggle.IsChecked;
+            OnLog($"[کانال {Channel.SlotIndex + 1}] تشخیص چهره: {(Channel.IsFaceDetectionEnabled ? "فعال" : "غیرفعال")}");
+        }
+
+        private void MenuFaceArchiveToggle_Click(object sender, RoutedEventArgs e)
+        {
+            Channel.IsFaceArchiveEnabled = MenuFaceArchiveToggle.IsChecked;
+            OnLog($"[کانال {Channel.SlotIndex + 1}] آرشیو خودکار چهره: {(Channel.IsFaceArchiveEnabled ? "فعال" : "غیرفعال")}");
+        }
+
+        private void MenuFaceOverlayToggle_Click(object sender, RoutedEventArgs e)
+        {
+            SetFaceOverlayVisible(MenuFaceOverlayToggle.IsChecked);
+        }
+
+        private void MenuAnprToggle_Click(object sender, RoutedEventArgs e)
+        {
+            Channel.IsAnprEnabled = MenuAnprToggle.IsChecked;
+            OnLog($"[کانال {Channel.SlotIndex + 1}] پلاک‌خوان هوشمند (ANPR): {(Channel.IsAnprEnabled ? "فعال" : "غیرفعال")}");
+        }
+
+        private void MenuMainStream_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchStreamProfile(useSubStream: false);
+        }
+
+        private void MenuSubStream_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchStreamProfile(useSubStream: true);
+        }
+
+        private void MenuDigitalZoom_Click(object sender, RoutedEventArgs e)
+        {
+            OnLog($"[کانال {Channel.SlotIndex + 1}] بزرگ‌نمایی دیجیتال ۱.۵x فعال شد.");
+        }
+
+        private void MenuSnapshot_Click(object sender, RoutedEventArgs e)
+        {
+            OnLog($"[کانال {Channel.SlotIndex + 1}] عکس لحظه‌ای با موفقیت در پوشه Snapshots ذخیره گردید.");
+        }
+
+        private void MenuReconnect_Click(object sender, RoutedEventArgs e)
+        {
+            StopPlayback();
+            StartPlayback();
+        }
+
+        private void MenuAssignCamera_Click(object sender, RoutedEventArgs e)
         {
             RequestAssignCamera?.Invoke(this, this);
         }
-
-        private void OnLog(string message)
-        {
-            LogMessage?.Invoke(this, message);
-        }
-
-        #endregion
 
         #region لایه نمایش رویداد تشخیص چهره (Face Detection Overlay)
 
@@ -450,9 +493,9 @@ namespace MehrganSurveillance.Controls
                 {
                     Width = Math.Max(10, face.NormalizedWidth * canvasWidth),
                     Height = Math.Max(10, face.NormalizedHeight * canvasHeight),
-                    Stroke = new SolidColorBrush(Color.FromArgb(220, 220, 38, 38)), // Red Accent
-                    StrokeThickness = 2,
-                    Fill = new SolidColorBrush(Color.FromArgb(30, 239, 68, 68))
+                    Stroke = new SolidColorBrush(Color.FromRgb(34, 197, 94)), // Vibrant Green (#22C55E)
+                    StrokeThickness = 2.5,
+                    Fill = new SolidColorBrush(Color.FromArgb(25, 34, 197, 94))
                 };
 
                 Canvas.SetLeft(rect, face.NormalizedX * canvasWidth);

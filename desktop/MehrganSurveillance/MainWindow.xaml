@@ -100,7 +100,28 @@
                                     Height="24"
                                     Padding="10,2"
                                     FontSize="10.5"
+                                    Margin="0,0,2,0"
                                     Click="OpenFaceArchiveWindow_Click" />
+
+                            <!-- تب ۴: پلاک‌خوان هوشمند (ANPR) -->
+                            <Button Content="🚗 پلاک‌خوان هوشمند (ANPR)"
+                                    ToolTip="آرشیو پلاک‌خوانی، جستجوی پلاک‌های ملی ایران و وضعیت موتور AI"
+                                    Style="{StaticResource NavTabButtonStyle}"
+                                    Height="24"
+                                    Padding="10,2"
+                                    FontSize="10.5"
+                                    Margin="0,0,2,0"
+                                    Click="OpenAnprWindow_Click" />
+
+                            <!-- تب ۴: پنل زنده چهره‌های شناسایی‌شده -->
+                            <Button x:Name="ToggleLiveFacePanelButton"
+                                    Content="👤 پنل چهره‌های زنده"
+                                    ToolTip="باز / بسته کردن پنل جانبی نمایش چهره‌های شناسایی‌شده لحظه‌ای"
+                                    Style="{StaticResource NavTabButtonStyle}"
+                                    Height="24"
+                                    Padding="10,2"
+                                    FontSize="10.5"
+                                    Click="ToggleLiveFacePanelButton_Click" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -217,9 +238,11 @@
         <Grid Grid.Row="1" Margin="6,6,6,4">
             <Grid.ColumnDefinitions>
                 <!-- ستون ۰ در RTL = سمت راست پنجره (Right-side Camera Sidebar) -->
-                <ColumnDefinition x:Name="SidebarColumn" Width="290" MinWidth="220" MaxWidth="380" />
-                <!-- ستون ۱ در RTL = مرکز و سمت چپ (Large Dark Multi-Camera Video Wall) -->
+                <ColumnDefinition x:Name="SidebarColumn" Width="280" MinWidth="200" MaxWidth="360" />
+                <!-- ستون ۱ در RTL = مرکز (Large Dark Multi-Camera Video Wall) -->
                 <ColumnDefinition Width="*" />
+                <!-- ستون ۲ در RTL = سمت چپ پنجره (Left-side Live Face Events & Capture Panel) -->
+                <ColumnDefinition x:Name="LiveFacePanelColumn" Width="280" MinWidth="220" MaxWidth="380" />
             </Grid.ColumnDefinitions>
 
             <!-- ============================================================= -->
@@ -507,6 +530,176 @@
                     </UniformGrid>
                 </Border>
             </Grid>
+
+            <!-- ============================================================= -->
+            <!-- ستون ۲ در RTL: پنل زنده چهره‌های شناسایی‌شده (Live Face Capture) -->
+            <!-- ============================================================= -->
+            <Border Grid.Column="2"
+                    x:Name="LiveFacePanelBorder"
+                    Background="{StaticResource CardBackgroundBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8"
+                    Margin="6,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <!-- سربرگ پنل چهره‌های زنده با بج شمارنده -->
+                        <RowDefinition Height="Auto" />
+                        <!-- دکمه‌های سریع جستجو و باز کردن آرشیو تاریخی -->
+                        <RowDefinition Height="Auto" />
+                        <!-- لیست وقایع چهره‌های شناسایی‌شده لحظه‌ای -->
+                        <RowDefinition Height="*" />
+                        <!-- پاورقی تنظیمات سریع چهره -->
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- سربرگ پنل -->
+                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="👤 چهره‌های شناسایی‌شده زنده"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center" />
+                            <Border Background="#DCFCE7"
+                                    CornerRadius="8"
+                                    Padding="5,1"
+                                    Margin="5,0,0,0">
+                                <TextBlock x:Name="LiveFaceCountBadgeText" Text="۰" FontSize="9" FontWeight="Bold" Foreground="#15803D" />
+                            </Border>
+                        </StackPanel>
+
+                        <!-- دکمه بستن سریع پنل -->
+                        <Button Grid.Column="1"
+                                Content="✕"
+                                ToolTip="بستن این پنل جانبی"
+                                Style="{StaticResource IconToolButtonStyle}"
+                                Width="20" Height="20"
+                                FontSize="9.5"
+                                Click="CloseLiveFacePanel_Click" />
+                    </Grid>
+
+                    <!-- نوار دکمه‌های جستجوی تاریخی و ساعتی -->
+                    <Border Grid.Row="1"
+                            Background="#F8FAFC"
+                            BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="6,4"
+                            Margin="0,0,0,6">
+                        <StackPanel>
+                            <Button Content="🔍 جستجوی تاریخی و ساعتی چهره‌ها..."
+                                    ToolTip="باز کردن پنجره آرشیو برای جستجوی پیشرفته بر اساس تاریخ، ساعت و دوربین"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Height="24"
+                                    FontSize="10"
+                                    Margin="0,0,0,4"
+                                    Click="OpenFaceArchiveWindow_Click" />
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox x:Name="FaceOverlayLiveToggle"
+                                          Content="نمایش کادر سبز روی زنده"
+                                          IsChecked="True"
+                                          FontSize="9.5"
+                                          VerticalAlignment="Center"
+                                          Click="FaceOverlayLiveToggle_Click" />
+                                <Button Grid.Column="1"
+                                        Content="پاک‌سازی لیست"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Height="18"
+                                        FontSize="8.5"
+                                        Padding="4,0"
+                                        Click="ClearLiveFacesList_Click" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- لیست فید چهره‌های شناسایی‌شده لحظه‌ای -->
+                    <Border Grid.Row="2"
+                            Background="#F8FAFC"
+                            BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                        <ListBox x:Name="LiveFaceCaptureListBox"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FFFFFF"
+                                            BorderBrush="{StaticResource BorderLightBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="6,4"
+                                            Margin="0,2">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <!-- آیکون چهره با کادر سبز رنگ -->
+                                                <ColumnDefinition Width="42" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- کادر نمادین یا پیش‌نمایش چهره با استروک سبز -->
+                                            <Border Grid.Column="0"
+                                                    Width="36" Height="36"
+                                                    Background="#F0FDF4"
+                                                    BorderBrush="#22C55E"
+                                                    BorderThickness="1.5"
+                                                    CornerRadius="3"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="👤" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding CameraName}" FontWeight="SemiBold" FontSize="10" Foreground="#0F172A" TextTrimming="CharacterEllipsis" />
+                                                    <Border Background="#DCFCE7" CornerRadius="2" Padding="3,0" Margin="4,0,0,0">
+                                                        <TextBlock Text="{Binding ConfidenceText}" FontSize="8" FontWeight="Bold" Foreground="#15803D" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="زمان: " FontSize="8.5" Foreground="{StaticResource TextMutedBrush}" />
+                                                    <TextBlock Text="{Binding TimestampString}" FontSize="8.5" FontFamily="JetBrains Mono, Consolas" Foreground="{StaticResource PrimaryBrush}" FlowDirection="LeftToRight" />
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- دکمه جزئیات یا مشاهده در آرشیو -->
+                                            <Button Grid.Column="2"
+                                                    Content="آرشیو"
+                                                    ToolTip="مشاهده در آرشیو چهره"
+                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                    FontSize="8.5"
+                                                    Padding="4,1"
+                                                    Height="20"
+                                                    VerticalAlignment="Center"
+                                                    Click="ViewFaceInArchive_Click" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+
+                    <!-- وضعیت فعال‌بودن هوش مصنوعی -->
+                    <Border Grid.Row="3" Background="#F1F5F9" CornerRadius="3" Padding="6,3" Margin="0,6,0,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="FaceAiStatusDot" Width="6" Height="6" Fill="#16A34A" Margin="0,0,5,0" />
+                            <TextBlock x:Name="FaceAiStatusText" Text="هوش مصنوعی چهره فعال است" FontSize="9" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- ================================================================= -->

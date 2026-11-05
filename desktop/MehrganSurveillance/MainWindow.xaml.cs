@@ -34,9 +34,13 @@ namespace MehrganSurveillance
         private int? _maximizedSlotIndex = null;
         private int _selectedSlotIndex = 0;
 
-        // سرویس‌های هوش مصنوعی و آرشیو محلی چهره
+        // سرویس‌های هوش مصنوعی و آرشیو محلی چهره و پلاک‌خوان ANPR
         private readonly FaceDetectionPipeline _facePipeline = new();
         private FaceArchiveService? _archiveService;
+        private readonly AnprPipeline _anprPipeline = new();
+        private AnprArchiveService? _anprArchiveService;
+        private readonly System.Collections.ObjectModel.ObservableCollection<LiveFaceFeedItem> _liveFaceFeed = new();
+        private long _liveFaceCounter;
 
         // صف لاگ‌های باچ‌شده و تایمر اختصاصی جهت جلوگیری از فریز UI
         private readonly ConcurrentQueue<string> _logQueue = new();
@@ -109,15 +113,61 @@ namespace MehrganSurveillance
                 _archiveService = new FaceArchiveService();
                 await _archiveService.InitializeAsync();
 
-                // اتصال رویداد تشخیص فریم به آرشیو و نمایش کادر روی سلول مرتبط
+                // ۵. مقداردهی اولیه پایپ‌لاین پلاک‌خوان هوشمند و آرشیو محلی ANPR
+                _anprPipeline.Initialize();
+                _anprArchiveService = new AnprArchiveService();
+                await _anprArchiveService.InitializeAsync();
+
+                _anprPipeline.PlateRecognized += (anprResult) =>
+                {
+                    if (_anprArchiveService != null)
+                    {
+                        _ = _anprArchiveService.RecordEventAsync(anprResult);
+                    }
+                    LogEvent($"پلاک خودرو کشف شد: {anprResult.Plate.NormalizedText} (اطمینان: {anprResult.OcrConfidence:P0})");
+                };
+
+                LiveFaceCaptureListBox.ItemsSource = _liveFaceFeed;
+
+                // اتصال رویداد تشخیص فریم به آرشیو، نمایش کادر سبز روی سلول و افزودن به پنل زنده
                 _facePipeline.FrameFaceDetected += (result, frame) =>
                 {
                     _archiveService?.OnFaceDetected(result, frame);
 
-                    if (result.ChannelIndex >= 0 && result.ChannelIndex < _cells.Count)
+                    Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        _cells[result.ChannelIndex].UpdateFaceDetections(result.Faces);
-                    }
+                        if (result.ChannelIndex >= 0 && result.ChannelIndex < _cells.Count)
+                        {
+                            _cells[result.ChannelIndex].UpdateFaceDetections(result.Faces);
+                        }
+
+                        if (result.Faces != null && result.Faces.Count > 0)
+                        {
+                            string camName = (result.ChannelIndex >= 0 && result.ChannelIndex < _channels.Count)
+                                ? _channels[result.ChannelIndex].DisplayName
+                                : $"کانال {result.ChannelIndex + 1}";
+
+                            foreach (var face in result.Faces)
+                            {
+                                Interlocked.Increment(ref _liveFaceCounter);
+                                _liveFaceFeed.Insert(0, new LiveFaceFeedItem
+                                {
+                                    CameraName = camName,
+                                    TimestampString = DateTime.Now.ToString("HH:mm:ss"),
+                                    ConfidenceText = $"{Math.Round(face.Confidence * 100)}%",
+                                    ChannelIndex = result.ChannelIndex
+                                });
+
+                                // محدودسازی لیست فید زنده به ۵۰ مورد اخیر جهت حفظ روان بودن
+                                while (_liveFaceFeed.Count > 50)
+                                {
+                                    _liveFaceFeed.RemoveAt(_liveFaceFeed.Count - 1);
+                                }
+                            }
+
+                            LiveFaceCountBadgeText.Text = _liveFaceCounter.ToString();
+                        }
+                    }));
                 };
 
                 // ۴. مقداردهی اسلات‌های ۹ گانه
@@ -650,6 +700,67 @@ namespace MehrganSurveillance
             };
             archiveWin.ShowDialog();
         }
+
+        private void OpenAnprWindow_Click(object sender, RoutedEventArgs e)
+        {
+            var anprWin = new AnprWindow(_anprPipeline, _anprArchiveService)
+            {
+                Owner = this
+            };
+            anprWin.ShowDialog();
+        }
+
+        private void ToggleLiveFacePanelButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (LiveFacePanelBorder.Visibility == Visibility.Visible)
+            {
+                LiveFacePanelBorder.Visibility = Visibility.Collapsed;
+                LiveFacePanelColumn.Width = new GridLength(0);
+            }
+            else
+            {
+                LiveFacePanelBorder.Visibility = Visibility.Visible;
+                LiveFacePanelColumn.Width = new GridLength(280);
+            }
+        }
+
+        private void CloseLiveFacePanel_Click(object sender, RoutedEventArgs e)
+        {
+            LiveFacePanelBorder.Visibility = Visibility.Collapsed;
+            LiveFacePanelColumn.Width = new GridLength(0);
+        }
+
+        private void ClearLiveFacesList_Click(object sender, RoutedEventArgs e)
+        {
+            _liveFaceFeed.Clear();
+            _liveFaceCounter = 0;
+            LiveFaceCountBadgeText.Text = "۰";
+        }
+
+        private void FaceOverlayLiveToggle_Click(object sender, RoutedEventArgs e)
+        {
+            bool isChecked = FaceOverlayLiveToggle.IsChecked == true;
+            foreach (var cell in _cells)
+            {
+                cell.SetFaceOverlayVisible(isChecked);
+            }
+        }
+
+        private void ViewFaceInArchive_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFaceArchiveWindow_Click(sender, e);
+        }
         #endregion
+    }
+
+    /// <summary>
+    /// مدل نمایشی فید زنده‌ی چهره‌های شناسایی‌شده در پنل کناری
+    /// </summary>
+    public class LiveFaceFeedItem
+    {
+        public string CameraName { get; init; } = string.Empty;
+        public string TimestampString { get; init; } = string.Empty;
+        public string ConfidenceText { get; init; } = string.Empty;
+        public int ChannelIndex { get; init; }
     }
 }

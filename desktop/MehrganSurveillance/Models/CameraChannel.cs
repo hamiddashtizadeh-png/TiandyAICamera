@@ -32,6 +32,11 @@ namespace MehrganSurveillance.Models
         public string CurrentStatus { get; set; } = "آماده اتصال";
         public string StatusColorHex { get; set; } = "#64748B"; // خاکستری
 
+        // تنظیمات هوش مصنوعی و آرشیو مختص هر کانال
+        public bool IsFaceDetectionEnabled { get; set; } = true;
+        public bool IsFaceArchiveEnabled { get; set; } = false;
+        public bool IsAnprEnabled { get; set; } = false;
+
         /// <summary>
         /// دریافت آدرس موثر استریم با در نظر گرفتن نوع تقاضا (فرعی یا اصلی) و منطق تبدیل خودکار تیاندی
         /// </summary>

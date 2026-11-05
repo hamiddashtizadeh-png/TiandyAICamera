@@ -6,7 +6,7 @@
         MinWidth="1000" MinHeight="680"
         FlowDirection="RightToLeft"
         FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif"
-        Background="{StaticResource BackgroundLightBrush}"
+        Background="#161B26"
         WindowStartupLocation="CenterOwner">
 
     <Grid Margin="12">
@@ -22,7 +22,7 @@
         </Grid.RowDefinitions>
 
         <!-- ۱. سربرگ و کلیدهای مدیریتی فعال‌سازی (Admin Controls) -->
-        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+        <Border Grid.Row="0" Background="#202634" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -31,67 +31,60 @@
 
                 <StackPanel Grid.Column="0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="🚗 پلاک‌خوان هوشمند خودرو (Iranian ANPR System)" FontSize="13.5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
-                        <Border Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="4" Padding="6,1" Margin="10,0,0,0">
-                            <TextBlock x:Name="AiEngineStatusBadge" Text="شتاب‌دهنده DirectML / محلی" FontSize="9.5" FontWeight="Bold" Foreground="#047857" />
+                        <TextBlock Text="🚗 پلاک‌خوان هوشمند خودرو (Iranian ANPR System)" FontSize="13.5" FontWeight="Bold" Foreground="#F1F5F9" />
+                        <Border Background="#111827" BorderBrush="#2563EB" BorderThickness="1" CornerRadius="4" Padding="8,2" Margin="10,0,0,0">
+                            <TextBlock x:Name="AiEngineStatusBadge" Text="شتاب‌دهنده DirectML / محلی" FontSize="9.5" FontWeight="Bold" Foreground="#38BDF8" />
                         </Border>
                     </StackPanel>
-                    <TextBlock Text="تشخیص خودکار خودرو، تفکیک کادر پلاک و نویسه‌خوانی OCR با پشتیبانی کامل از حروف و ساختار پلاک‌های ملی ایران (بدون ارسال به Cloud)." FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock Text="تشخیص خودکار خودرو، تفکیک کادر پلاک و نویسه‌خوانی OCR با پشتیبانی کامل از حروف و ساختار پلاک‌های ملی ایران (بدون ارسال به Cloud)." FontSize="10" Foreground="#94A3B8" />
                 </StackPanel>
 
                 <!-- سوئیچ‌های مدیریتی -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <CheckBox x:Name="AnprEnableToggle" Content="فعال‌سازی موتور پلاک‌خوان" IsChecked="false" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="AnprEnableToggle_Click" />
-                    <CheckBox x:Name="AutoArchiveToggle" Content="ثبت خودکار در آرشیو محلی" IsChecked="true" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="AutoArchiveToggle_Click" />
+                    <CheckBox x:Name="AnprEnableToggle" Content="فعال‌سازی موتور پلاک‌خوان" IsChecked="true" Foreground="#F1F5F9" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="AnprEnableToggle_Click" />
+                    <CheckBox x:Name="AutoArchiveToggle" Content="ثبت خودکار در آرشیو محلی" IsChecked="true" Foreground="#F1F5F9" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="AutoArchiveToggle_Click" />
                     <Button Content="🔄 بروزرسانی" Style="{StaticResource SecondaryButtonStyle}" Height="26" Padding="10,0" FontSize="10.5" Click="RefreshButton_Click" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- ۲. نوار فیلترهای جستجو و کیبورد سریع پلاک -->
-        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10">
+        <Border Grid.Row="1" Background="#202634" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10">
             <StackPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <!-- جستجوی متن پلاک -->
                         <ColumnDefinition Width="220" />
-                        <!-- فیلتر دوربین -->
                         <ColumnDefinition Width="150" />
-                        <!-- تاریخ از -->
                         <ColumnDefinition Width="140" />
-                        <!-- تاریخ تا -->
                         <ColumnDefinition Width="140" />
-                        <!-- وضعیت اعتبار -->
                         <ColumnDefinition Width="130" />
-                        <!-- دکمه اقدام -->
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
-                        <!-- دکمه حذف -->
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                        <TextBlock Text="شماره یا بخشی از پلاک:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <TextBlock Text="شماره یا بخشی از پلاک:" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,3" />
                         <TextBox x:Name="PlateSearchBox" Height="26" FontSize="11" FontWeight="SemiBold" Padding="4,2" KeyDown="PlateSearchBox_KeyDown" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                        <TextBlock Text="دوربین:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <TextBlock Text="دوربین:" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,3" />
                         <ComboBox x:Name="CameraFilterCombo" Height="26" FontSize="10" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Margin="0,0,10,0">
-                        <TextBlock Text="از تاریخ:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <TextBlock Text="از تاریخ:" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,3" />
                         <DatePicker x:Name="FromDatePicker" Height="26" FontSize="10" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="3" Margin="0,0,10,0">
-                        <TextBlock Text="تا تاریخ:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <TextBlock Text="تا تاریخ:" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,3" />
                         <DatePicker x:Name="ToDatePicker" Height="26" FontSize="10" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="4" Margin="0,0,10,0">
-                        <TextBlock Text="وضعیت اعتبار:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,3" />
+                        <TextBlock Text="وضعیت اعتبار:" FontSize="10" Foreground="#94A3B8" Margin="0,0,0,3" />
                         <ComboBox x:Name="StatusFilterCombo" Height="26" FontSize="10">
                             <ComboBoxItem Content="همه وضعیت‌ها" IsSelected="True" />
                             <ComboBoxItem Content="معتبر (Verified)" />
@@ -107,25 +100,25 @@
 
                 <!-- ردیف حروف پرکاربرد پلاک ایران جهت درج سریع در جستجو -->
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="حروف سریع:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <Button Content="ب" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ج" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="د" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="س" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ص" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ط" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ع" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ق" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ل" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="م" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ن" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="و" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ه" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ی" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ت" ToolTip="تاکسی" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="4,0,1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="الف" ToolTip="دولتی" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="30" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="پ" ToolTip="پلیس" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
-                    <Button Content="ژ" ToolTip="معلولین / جانبازان" Style="{StaticResource SecondaryButtonStyle}" Height="20" Width="24" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <TextBlock Text="حروف سریع:" FontSize="9.5" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <Button Content="ب" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ج" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="د" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="س" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ص" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ط" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ع" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ق" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ل" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="م" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ن" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="و" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ه" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ی" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ت" ToolTip="تاکسی" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="4,0,1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="الف" ToolTip="دولتی" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="32" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="پ" ToolTip="پلیس" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
+                    <Button Content="ژ" ToolTip="معلولین / جانبازان" Style="{StaticResource SecondaryButtonStyle}" Height="22" Width="26" Padding="0" Margin="1,0" FontSize="9.5" Click="QuickLetter_Click" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -133,22 +126,21 @@
         <!-- ۳. محتوای اصلی: جدول رویدادها (راست) و پلاک گرافیکی و پیش‌نمایش تصویر (چپ) -->
         <Grid Grid.Row="2" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
-                <!-- جدول رویدادها -->
                 <ColumnDefinition Width="*" />
-                <!-- پنل نمایش پلاک و جزئیات -->
                 <ColumnDefinition Width="400" />
             </Grid.ColumnDefinitions>
 
             <!-- جدول رویدادهای پلاک‌خوان -->
-            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Margin="0,0,8,0">
+            <Border Grid.Column="0" Background="#1C2230" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Margin="0,0,8,0">
                 <DataGrid x:Name="AnprEventsGrid"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
                           SelectionMode="Extended"
                           CanUserAddRows="False"
                           GridLinesVisibility="Horizontal"
-                          HorizontalGridLinesBrush="#F1F5F9"
+                          HorizontalGridLinesBrush="#2A3244"
                           Background="Transparent"
+                          Foreground="#F1F5F9"
                           BorderThickness="0"
                           RowHeight="36"
                           FontSize="10.5"
@@ -167,10 +159,10 @@
             </Border>
 
             <!-- پنل پیش‌نمایش گرافیکی پلاک و مشخصات فنی -->
-            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12">
+            <Border Grid.Column="1" Background="#202634" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Padding="12">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock Text="پیش‌نمایش پلاک و مشخصات بیومتریک رویداد" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,10" />
+                        <TextBlock Text="پیش‌نمایش پلاک و مشخصات رویداد" FontSize="11.5" FontWeight="Bold" Foreground="#F1F5F9" Margin="0,0,0,10" />
 
                         <!-- پلاک گرافیکی شبیه‌سازی‌شده رسمی ایران -->
                         <Border x:Name="PlateVisualCard"
@@ -183,15 +175,10 @@
                                 SnapsToDevicePixels="True">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <!-- نوار آبی سمت راست پلاک ملی با پرچم ایران و متن I.R. IRAN -->
                                     <ColumnDefinition Width="38" />
-                                    <!-- ۲ رقم ابتدایی -->
                                     <ColumnDefinition Width="65" />
-                                    <!-- حرف فارسی پلاک -->
                                     <ColumnDefinition Width="65" />
-                                    <!-- ۳ رقم میانی -->
                                     <ColumnDefinition Width="95" />
-                                    <!-- کد ۲ رقمی استان در کادر مربع -->
                                     <ColumnDefinition Width="65" />
                                 </Grid.ColumnDefinitions>
 
@@ -224,43 +211,49 @@
                         </Border>
 
                         <!-- تصویر کراپ پلاک -->
-                        <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Height="90" Margin="0,0,0,10">
-                            <Image x:Name="PlateCropImage" Stretch="Uniform" />
+                        <Border Background="#131722" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Height="95" Margin="0,0,0,10">
+                            <Grid>
+                                <TextBlock Text="تصویر برش پلاک خودرو" FontSize="9.5" Foreground="#64748B" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Image x:Name="PlateCropImage" Stretch="Uniform" />
+                            </Grid>
                         </Border>
 
                         <!-- تصویر خودرو -->
-                        <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Height="140" Margin="0,0,0,12">
-                            <Image x:Name="VehicleCropImage" Stretch="Uniform" />
+                        <Border Background="#131722" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Height="150" Margin="0,0,0,12">
+                            <Grid>
+                                <TextBlock Text="تصویر کامل خودرو" FontSize="9.5" Foreground="#64748B" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Image x:Name="VehicleCropImage" Stretch="Uniform" />
+                            </Grid>
                         </Border>
 
                         <!-- مشخصات تفکیک‌شده رویداد -->
-                        <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="8">
+                        <Border Background="#151924" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Padding="8">
                             <StackPanel>
-                                <TextBlock Text="اطلاعات متادیتا و مدل هوش مصنوعی:" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
+                                <TextBlock Text="اطلاعات متادیتا و مدل هوش مصنوعی:" FontSize="10" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,6" />
 
                                 <Grid Margin="0,0,0,4">
-                                    <TextBlock Text="متن خام OCR:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="RawOcrValue" Text="-" FontSize="9.5" FontWeight="Bold" HorizontalAlignment="Left" />
+                                    <TextBlock Text="متن خام OCR:" FontSize="9.5" Foreground="#94A3B8" />
+                                    <TextBlock x:Name="RawOcrValue" Text="-" FontSize="9.5" FontWeight="Bold" Foreground="#F1F5F9" HorizontalAlignment="Left" />
                                 </Grid>
 
                                 <Grid Margin="0,0,0,4">
-                                    <TextBlock Text="شناسه رویداد:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="EventIdValue" Text="-" FontSize="8.5" FontFamily="JetBrains Mono" HorizontalAlignment="Left" />
+                                    <TextBlock Text="شناسه رویداد:" FontSize="9.5" Foreground="#94A3B8" />
+                                    <TextBlock x:Name="EventIdValue" Text="-" FontSize="8.5" FontFamily="JetBrains Mono" Foreground="#CBD5E1" HorizontalAlignment="Left" />
                                 </Grid>
 
                                 <Grid Margin="0,0,0,4">
-                                    <TextBlock Text="مدل و نسخه:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="ModelInfoValue" Text="-" FontSize="9.5" HorizontalAlignment="Left" />
+                                    <TextBlock Text="مدل و نسخه:" FontSize="9.5" Foreground="#94A3B8" />
+                                    <TextBlock x:Name="ModelInfoValue" Text="-" FontSize="9.5" Foreground="#CBD5E1" HorizontalAlignment="Left" />
                                 </Grid>
 
                                 <Grid Margin="0,0,0,4">
-                                    <TextBlock Text="زمان استنتاج:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="LatencyValue" Text="-" FontSize="9.5" HorizontalAlignment="Left" />
+                                    <TextBlock Text="زمان استنتاج:" FontSize="9.5" Foreground="#94A3B8" />
+                                    <TextBlock x:Name="LatencyValue" Text="-" FontSize="9.5" Foreground="#CBD5E1" HorizontalAlignment="Left" />
                                 </Grid>
 
                                 <Grid>
-                                    <TextBlock Text="شتاب‌دهنده فعال:" FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock x:Name="EpValue" Text="-" FontSize="9.5" FontWeight="Bold" Foreground="#047857" HorizontalAlignment="Left" />
+                                    <TextBlock Text="شتاب‌دهنده فعال:" FontSize="9.5" Foreground="#94A3B8" />
+                                    <TextBlock x:Name="EpValue" Text="-" FontSize="9.5" FontWeight="Bold" Foreground="#34D399" HorizontalAlignment="Left" />
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -270,7 +263,7 @@
         </Grid>
 
         <!-- ۴. نوار وضعیت و مصرف دیسک -->
-        <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="10,6">
+        <Border Grid.Row="3" Background="#11151E" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Padding="12,7">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -278,22 +271,22 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="کل رویدادهای ثبت‌شده: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
-                    <TextBlock x:Name="TotalEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,14,0" />
+                    <TextBlock Text="کل رویدادهای ثبت‌شده: " FontSize="10" Foreground="#94A3B8" />
+                    <TextBlock x:Name="TotalEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="#F1F5F9" Margin="0,0,14,0" />
 
-                    <TextBlock Text="پلاک‌های معتبر: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
-                    <TextBlock x:Name="VerifiedEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="#047857" Margin="0,0,14,0" />
+                    <TextBlock Text="پلاک‌های معتبر: " FontSize="10" Foreground="#94A3B8" />
+                    <TextBlock x:Name="VerifiedEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="#34D399" Margin="0,0,14,0" />
 
-                    <TextBlock Text="رویدادهای امروز: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
-                    <TextBlock x:Name="TodayEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,14,0" />
+                    <TextBlock Text="رویدادهای امروز: " FontSize="10" Foreground="#94A3B8" />
+                    <TextBlock x:Name="TodayEventsText" Text="۰" FontSize="10.5" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,14,0" />
 
-                    <TextBlock Text="میانگین اطمینان: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
-                    <TextBlock x:Name="AvgConfidenceText" Text="۰٪" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="میانگین اطمینان: " FontSize="10" Foreground="#94A3B8" />
+                    <TextBlock x:Name="AvgConfidenceText" Text="۰٪" FontSize="10.5" FontWeight="Bold" Foreground="#F1F5F9" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="ذخیره‌سازی محلی SQLite: " FontSize="9.5" Foreground="{StaticResource TextMutedBrush}" />
-                    <TextBlock Text="archive/anpr_events.db" FontSize="9.5" FontFamily="JetBrains Mono" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock Text="ذخیره‌سازی محلی SQLite: " FontSize="9.5" Foreground="#94A3B8" />
+                    <TextBlock Text="archive/anpr_events.db" FontSize="9.5" FontFamily="JetBrains Mono" Foreground="#38BDF8" />
                 </StackPanel>
             </Grid>
         </Border>

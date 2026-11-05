@@ -430,10 +430,11 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                 float centerX = (bestCol + 0.5f) / gridCols;
                 float centerY = (bestRow + 0.5f) / gridRows;
 
-                float boxW = 0.18f;
-                float boxH = 0.24f;
-                float normX = Math.Clamp(centerX - (boxW / 2), 0.02f, 0.80f);
-                float normY = Math.Clamp(centerY - (boxH / 2), 0.02f, 0.74f);
+                // ابعاد بزرگ‌تر و استاندارد کادر چهره و سرشانه (حداقل ۲۶٪ عرض و ۳۴٪ ارتفاع تصویر)
+                float boxW = 0.26f;
+                float boxH = 0.34f;
+                float normX = Math.Clamp(centerX - (boxW / 2), 0.02f, 0.72f);
+                float normY = Math.Clamp(centerY - (boxH / 2), 0.02f, 0.64f);
 
                 float confidence = Math.Min(0.96f, 0.85f + (maxCount / 400f));
 
@@ -451,10 +452,10 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                 // فقط برای دوربین‌های تست سنتتیک (بدون دوربین فیزیکی) یک کادر نمونه تولید می‌شود
                 faces.Add(new FaceBoundingBox
                 {
-                    NormalizedX = 0.38f,
-                    NormalizedY = 0.22f,
-                    NormalizedWidth = 0.24f,
-                    NormalizedHeight = 0.34f,
+                    NormalizedX = 0.35f,
+                    NormalizedY = 0.20f,
+                    NormalizedWidth = 0.28f,
+                    NormalizedHeight = 0.38f,
                     Confidence = 0.92f
                 });
             }
@@ -505,7 +506,7 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
     }
 
     /// <summary>
-    /// پردازش خروجی‌های خام مدل، استخراج کاندیداها و اعمال الگوریتم Non-Maximum Suppression (NMS)
+    /// پردازش خروجی‌های خام مدل، استخراج کاندیداها با کادر پرتره استاندارد و اعمال الگوریتم Non-Maximum Suppression (NMS)
     /// </summary>
     public static List<FaceBoundingBox> PostprocessDetections(
         Tensor<float> scores,
@@ -522,14 +523,29 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
             float faceScore = scores[0, i, 1]; // امتیاز کلاس چهره (اندیس ۱)
             if (faceScore >= confidenceThreshold)
             {
-                // در مدل استاندارد Ultra-Face (RFB-320) خروجی boxes به صورت [xmin, ymin, xmax, ymax] کدگذاری شده است
-                float xmin = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 0]));
-                float ymin = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 1]));
-                float xmax = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 2]));
-                float ymax = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 3]));
+                // در مدل استاندارد Ultra-Face (RFB-320) خروجی boxes به صورت [xmin, ymin, xmax, ymax] تنگ روی صورت است
+                float rawXmin = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 0]));
+                float rawYmin = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 1]));
+                float rawXmax = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 2]));
+                float rawYmax = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 3]));
 
-                float width = Math.Max(0.01f, xmax - xmin);
-                float height = Math.Max(0.01f, ymax - ymin);
+                float rawW = Math.Max(0.02f, rawXmax - rawXmin);
+                float rawH = Math.Max(0.02f, rawYmax - rawYmin);
+
+                // گسترش استاندارد کادر تنگ مدل Ultra-Face تا کل سر، مو و بخشی از گردن/سرشانه در کادر سبز و عکس شات قرار بگیرد
+                float padX = rawW * 0.35f;
+                float padTop = rawH * 0.32f;
+                float padBottom = rawH * 0.45f;
+
+                float xmin = Math.Clamp(rawXmin - padX, 0.0f, 0.96f);
+                float ymin = Math.Clamp(rawYmin - padTop, 0.0f, 0.96f);
+                float xmax = Math.Clamp(rawXmax + padX, xmin + 0.04f, 1.0f);
+                float ymax = Math.Clamp(rawYmax + padBottom, ymin + 0.04f, 1.0f);
+
+                float width = Math.Max(0.14f, xmax - xmin);
+                float height = Math.Max(0.18f, ymax - ymin);
+                if (xmin + width > 1.0f) xmin = Math.Max(0.0f, 1.0f - width);
+                if (ymin + height > 1.0f) ymin = Math.Max(0.0f, 1.0f - height);
 
                 candidates.Add(new FaceBoundingBox
                 {

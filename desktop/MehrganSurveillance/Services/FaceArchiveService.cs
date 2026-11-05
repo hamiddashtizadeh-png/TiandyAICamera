@@ -248,7 +248,17 @@ public sealed class FaceArchiveService : IAsyncDisposable, IDisposable
         for (ushort i = 0; i < result.Faces.Count; i++)
         {
             var face = result.Faces[i];
-            var (cx, cy, cw, ch) = face.ToPixelCoordinates(frame.Width, frame.Height);
+            var (rawX, rawY, rawW, rawH) = face.ToPixelCoordinates(frame.Width, frame.Height);
+
+            // گسترش کادر برش جهت ثبت تصویر پرتره کامل سر و شانه در آرشیو (جلوگیری از کوچک یا بریده افتادن عکس چهره)
+            int padX = Math.Max((int)(rawW * 0.40), 20);
+            int padTop = Math.Max((int)(rawH * 0.35), 18);
+            int padBottom = Math.Max((int)(rawH * 0.52), 28);
+
+            int cx = Math.Max(0, rawX - padX);
+            int cy = Math.Max(0, rawY - padTop);
+            int cw = Math.Min(frame.Width - cx, rawW + (padX * 2));
+            int ch = Math.Min(frame.Height - cy, rawH + padTop + padBottom);
 
             // استخراج مستقیم بافر برش‌خورده در حافظه
             byte[] cropPixelBytes = ExtractCropBgra32(frame, cx, cy, cw, ch);
@@ -333,7 +343,11 @@ public sealed class FaceArchiveService : IAsyncDisposable, IDisposable
         {
             int srcOffset = ((cy + row) * frame.Stride) + (cx * bytesPerPixel);
             int dstOffset = row * cw * bytesPerPixel;
-            sourceSpan.Slice(srcOffset, cw * bytesPerPixel).CopyTo(cropBuffer.AsSpan(dstOffset));
+            int rowBytes = cw * bytesPerPixel;
+            if (srcOffset >= 0 && srcOffset + rowBytes <= sourceSpan.Length && dstOffset + rowBytes <= cropBuffer.Length)
+            {
+                sourceSpan.Slice(srcOffset, rowBytes).CopyTo(cropBuffer.AsSpan(dstOffset));
+            }
         }
 
         return cropBuffer;

@@ -89,8 +89,18 @@ public partial class FaceArchiveWindow : Window
             };
 
             _currentEvents = await _archiveService.QueryEventsAsync(filter);
+            EventsDataGrid.ItemsSource = null;
             EventsDataGrid.ItemsSource = _currentEvents;
             TotalArchivedBadge.Text = $"{_currentEvents.Count} رویداد ثبت‌شده";
+
+            if (_currentEvents.Count > 0)
+            {
+                EventsDataGrid.SelectedIndex = 0;
+            }
+            else
+            {
+                CropsItemsControl.ItemsSource = null;
+            }
         }
         catch (Exception ex)
         {

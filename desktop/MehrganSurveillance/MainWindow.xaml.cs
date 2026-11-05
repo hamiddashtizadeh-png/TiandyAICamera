@@ -125,15 +125,17 @@ namespace MehrganSurveillance
 
                 // ۵. مقداردهی اولیه پایپ‌لاین پلاک‌خوان هوشمند و آرشیو محلی ANPR
                 _anprPipeline.Initialize();
+                _anprPipeline.EnablePipeline();
                 _framePipeline.RegisterConsumer(_anprPipeline);
                 _anprArchiveService = new AnprArchiveService();
                 await _anprArchiveService.InitializeAsync();
 
-                _anprPipeline.PlateRecognized += (anprResult) =>
+                _anprPipeline.FramePlateRecognized += (anprResult, frame) =>
                 {
                     if (_anprArchiveService != null)
                     {
-                        _ = _anprArchiveService.RecordEventAsync(anprResult);
+                        var (vehJpeg, pltJpeg) = ExtractAnprCropsFromFrame(frame, anprResult);
+                        _ = _anprArchiveService.RecordEventAsync(anprResult, vehJpeg, pltJpeg);
                     }
                     LogEvent($"پلاک خودرو کشف شد: {anprResult.Plate.NormalizedText} (اطمینان: {anprResult.OcrConfidence:P0})");
                 };
@@ -761,10 +763,92 @@ namespace MehrganSurveillance
 
         #endregion
 
-        #region دکمه‌های ناوبری چیدمان
-        private void Layout1x1Button_Click(object sender, RoutedEventArgs e) => SetLayout(1);
-        private void Layout2x2Button_Click(object sender, RoutedEventArgs e) => SetLayout(4);
-        private void Layout3x3Button_Click(object sender, RoutedEventArgs e) => SetLayout(9);
+        #region دکمه‌های ناوبری چیدمان و صفحه اصلی (NetVideo Home Page & Live View)
+        private void Layout1x1Button_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToLiveWorkspace();
+            SetLayout(1);
+        }
+
+        private void Layout2x2Button_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToLiveWorkspace();
+            SetLayout(4);
+        }
+
+        private void Layout3x3Button_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToLiveWorkspace();
+            SetLayout(9);
+        }
+
+        private void HomeNavTabButton_Click(object sender, RoutedEventArgs e)
+        {
+            HideAllCellOverlays();
+            HomeDashboardView.Visibility = Visibility.Visible;
+            LiveWorkspaceView.Visibility = Visibility.Collapsed;
+            LiveToolbarControls.Visibility = Visibility.Collapsed;
+
+            HomeNavTabButton.Background = new SolidColorBrush(Color.FromRgb(28, 39, 60));
+            HomeNavTabButton.BorderBrush = new SolidColorBrush(Color.FromRgb(37, 99, 235));
+            HomeNavTabText.Foreground = new SolidColorBrush(Color.FromRgb(96, 165, 250));
+
+            LiveViewNavTabButton.Background = Brushes.Transparent;
+            LiveViewNavTabButton.BorderBrush = Brushes.Transparent;
+            LiveViewNavTabText.Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225));
+        }
+
+        private void LiveViewNavTabButton_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToLiveWorkspace();
+        }
+
+        private void SwitchToLiveWorkspace()
+        {
+            HomeDashboardView.Visibility = Visibility.Collapsed;
+            LiveWorkspaceView.Visibility = Visibility.Visible;
+            LiveToolbarControls.Visibility = Visibility.Visible;
+
+            LiveViewNavTabButton.Background = new SolidColorBrush(Color.FromRgb(28, 39, 60));
+            LiveViewNavTabButton.BorderBrush = new SolidColorBrush(Color.FromRgb(37, 99, 235));
+            LiveViewNavTabText.Foreground = new SolidColorBrush(Color.FromRgb(96, 165, 250));
+
+            HomeNavTabButton.Background = Brushes.Transparent;
+            HomeNavTabButton.BorderBrush = Brushes.Transparent;
+            HomeNavTabText.Foreground = new SolidColorBrush(Color.FromRgb(203, 213, 225));
+        }
+
+        private void OpenTvWallTile_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToLiveWorkspace();
+            SetLayout(9);
+        }
+
+        private void OpenSingleHdViewTile_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToLiveWorkspace();
+            SetLayout(1);
+        }
+
+        private void OpenAccessControlTile_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToLiveWorkspace();
+            LiveFacePanelBorder.Visibility = Visibility.Visible;
+            LiveFacePanelColumn.Width = new GridLength(290);
+        }
+
+        private void OpenAlarmManagementTile_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchToLiveWorkspace();
+            DiagnosticsDrawer.Visibility = Visibility.Visible;
+            ToggleLogPanelButton.Content = "📋 وقایع LibVLC ▼";
+        }
+
+        private void OpenOperationLogsTile_Click(object sender, RoutedEventArgs e)
+        {
+            DiagnosticsDrawer.Visibility = Visibility.Visible;
+            ToggleLogPanelButton.Content = "📋 وقایع LibVLC ▼";
+        }
 
         private void OpenFaceArchiveWindow_Click(object sender, RoutedEventArgs e)
         {
@@ -788,6 +872,7 @@ namespace MehrganSurveillance
 
         private void ToggleLiveFacePanelButton_Click(object sender, RoutedEventArgs e)
         {
+            SwitchToLiveWorkspace();
             if (LiveFacePanelBorder.Visibility == Visibility.Visible)
             {
                 LiveFacePanelBorder.Visibility = Visibility.Collapsed;
@@ -796,7 +881,7 @@ namespace MehrganSurveillance
             else
             {
                 LiveFacePanelBorder.Visibility = Visibility.Visible;
-                LiveFacePanelColumn.Width = new GridLength(280);
+                LiveFacePanelColumn.Width = new GridLength(290);
             }
         }
 
@@ -833,7 +918,7 @@ namespace MehrganSurveillance
             if (isEnabled)
             {
                 _facePipeline.EnablePipeline();
-                FaceAiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(22, 163, 74));
+                FaceAiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(16, 185, 129));
                 FaceAiStatusText.Text = "هوش مصنوعی چهره فعال است";
                 LogEvent("پردازش هوش مصنوعی چهره توسط کاربر به صورت سراسری فعال شد.");
 
@@ -924,6 +1009,9 @@ namespace MehrganSurveillance
             }
         }
 
+        /// <summary>
+        /// استخراج شات پرتره کامل سر و شانه از فریم دوربین با حاشیه استاندارد امنیتی تا تصویر چهره کوچک یا بریده نیفتد
+        /// </summary>
         private static System.Windows.Media.ImageSource? CreateThumbnailFromFrame(AcquiredFrame frame, FaceBoundingBox face)
         {
             try
@@ -931,21 +1019,38 @@ namespace MehrganSurveillance
                 var (cx, cy, cw, ch) = face.ToPixelCoordinates(frame.Width, frame.Height);
                 if (cw <= 4 || ch <= 4) return null;
 
-                // حاشیه برای قاب‌بندی زیباتر پرتره
-                int padX = (int)(cw * 0.12);
-                int padY = (int)(ch * 0.12);
-                cx = Math.Max(0, cx - padX);
-                cy = Math.Max(0, cy - padY);
-                cw = Math.Min(frame.Width - cx, cw + (padX * 2));
-                ch = Math.Min(frame.Height - cy, ch + (padY * 2));
+                // گسترش سخاوتمندانه کادر پرتره (شامل کامل مو، سر، گردن و سرشانه) و تضمین حداقل ابعاد استاندارد
+                int padLeftRight = Math.Max((int)(cw * 0.42), 24);
+                int padTop = Math.Max((int)(ch * 0.38), 22);
+                int padBottom = Math.Max((int)(ch * 0.55), 32);
 
-                int stride = cw * 4;
-                byte[] crop = new byte[stride * ch];
+                int targetX = Math.Max(0, cx - padLeftRight);
+                int targetY = Math.Max(0, cy - padTop);
+                int targetW = Math.Min(frame.Width - targetX, cw + (padLeftRight * 2));
+                int targetH = Math.Min(frame.Height - targetY, ch + padTop + padBottom);
+
+                // تضمین حداقل اندازه شات در صورت کوچک بودن چهره در دورترین نقطه تصویر
+                int minShotDim = Math.Min(frame.Width, frame.Height) / 3;
+                if (targetW < minShotDim)
+                {
+                    int extraW = minShotDim - targetW;
+                    targetX = Math.Max(0, targetX - (extraW / 2));
+                    targetW = Math.Min(frame.Width - targetX, minShotDim);
+                }
+                if (targetH < minShotDim)
+                {
+                    int extraH = minShotDim - targetH;
+                    targetY = Math.Max(0, targetY - (extraH / 2));
+                    targetH = Math.Min(frame.Height - targetY, minShotDim);
+                }
+
+                int stride = targetW * 4;
+                byte[] crop = new byte[stride * targetH];
                 var raw = frame.PixelData.Span;
 
-                for (int y = 0; y < ch; y++)
+                for (int y = 0; y < targetH; y++)
                 {
-                    int srcOffset = ((cy + y) * frame.Stride) + (cx * 4);
+                    int srcOffset = ((targetY + y) * frame.Stride) + (targetX * 4);
                     int dstOffset = y * stride;
                     if (srcOffset + stride <= raw.Length && dstOffset + stride <= crop.Length)
                     {
@@ -954,7 +1059,7 @@ namespace MehrganSurveillance
                 }
 
                 var bitmap = System.Windows.Media.Imaging.BitmapSource.Create(
-                    cw, ch, 96, 96,
+                    targetW, targetH, 96, 96,
                     System.Windows.Media.PixelFormats.Bgra32,
                     null, crop, stride);
                 bitmap.Freeze();
@@ -964,6 +1069,82 @@ namespace MehrganSurveillance
             {
                 return null;
             }
+        }
+
+        private static (byte[]? VehicleJpeg, byte[]? PlateJpeg) ExtractAnprCropsFromFrame(AcquiredFrame frame, AnprResult result)
+        {
+            byte[]? vehJpeg = result.VehicleCropJpeg;
+            byte[]? pltJpeg = result.PlateCropJpeg;
+
+            try
+            {
+                if (pltJpeg == null && result.PlateBox != null)
+                {
+                    pltJpeg = EncodeNormalizedBoxToJpeg(frame, result.PlateBox, padFactorX: 0.18f, padFactorY: 0.30f);
+                }
+
+                if (vehJpeg == null)
+                {
+                    var vBox = result.VehicleBox ?? (result.PlateBox != null
+                        ? new NormalizedBoundingBox(
+                            Math.Max(0.02f, result.PlateBox.X - 0.18f),
+                            Math.Max(0.02f, result.PlateBox.Y - 0.35f),
+                            Math.Min(0.95f, result.PlateBox.Width + 0.36f),
+                            Math.Min(0.95f, result.PlateBox.Height + 0.48f))
+                        : null);
+
+                    if (vBox != null)
+                    {
+                        vehJpeg = EncodeNormalizedBoxToJpeg(frame, vBox, padFactorX: 0.05f, padFactorY: 0.05f);
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return (vehJpeg, pltJpeg);
+        }
+
+        private static byte[]? EncodeNormalizedBoxToJpeg(AcquiredFrame frame, NormalizedBoundingBox box, float padFactorX, float padFactorY)
+        {
+            int cx = (int)(box.X * frame.Width);
+            int cy = (int)(box.Y * frame.Height);
+            int cw = Math.Max(16, (int)(box.Width * frame.Width));
+            int ch = Math.Max(12, (int)(box.Height * frame.Height));
+
+            int padX = (int)(cw * padFactorX);
+            int padY = (int)(ch * padFactorY);
+
+            int x = Math.Clamp(cx - padX, 0, Math.Max(0, frame.Width - 8));
+            int y = Math.Clamp(cy - padY, 0, Math.Max(0, frame.Height - 8));
+            int w = Math.Clamp(cw + (padX * 2), 8, frame.Width - x);
+            int h = Math.Clamp(ch + (padY * 2), 8, frame.Height - y);
+
+            int stride = w * 4;
+            byte[] crop = new byte[stride * h];
+            var raw = frame.PixelData.Span;
+
+            for (int row = 0; row < h; row++)
+            {
+                int srcOffset = ((y + row) * frame.Stride) + (x * 4);
+                int dstOffset = row * stride;
+                if (srcOffset + stride <= raw.Length && dstOffset + stride <= crop.Length)
+                {
+                    raw.Slice(srcOffset, stride).CopyTo(crop.AsSpan(dstOffset, stride));
+                }
+            }
+
+            var bitmap = System.Windows.Media.Imaging.BitmapSource.Create(
+                w, h, 96, 96,
+                System.Windows.Media.PixelFormats.Bgra32,
+                null, crop, stride);
+
+            var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder { QualityLevel = 90 };
+            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+            using var ms = new System.IO.MemoryStream();
+            encoder.Save(ms);
+            return ms.ToArray();
         }
         #endregion
     }

@@ -30,6 +30,7 @@ public partial class AnprWindow : Window
         _archiveService = archiveService ?? new AnprArchiveService();
 
         Loaded += AnprWindow_Loaded;
+        Closed += AnprWindow_Closed;
     }
 
     private async void AnprWindow_Loaded(object sender, RoutedEventArgs e)
@@ -37,6 +38,7 @@ public partial class AnprWindow : Window
         try
         {
             await _archiveService.InitializeAsync();
+            _pipeline.PlateRecognized += OnLivePlateRecognized;
 
             AnprEnableToggle.IsChecked = _pipeline.Config.IsEnabled;
             UpdateEngineBadge();
@@ -55,17 +57,37 @@ public partial class AnprWindow : Window
         }
     }
 
+    private void AnprWindow_Closed(object? sender, EventArgs e)
+    {
+        _pipeline.PlateRecognized -= OnLivePlateRecognized;
+    }
+
+    private void OnLivePlateRecognized(AnprResult result)
+    {
+        Dispatcher.InvokeAsync(async () =>
+        {
+            await Task.Delay(120);
+            await LoadEventsAsync(PlateSearchBox.Text);
+            await UpdateStatisticsAsync();
+        });
+    }
+
     private void UpdateEngineBadge()
     {
         if (_pipeline.ModelStatus.IsReady)
         {
-            AiEngineStatusBadge.Text = $"موتور فعال ({_pipeline.ModelStatus.ExecutionProvider})";
-            AiEngineStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(4, 120, 87));
+            AiEngineStatusBadge.Text = $"موتور فعال ONNX ({_pipeline.ModelStatus.ExecutionProvider})";
+            AiEngineStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(52, 211, 153));
+        }
+        else if (_pipeline.IsInitialized)
+        {
+            AiEngineStatusBadge.Text = $"موتور پلاک‌خوان فعال ({_pipeline.ModelStatus.ExecutionProvider} / تحلیل کادر و کاراکتر)";
+            AiEngineStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248));
         }
         else
         {
-            AiEngineStatusBadge.Text = "مدل‌های وزنی بارگذاری نشده‌اند (Inference Not Ready)";
-            AiEngineStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(180, 83, 9));
+            AiEngineStatusBadge.Text = "در انتظار راه‌اندازی موتور";
+            AiEngineStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(251, 191, 36));
         }
     }
 

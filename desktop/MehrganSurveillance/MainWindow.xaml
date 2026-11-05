@@ -10,141 +10,157 @@
         MinWidth="1150" MinHeight="750"
         FlowDirection="RightToLeft"
         FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif"
-        Background="{StaticResource BackgroundLightBrush}"
+        Background="#161B26"
         WindowStartupLocation="CenterScreen">
 
     <Grid>
         <Grid.RowDefinitions>
-            <!-- ۱. نوار ابزار اصلی شل برنامه و تب‌های ناوبری (Clean White Top VMS Shell - 46px) -->
-            <RowDefinition Height="46" />
-            <!-- ۲. فضای کاری اصلی نظارت (سایدبار راست + وال ویدیویی تیره مرکزی) -->
+            <!-- ۱. نوار ابزار فوقانی سبک NetVideo VMS (52px) -->
+            <RowDefinition Height="52" />
+            <!-- ۲. فضای کاری اصلی (صفحه اصلی کاشی‌های NetVideo یا نمای پایش زنده) -->
             <RowDefinition Height="*" />
-            <!-- ۳. نوار تایم‌لاین پخش و کنترل‌های فشرده (Bottom Playback Timeline & Controls) -->
+            <!-- ۳. نوار تایم‌لاین پخش و کنترل‌های فشرده پایینی -->
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- ================================================================= -->
-        <!-- ۱. نوار ابزار اصلی شل برنامه و تب‌های ناوبری (Enterprise VMS Top Shell) -->
-        <!-- تم سفید/روشن تمیز با لهجه‌های بنفش و آبی اینترپرایز                     -->
+        <!-- ۱. نوار ابزار اصلی شل برنامه و تب‌های ناوبری (NetVideo Dark Top Shell) -->
         <!-- ================================================================= -->
         <Border Grid.Row="0"
-                Background="#FFFFFF"
+                Background="#11151E"
                 Padding="14,0"
-                BorderBrush="{StaticResource BorderLightBrush}"
+                BorderBrush="#252D3D"
                 BorderThickness="0,0,0,1">
-            <Grid VerticalAlignment="Center">
+            <Grid VerticalAlignment="Stretch">
                 <Grid.ColumnDefinitions>
-                    <!-- برند مهرگان و تب‌های ناوبری فوقانی -->
+                    <!-- برند مهرگان / NetVideo و تب‌های اصلی (Home page, Live View, ...) -->
                     <ColumnDefinition Width="Auto" />
-                    <!-- چیدمان‌های ماتریسی ۱x۱, ۲x۲, ۳x۳ و عملیات گروهی استریم -->
+                    <!-- کنترل‌های چیدمان ماتریسی ۱x۱, ۲x۲, ۳x۳ و عملیات گروهی استریم -->
                     <ColumnDefinition Width="*" />
-                    <!-- ساعت زنده مانیتورینگ و وضعیت موتور TCP -->
+                    <!-- وضعیت لاگین، موتور TCP و ساعت زنده -->
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- ستون راست: برندینگ سامانه و تب‌های فشرده VMS -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- لوگو و نماد سپر بنفش/آبی -->
-                    <Border Width="28" Height="28"
-                            Background="{StaticResource PrimaryBrush}"
-                            CornerRadius="5"
-                            Margin="0,0,8,0">
-                        <TextBlock Text="🛡" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
-                        <TextBlock Text="سامانه نظارت تصویری مهرگان"
-                                   FontSize="13"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}" />
-                        <TextBlock Text="Mehrgan VMS Enterprise | C# .NET 10"
-                                   FontSize="8.5"
-                                   FontFamily="JetBrains Mono, Consolas, Segoe UI"
-                                   Foreground="{StaticResource TextMutedBrush}" />
+                <!-- ستون راست: لوگو NetVideo / مهرگان و تب‌های ناوبری سبک NetVideo -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Stretch">
+                    <!-- برندینگ آبی درخشان سبک NetVideo -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
+                        <Border Width="30" Height="30"
+                                Background="#1A73E8"
+                                CornerRadius="6"
+                                Margin="0,0,8,0">
+                            <TextBlock Text="🛡" FontSize="15" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Mehrgan"
+                                           FontSize="15"
+                                           FontWeight="ExtraBold"
+                                           FontFamily="Segoe UI, Tahoma"
+                                           Foreground="#38BDF8"
+                                           Margin="0,0,4,0" />
+                                <TextBlock Text="NetVideo"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           FontFamily="Segoe UI, Tahoma"
+                                           Foreground="#60A5FA" />
+                            </StackPanel>
+                            <TextBlock Text="سامانه نظارت تصویری هوشمند مهرگان"
+                                       FontSize="9"
+                                       Foreground="#94A3B8" />
+                        </StackPanel>
                     </StackPanel>
 
-                    <!-- تب‌های فشرده فوقانی (Compact Top Navigation Tabs) -->
-                    <Border Background="#F1F5F9"
-                            BorderBrush="{StaticResource BorderLightBrush}"
-                            BorderThickness="1"
-                            CornerRadius="5"
-                            Padding="2"
-                            VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <!-- تب ۱: پایش زنده (فعال) -->
-                            <Border Background="#FFFFFF"
-                                    BorderBrush="{StaticResource PrimaryBrush}"
-                                    BorderThickness="0,0,0,2"
-                                    CornerRadius="3"
-                                    Padding="10,4"
-                                    Margin="0,0,2,0">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="⊞" FontSize="11" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,4,0" />
-                                    <TextBlock Text="پایش زنده (Live View)" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
-                                </StackPanel>
-                            </Border>
+                    <!-- تب‌های ناوبری سقف برنامه دقیقاً مشابه هدر NetVideo -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch">
+                        <!-- تب ۱: صفحه اصلی (Home page) -->
+                        <Button x:Name="HomeNavTabButton"
+                                ToolTip="صفحه اصلی و میزکار ماژول‌های نظارتی (Home page)"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="0,0,0,2"
+                                Padding="16,0"
+                                Click="HomeNavTabButton_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🏠" FontSize="12" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="HomeNavTabText" Text="صفحه اصلی (Home page)" FontSize="11.5" FontWeight="Bold" Foreground="#CBD5E1" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
 
-                            <!-- تب ۲: کشف هوشمند تجهیزات -->
-                            <Button Content="🔍 کشف هوشمند (ONVIF)"
-                                    ToolTip="کشف دوربین‌های شبکه محلی و تست پخش"
-                                    Style="{StaticResource NavTabButtonStyle}"
-                                    Height="24"
-                                    Padding="10,2"
-                                    FontSize="10.5"
-                                    Margin="0,0,2,0"
-                                    Click="OpenDiscoveryWindow_Click" />
+                        <!-- تب ۲: پایش زنده (Live View) -->
+                        <Button x:Name="LiveViewNavTabButton"
+                                ToolTip="مشاهده زنده دوربین‌ها و دیوار ویدیویی (Live View)"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Background="#1C273C"
+                                BorderBrush="#2563EB"
+                                BorderThickness="0,0,0,2"
+                                Padding="16,0"
+                                Click="LiveViewNavTabButton_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="⊞" FontSize="13" Foreground="#60A5FA" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="LiveViewNavTabText" Text="پایش زنده (Live View)" FontSize="11.5" FontWeight="Bold" Foreground="#60A5FA" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
 
-                            <!-- تب ۳: آرشیو و رویدادهای چهره -->
-                            <Button Content="🛡 آرشیو چهره"
-                                    ToolTip="مشاهده، جستجو و مدیریت آرشیو محلی چهره‌ها"
-                                    Style="{StaticResource NavTabButtonStyle}"
-                                    Height="24"
-                                    Padding="10,2"
-                                    FontSize="10.5"
-                                    Margin="0,0,2,0"
-                                    Click="OpenFaceArchiveWindow_Click" />
+                        <!-- تب ۳: مدیریت تجهیزات (Device management / ONVIF) -->
+                        <Button Content="📹 مدیریت تجهیزات (ONVIF)"
+                                ToolTip="کشف و مدیریت دوربین‌های شبکه محلی (Device management)"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Padding="14,0"
+                                FontSize="11"
+                                Click="OpenDiscoveryWindow_Click" />
 
-                            <!-- تب ۴: پلاک‌خوان هوشمند (ANPR) -->
-                            <Button Content="🚗 پلاک‌خوان هوشمند (ANPR)"
-                                    ToolTip="آرشیو پلاک‌خوانی، جستجوی پلاک‌های ملی ایران و وضعیت موتور AI"
-                                    Style="{StaticResource NavTabButtonStyle}"
-                                    Height="24"
-                                    Padding="10,2"
-                                    FontSize="10.5"
-                                    Margin="0,0,2,0"
-                                    Click="OpenAnprWindow_Click" />
+                        <!-- تب ۴: تشخیص چهره (Face recognition) -->
+                        <Button Content="👤 تشخیص و آرشیو چهره"
+                                ToolTip="مشاهده، جستجو و مدیریت آرشیو محلی چهره‌ها (Face recognition)"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Padding="14,0"
+                                FontSize="11"
+                                Click="OpenFaceArchiveWindow_Click" />
 
-                            <!-- تب ۴: پنل زنده چهره‌های شناسایی‌شده -->
-                            <Button x:Name="ToggleLiveFacePanelButton"
-                                    Content="👤 پنل چهره‌های زنده"
-                                    ToolTip="باز / بسته کردن پنل جانبی نمایش چهره‌های شناسایی‌شده لحظه‌ای"
-                                    Style="{StaticResource NavTabButtonStyle}"
-                                    Height="24"
-                                    Padding="10,2"
-                                    FontSize="10.5"
-                                    Click="ToggleLiveFacePanelButton_Click" />
-                        </StackPanel>
-                    </Border>
+                        <!-- تب ۵: پلاک‌خوان خودرو (Vehicle management / ANPR) -->
+                        <Button Content="🚗 مدیریت خودرو و پلاک (ANPR)"
+                                ToolTip="پلاک‌خوان هوشمند خودرو و جستجوی پلاک‌های ملی ایران"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Padding="14,0"
+                                FontSize="11"
+                                Click="OpenAnprWindow_Click" />
+
+                        <!-- تب ۶: پنل زنده چهره‌ها -->
+                        <Button x:Name="ToggleLiveFacePanelButton"
+                                Content="🪪 پنل چهره زنده"
+                                ToolTip="باز / بسته کردن پنل جانبی نمایش چهره‌های شناسایی‌شده لحظه‌ای"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Padding="12,0"
+                                FontSize="11"
+                                Click="ToggleLiveFacePanelButton_Click" />
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- ستون وسط: سوئیچرهای ماتریسی ۱x۱، ۲x۲، ۳x۳ و عملیات گروهی -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <!-- انتخابگر ماتریس چیدمان (Segmented Layout Controls) -->
-                    <Border Background="#F8FAFC"
-                            BorderBrush="{StaticResource BorderStrongBrush}"
+                <!-- ستون وسط: سوئیچرهای ماتریسی ۱x۱، ۲x۲، ۳x۳ و عملیات گروهی (فقط در نمای زنده کاربردی است) -->
+                <StackPanel x:Name="LiveToolbarControls"
+                            Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <!-- انتخابگر ماتریس چیدمان -->
+                    <Border Background="#181E2C"
+                            BorderBrush="#2C3548"
                             BorderThickness="1"
                             CornerRadius="5"
                             Padding="2"
-                            Margin="0,0,12,0">
+                            Margin="0,0,10,0">
                         <StackPanel Orientation="Horizontal">
                             <Button x:Name="Layout1x1Button"
                                     Content="⊞ ۱×۱"
                                     ToolTip="چیدمان تک‌تصویر با رزولوشن کامل (/1/1)"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Background="Transparent"
-                                    Foreground="{StaticResource TextPrimaryBrush}"
+                                    Foreground="#E2E8F0"
                                     BorderThickness="0"
                                     Padding="10,2"
-                                    Height="24"
+                                    Height="26"
                                     FontSize="10.5"
                                     Margin="0,0,2,0"
                                     Click="Layout1x1Button_Click" />
@@ -154,7 +170,7 @@
                                     ToolTip="چیدمان ۴ تصویر با استریم فرعی بهینه (/1/2)"
                                     Style="{StaticResource PrimaryButtonStyle}"
                                     Padding="12,2"
-                                    Height="24"
+                                    Height="26"
                                     FontSize="10.5"
                                     Margin="0,0,2,0"
                                     Click="Layout2x2Button_Click" />
@@ -164,10 +180,10 @@
                                     ToolTip="چیدمان ۹ تصویر با استریم فرعی (/1/2)"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Background="Transparent"
-                                    Foreground="{StaticResource TextPrimaryBrush}"
+                                    Foreground="#E2E8F0"
                                     BorderThickness="0"
                                     Padding="10,2"
-                                    Height="24"
+                                    Height="26"
                                     FontSize="10.5"
                                     Click="Layout3x3Button_Click" />
                         </StackPanel>
@@ -178,7 +194,7 @@
                             Content="▶ اتصال همه"
                             ToolTip="برقراری اتصال همزمان کلیه استریم‌های فعال در چیدمان جاری"
                             Style="{StaticResource SuccessButtonStyle}"
-                            Height="26"
+                            Height="28"
                             Padding="12,0"
                             FontSize="10.5"
                             Margin="0,0,6,0"
@@ -188,39 +204,41 @@
                             Content="⏹ قطع همه"
                             ToolTip="قطع فوری کلیه استریم‌ها جهت آزادسازی منابع شبکه و گرافیک"
                             Style="{StaticResource DangerButtonStyle}"
-                            Height="26"
+                            Height="28"
                             Padding="10,0"
                             FontSize="10.5"
                             Margin="0,0,8,0"
                             Click="DisconnectAllButton_Click" />
                 </StackPanel>
 
-                <!-- ستون چپ: نشانگر موتور LibVLC TCP و ساعت دیجیتال -->
+                <!-- ستون چپ: نشانگر موتور LibVLC TCP، وضعیت ادمین و ساعت دیجیتال -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- نشانگر وضعیت موتور و شتاب‌دهنده گرافیکی -->
-                    <Border Background="#F8FAFC"
-                            BorderBrush="{StaticResource BorderLightBrush}"
+                    <!-- نشانگر کاربر/سیستم مشابه گوشه بالای راست NetVideo -->
+                    <Border Background="#1B2232"
+                            BorderBrush="#2C3548"
                             BorderThickness="1"
                             CornerRadius="12"
                             Padding="8,3"
-                            Margin="0,0,10,0">
+                            Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="EngineStatusDot" Width="6.5" Height="6.5" Fill="#16A34A" Margin="0,0,5,0" />
+                            <Ellipse x:Name="EngineStatusDot" Width="7" Height="7" Fill="#10B981" Margin="0,0,5,0" />
                             <TextBlock x:Name="EngineStatusText"
                                        Text="موتور فعال (TCP)"
                                        FontSize="9.5"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Foreground="#CBD5E1"
                                        FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
 
                     <!-- ساعت زنده مانیتورینگ -->
-                    <Border Background="#0F172A"
+                    <Border Background="#181E2C"
+                            BorderBrush="#2C3548"
+                            BorderThickness="1"
                             CornerRadius="4"
-                            Padding="8,2">
+                            Padding="9,3">
                         <TextBlock x:Name="LiveClockText"
                                    Text="--:--:--"
-                                   FontSize="11.5"
+                                   FontSize="12"
                                    FontWeight="Bold"
                                    FontFamily="JetBrains Mono, Consolas"
                                    Foreground="#38BDF8"
@@ -231,503 +249,859 @@
         </Border>
 
         <!-- ================================================================= -->
-        <!-- ۲. فضای کاری اصلی نظارت (Main VMS Workspace)                      -->
-        <!-- سمت راست: سایدبار دوربین‌ها با جستجو، وضعیت، نام و انتخاب         -->
-        <!-- سمت چپ و مرکز: وال ویدیویی تیره و بسیار بزرگ (Large Dark Video Wall) -->
+        <!-- ۲. فضای کاری اصلی: شامل ۱) داشبورد خانه NetVideo و ۲) پایش زنده     -->
         <!-- ================================================================= -->
-        <Grid Grid.Row="1" Margin="6,6,6,4">
-            <Grid.ColumnDefinitions>
-                <!-- ستون ۰ در RTL = سمت راست پنجره (Right-side Camera Sidebar) -->
-                <ColumnDefinition x:Name="SidebarColumn" Width="280" MinWidth="200" MaxWidth="360" />
-                <!-- ستون ۱ در RTL = مرکز (Large Dark Multi-Camera Video Wall) -->
-                <ColumnDefinition Width="*" />
-                <!-- ستون ۲ در RTL = سمت چپ پنجره (Left-side Live Face Events & Capture Panel) -->
-                <ColumnDefinition x:Name="LiveFacePanelColumn" Width="280" MinWidth="220" MaxWidth="380" />
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="1">
 
             <!-- ============================================================= -->
-            <!-- پنل سایدبار سمت راست: جستجوی زنده، لیست دوربین‌ها و بازرس اسلات -->
+            <!-- الف) صفحه اصلی به سبک NetVideo (Common functions & Basic functions) -->
             <!-- ============================================================= -->
-            <Border Grid.Column="0"
-                    Background="{StaticResource CardBackgroundBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8"
-                    Margin="0,0,6,0">
-                <Grid>
+            <Border x:Name="HomeDashboardView"
+                    Background="#161B26"
+                    Padding="36,24"
+                    Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="1360">
+                        <!-- عنوان بخش اول: Common functions -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <Rectangle Width="4" Height="18" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="توابع و ماژول‌های اصلی (Common functions)"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="#FFFFFF"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- شبکه کارت‌های بزرگ (۴ ستونی مشابه NetVideo) -->
+                        <UniformGrid Columns="4" Rows="2" Margin="0,0,0,28">
+                            <!-- کارت ۱: پایش زنده (Live View) - آیکون آبی -->
+                            <Button Style="{StaticResource NetVideoTileButtonStyle}"
+                                    Margin="6"
+                                    Height="112"
+                                    Click="LiveViewNavTabButton_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="54" Height="54" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#38BDF8" Offset="0" />
+                                                <GradientStop Color="#0284C7" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="▶️" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="پایش زنده (Live View)" FontSize="13.5" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4" />
+                                        <TextBlock Text="مشاهده تصاویر زنده نقاط نظارتی با چیدمان چنددوربینه هوشمند" FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+
+                            <!-- کارت ۲: مدیریت تجهیزات (Device management) - آیکون بنفش -->
+                            <Button Style="{StaticResource NetVideoTileButtonStyle}"
+                                    Margin="6"
+                                    Height="112"
+                                    Click="OpenDiscoveryWindow_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="54" Height="54" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#818CF8" Offset="0" />
+                                                <GradientStop Color="#4F46E5" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="📹" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="مدیریت تجهیزات (Device Management)" FontSize="13.5" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4" />
+                                        <TextBlock Text="کشف خودکار ONVIF، افزودن، ویرایش و مدیریت گروه دوربین‌ها" FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+
+                            <!-- کارت ۳: آرشیو و بازپخش چهره (Playback & Face Archive) - آیکون فیروزه‌ای سبز -->
+                            <Button Style="{StaticResource NetVideoTileButtonStyle}"
+                                    Margin="6"
+                                    Height="112"
+                                    Click="OpenFaceArchiveWindow_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="54" Height="54" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#2DD4BF" Offset="0" />
+                                                <GradientStop Color="#0D9488" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="👤" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="تشخیص و آرشیو چهره (Face Archive)" FontSize="13.5" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4" />
+                                        <TextBlock Text="جستجو و مرور پرتره‌های چهره ثبت‌شده در نقاط نظارتی با رمزنگاری محلی" FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+
+                            <!-- کارت ۴: دیوار تلویزیونی (TV Wall / 3x3 Matrix) - آیکون آبی فیروزه‌ای -->
+                            <Button Style="{StaticResource NetVideoTileButtonStyle}"
+                                    Margin="6"
+                                    Height="112"
+                                    Click="OpenTvWallTile_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="54" Height="54" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#38BDF8" Offset="0" />
+                                                <GradientStop Color="#0369A1" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="🖥" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="دیوار ویدیویی (TV Wall 3×3)" FontSize="13.5" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4" />
+                                        <TextBlock Text="پیکربندی و پیش‌نمایش ماتریس ۹ تایی تمام‌صفحه اتاق کنترل" FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+
+                            <!-- کارت ۵: مدیریت خودرو و پلاک‌خوان (Vehicle management / ANPR) - آیکون سبز زمردی -->
+                            <Button Style="{StaticResource NetVideoTileButtonStyle}"
+                                    Margin="6"
+                                    Height="112"
+                                    Click="OpenAnprWindow_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="54" Height="54" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#34D399" Offset="0" />
+                                                <GradientStop Color="#059669" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="🚗" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="مدیریت خودرو و پلاک (Vehicle ANPR)" FontSize="13.5" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4" />
+                                        <TextBlock Text="پشتیبانی از پلاک‌خوانی منطقه‌ای خودروها و ثبت تردد پلاک ملی ایران" FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+
+                            <!-- کارت ۶: مدیریت هشدار و رویدادها (Alarm management) - آیکون نارنجی/قرمز -->
+                            <Button Style="{StaticResource NetVideoTileButtonStyle}"
+                                    BorderBrush="#2563EB"
+                                    Margin="6"
+                                    Height="112"
+                                    Click="OpenAlarmManagementTile_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="54" Height="54" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#FB923C" Offset="0" />
+                                                <GradientStop Color="#EA580C" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="⚠️" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="مدیریت هشدارها و وقایع (Alarm)" FontSize="13.5" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4" />
+                                        <TextBlock Text="نمایش لحظه‌ای پیام‌های هشدار، وقایع سیستم و تشخیص‌های هوش مصنوعی" FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+
+                            <!-- کارت ۷: کنترل تردد و دسترسی (Access Control) - آیکون بنفش/نیلی -->
+                            <Button Style="{StaticResource NetVideoTileButtonStyle}"
+                                    Margin="6"
+                                    Height="112"
+                                    Click="OpenAccessControlTile_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="54" Height="54" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#A78BFA" Offset="0" />
+                                                <GradientStop Color="#6D28D9" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="🪪" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="کنترل تردد زنده (Access Control)" FontSize="13.5" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4" />
+                                        <TextBlock Text="مانیتورینگ لحظه‌ای تردد افراد و پرتره‌های چهره در ورودی‌ها" FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+
+                            <!-- کارت ۸: نمای تک‌دوربینه باکیفیت (HD Single View) -->
+                            <Button Style="{StaticResource NetVideoTileButtonStyle}"
+                                    Margin="6"
+                                    Height="112"
+                                    Click="OpenSingleHdViewTile_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="54" Height="54" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#F472B6" Offset="0" />
+                                                <GradientStop Color="#DB2777" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <TextBlock Text="🎯" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="پایش متمرکز تک‌کانال (1×1 HD)" FontSize="13.5" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,4" />
+                                        <TextBlock Text="مشاهده با رزولوشن کامل استریم اصلی (/1/1) و بزرگ‌نمایی دیجیتال" FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </UniformGrid>
+
+                        <!-- عنوان بخش دوم: Basic functions -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <Rectangle Width="4" Height="18" Fill="#38BDF8" RadiusX="2" RadiusY="2" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="ابزارها و امکانات پایه (Basic functions)"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="#FFFFFF"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- نوار افقی آیکون‌های رنگارنگ پایین صفحه دقیقاً مشابه NetVideo -->
+                        <Border Background="#202634"
+                                BorderBrush="#2A3244"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="20,22">
+                            <UniformGrid Columns="10" Rows="1">
+                                <!-- ۱. System configuration -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenDiscoveryWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#F59E0B" Margin="0,0,0,8">
+                                            <TextBlock Text="⚙️" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="پیکربندی سیستم" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۲. User / Face management -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenFaceArchiveWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#EC4899" Margin="0,0,0,8">
+                                            <TextBlock Text="👥" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="بانک چهره‌ها" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۳. Alarm configuration -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenAlarmManagementTile_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#F97316" Margin="0,0,0,8">
+                                            <TextBlock Text="🚨" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="تنظیمات هشدار" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۴. Intelligent search -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenAnprWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#22C55E" Margin="0,0,0,8">
+                                            <TextBlock Text="🔍" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="جستجوی هوشمند" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۵. ElectronicMap / Subnet Scan -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenDiscoveryWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#EAB308" Margin="0,0,0,8">
+                                            <TextBlock Text="🗺️" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="نقشه شبکه" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۶. Data statistics -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenAnprWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#3B82F6" Margin="0,0,0,8">
+                                            <TextBlock Text="📊" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="آمار تردد و داده" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۷. Face recognition -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenFaceArchiveWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#D946EF" Margin="0,0,0,8">
+                                            <TextBlock Text="👤" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="تشخیص چهره" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۸. Access Management -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenAccessControlTile_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#10B981" Margin="0,0,0,8">
+                                            <TextBlock Text="👮" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="مدیریت تردد" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۹. Operation logs -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenOperationLogsTile_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#16A34A" Margin="0,0,0,8">
+                                            <TextBlock Text="📋" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="وقایع سیستم" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۱۰. Video player -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="LiveViewNavTabButton_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#06B6D4" Margin="0,0,0,8">
+                                            <TextBlock Text="🎬" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="پخش‌کننده ویدیو" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </UniformGrid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- ============================================================= -->
+            <!-- ب) نمای پایش زنده (Main Live View Workspace)                  -->
+            <!-- ============================================================= -->
+            <Grid x:Name="LiveWorkspaceView" Margin="6,6,6,4" Visibility="Visible">
+                <Grid.ColumnDefinitions>
+                    <!-- ستون ۰ در RTL = سمت راست پنجره (Right-side Camera Sidebar) -->
+                    <ColumnDefinition x:Name="SidebarColumn" Width="280" MinWidth="200" MaxWidth="360" />
+                    <!-- ستون ۱ در RTL = مرکز (Large Dark Multi-Camera Video Wall) -->
+                    <ColumnDefinition Width="*" />
+                    <!-- ستون ۲ در RTL = سمت چپ پنجره (Left-side Live Face Events & Capture Panel) -->
+                    <ColumnDefinition x:Name="LiveFacePanelColumn" Width="290" MinWidth="220" MaxWidth="380" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ========================================================= -->
+                <!-- پنل سایدبار سمت راست: جستجوی زنده، لیست دوربین‌ها و بازرس اسلات -->
+                <!-- ========================================================= -->
+                <Border Grid.Column="0"
+                        Background="#1B202C"
+                        BorderBrush="#2C3548"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="8"
+                        Margin="0,0,6,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <!-- سربرگ سایدبار و دکمه‌های ابزار -->
+                            <RowDefinition Height="Auto" />
+                            <!-- کادر جستجوی سریع دوربین‌ها -->
+                            <RowDefinition Height="Auto" />
+                            <!-- لیست دوربین‌های رجیستری -->
+                            <RowDefinition Height="*" />
+                            <!-- بازرس اسلات انتخابی و تنظیم آدرس RTSP -->
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- سربرگ سایدبار -->
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="📹 دوربین‌های رجیستری"
+                                           FontSize="11.5"
+                                           FontWeight="Bold"
+                                           Foreground="#F1F5F9"
+                                           VerticalAlignment="Center" />
+                                <Border x:Name="RegistryCountBadge"
+                                        Background="#1E3A8A"
+                                        CornerRadius="8"
+                                        Padding="6,1"
+                                        Margin="6,0,0,0">
+                                    <TextBlock x:Name="RegistryCountText" Text="۰" FontSize="9.5" FontWeight="Bold" Foreground="#60A5FA" />
+                                </Border>
+                            </StackPanel>
+
+                            <!-- کلیدهای بارگذاری مجدد و کشف سریع -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button ToolTip="بارگذاری مجدد لیست رجیستری"
+                                        Style="{StaticResource IconToolButtonStyle}"
+                                        Width="24" Height="24"
+                                        Margin="0,0,3,0"
+                                        Click="ReloadRegistryButton_Click">
+                                    <TextBlock Text="🔄" FontSize="10" />
+                                </Button>
+                                <Button ToolTip="کشف هوشمند دوربین‌های جدید"
+                                        Style="{StaticResource IconToolButtonStyle}"
+                                        Width="24" Height="24"
+                                        Click="OpenDiscoveryWindow_Click">
+                                    <TextBlock Text="➕" FontSize="10" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- کادر جستجوی زنده دوربین‌ها (Search Filter) -->
+                        <Border Grid.Row="1"
+                                Background="#131722"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="4,2"
+                                Margin="0,0,0,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="🔍" FontSize="10" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                <TextBox x:Name="SearchCameraInput"
+                                         Grid.Column="1"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         Foreground="#F1F5F9"
+                                         FontSize="10.5"
+                                         Padding="0"
+                                         Height="22"
+                                         VerticalContentAlignment="Center"
+                                         ToolTip="جستجو بر اساس نام، برند یا آدرس IP دوربین"
+                                         TextChanged="SearchCameraInput_TextChanged" />
+                            </Grid>
+                        </Border>
+
+                        <!-- لیست دوربین‌های رجیستری با شاخص آنلاین/آفلاین -->
+                        <Border Grid.Row="2"
+                                Background="#141822"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="0,0,0,6">
+                            <ListBox x:Name="RegistryCamerasListBox"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     SelectionChanged="RegistryCamerasListBox_SelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#202634"
+                                                BorderBrush="#2C3548"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                Padding="6,5"
+                                                Margin="0,2">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- چراغ سبز وضعیت دوربین -->
+                                                <Ellipse Grid.Column="0"
+                                                         Width="6.5" Height="6.5"
+                                                         Fill="#10B981"
+                                                         VerticalAlignment="Center"
+                                                         Margin="0,0,6,0" />
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="10.5" Foreground="#F1F5F9" TextTrimming="CharacterEllipsis" />
+                                                    <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
+                                                        <TextBlock Text="{Binding Brand}" FontSize="9" Foreground="#94A3B8" />
+                                                        <TextBlock Text=" · " FontSize="8" Foreground="#64748B" />
+                                                        <TextBlock Text="{Binding IpAddress}" FontSize="9" FontFamily="JetBrains Mono, Consolas" Foreground="#38BDF8" FlowDirection="LeftToRight" />
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- دکمه تخصیص سریع به اسلات فعال -->
+                                                <Button Grid.Column="2"
+                                                        Content="تخصیص"
+                                                        ToolTip="تخصیص این دوربین به اسلات جاری وال"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        FontSize="9"
+                                                        Padding="6,1"
+                                                        Height="21"
+                                                        VerticalAlignment="Center"
+                                                        Click="AssignCurrentItemToActiveSlot_Click" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+
+                        <!-- بازرس اسلات انتخابی و تنظیم دستی آدرس استریم RTSP -->
+                        <Border Grid.Row="3"
+                                Background="#151924"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="6">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="اسلات انتخابی:" FontSize="10" Foreground="#94A3B8" Margin="0,0,3,0" />
+                                        <TextBlock x:Name="ActiveSlotLabel" Text="کانال ۱" FontSize="10.5" FontWeight="Bold" Foreground="#38BDF8" />
+                                    </StackPanel>
+
+                                    <Border Grid.Column="1" Background="#064E3B" CornerRadius="2" Padding="4,1">
+                                        <TextBlock Text="DPAPI امن" FontSize="8" FontWeight="Bold" Foreground="#34D399" />
+                                    </Border>
+                                </Grid>
+
+                                <!-- کادر ورود آدرس استریم RTSP -->
+                                <TextBox x:Name="ManualRtspInput"
+                                         Height="24"
+                                         FontSize="9.5"
+                                         FontFamily="JetBrains Mono, Consolas"
+                                         Padding="4,1"
+                                         FlowDirection="LeftToRight"
+                                         Margin="0,0,0,4" />
+
+                                <!-- پریست‌های سریع تیاندی (/1/1, /1/2, /1/3) و دکمه اعمال -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                        <Button Content="/1/1" Style="{StaticResource SecondaryButtonStyle}" Padding="4,1" Height="20" FontSize="8.5" Margin="0,0,2,0" ToolTip="پریست استریم اصلی تیاندی" Click="Preset11_Click" />
+                                        <Button Content="/1/2" Style="{StaticResource SecondaryButtonStyle}" Padding="4,1" Height="20" FontSize="8.5" Margin="0,0,2,0" ToolTip="پریست استریم فرعی تیاندی" Click="Preset12_Click" />
+                                        <Button Content="/1/3" Style="{StaticResource SecondaryButtonStyle}" Padding="4,1" Height="20" FontSize="8.5" ToolTip="پریست استریم سوم تیاندی" Click="Preset13_Click" />
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            Content="اعمال آدرس"
+                                            Style="{StaticResource PrimaryButtonStyle}"
+                                            Height="20"
+                                            Padding="8,0"
+                                            FontSize="9"
+                                            Click="ApplyManualRtsp_Click" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- ========================================================= -->
+                <!-- بخش وال ویدیویی تیره بزرگ (Large Dark Multi-Camera Video Wall) -->
+                <!-- ========================================================= -->
+                <Grid Grid.Column="1">
                     <Grid.RowDefinitions>
-                        <!-- سربرگ سایدبار و دکمه‌های ابزار -->
+                        <!-- بنر اطلاع‌رسانی حالت تمام‌صفحه -->
                         <RowDefinition Height="Auto" />
-                        <!-- کادر جستجوی سریع دوربین‌ها -->
-                        <RowDefinition Height="Auto" />
-                        <!-- لیست دوربین‌های رجیستری -->
+                        <!-- شبکه ماتریسی بزرگ وال دوربین‌ها -->
                         <RowDefinition Height="*" />
-                        <!-- بازرس اسلات انتخابی و تنظیم آدرس RTSP -->
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- سربرگ سایدبار -->
-                    <Grid Grid.Row="0" Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="📹 دوربین‌های رجیستری"
-                                       FontSize="11.5"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       VerticalAlignment="Center" />
-                            <Border x:Name="RegistryCountBadge"
-                                    Background="#EEF2FF"
-                                    CornerRadius="8"
-                                    Padding="5,1"
-                                    Margin="5,0,0,0">
-                                <TextBlock x:Name="RegistryCountText" Text="۰" FontSize="9" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
-                            </Border>
-                        </StackPanel>
-
-                        <!-- کلیدهای بارگذاری مجدد و کشف سریع -->
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Button ToolTip="بارگذاری مجدد لیست رجیستری"
-                                    Style="{StaticResource IconToolButtonStyle}"
-                                    Width="22" Height="22"
-                                    Margin="0,0,3,0"
-                                    Click="ReloadRegistryButton_Click">
-                                <TextBlock Text="🔄" FontSize="9.5" />
-                            </Button>
-                            <Button ToolTip="کشف هوشمند دوربین‌های جدید"
-                                    Style="{StaticResource IconToolButtonStyle}"
-                                    Width="22" Height="22"
-                                    Click="OpenDiscoveryWindow_Click">
-                                <TextBlock Text="➕" FontSize="9.5" />
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- کادر جستجوی زنده دوربین‌ها (Search Filter) -->
-                    <Border Grid.Row="1"
-                            Background="#F8FAFC"
-                            BorderBrush="{StaticResource BorderLightBrush}"
+                    <!-- بنر شناور بازگشت از تمام‌صفحه -->
+                    <Border x:Name="MaximizedBanner"
+                            Grid.Row="0"
+                            Background="#11151E"
+                            BorderBrush="#2563EB"
                             BorderThickness="1"
                             CornerRadius="4"
-                            Padding="4,2"
-                            Margin="0,0,0,6">
+                            Padding="10,5"
+                            Margin="0,0,0,4"
+                            Visibility="Collapsed">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="🔍" FontSize="10" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
-                            <TextBox x:Name="SearchCameraInput"
-                                     Grid.Column="1"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     FontSize="10.5"
-                                     Padding="0"
-                                     Height="22"
-                                     VerticalContentAlignment="Center"
-                                     ToolTip="جستجو بر اساس نام، برند یا آدرس IP دوربین"
-                                     TextChanged="SearchCameraInput_TextChanged" />
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🔍" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="MaximizedBannerText"
+                                           Text="حالت تمام‌صفحه با استریم باکیفیت اصلی (Main-Stream /1/1) فعال است."
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="#38BDF8"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="— جهت بازگشت به چیدمان قبلی کلید Esc یا دابل‌کلیک کنید."
+                                           FontSize="10"
+                                           Foreground="#94A3B8"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0" />
+                            </StackPanel>
+
+                            <Button Grid.Column="1"
+                                    Content="بازگشت به چیدمان قبلی ❐"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Height="24"
+                                    Padding="10,0"
+                                    FontSize="10"
+                                    Click="RestoreMaximized_Click" />
                         </Grid>
                     </Border>
 
-                    <!-- لیست دوربین‌های رجیستری با شاخص آنلاین/آفلاین -->
-                    <Border Grid.Row="2"
-                            Background="#F8FAFC"
-                            BorderBrush="{StaticResource BorderLightBrush}"
+                    <!-- کادر وال ویدیویی سینمایی تیره -->
+                    <Border Grid.Row="1"
+                            Background="#080B11"
+                            BorderBrush="#252D3D"
                             BorderThickness="1"
                             CornerRadius="4"
-                            Margin="0,0,0,6">
-                        <ListBox x:Name="RegistryCamerasListBox"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 SelectionChanged="RegistryCamerasListBox_SelectionChanged">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#FFFFFF"
-                                            BorderBrush="{StaticResource BorderLightBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="4"
-                                            Padding="6,4"
-                                            Margin="0,2">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <!-- نشانگر وضعیت آنلاین/رجیستر -->
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- چراغ سبز وضعیت دوربین -->
-                                            <Ellipse Grid.Column="0"
-                                                     Width="6" Height="6"
-                                                     Fill="#16A34A"
-                                                     VerticalAlignment="Center"
-                                                     Margin="0,0,6,0" />
-
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="10.5" Foreground="#0F172A" TextTrimming="CharacterEllipsis" />
-                                                <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
-                                                    <TextBlock Text="{Binding Brand}" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" />
-                                                    <TextBlock Text=" · " FontSize="8" Foreground="{StaticResource TextMutedBrush}" />
-                                                    <TextBlock Text="{Binding IpAddress}" FontSize="9" FontFamily="JetBrains Mono, Consolas" Foreground="{StaticResource PrimaryBrush}" FlowDirection="LeftToRight" />
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <!-- دکمه تخصیص سریع به اسلات فعال -->
-                                            <Button Grid.Column="2"
-                                                    Content="تخصیص"
-                                                    ToolTip="تخصیص این دوربین به اسلات جاری وال"
-                                                    Style="{StaticResource SecondaryButtonStyle}"
-                                                    FontSize="9"
-                                                    Padding="5,1"
-                                                    Height="20"
-                                                    VerticalAlignment="Center"
-                                                    Click="AssignCurrentItemToActiveSlot_Click" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Border>
-
-                    <!-- بازرس اسلات انتخابی و تنظیم دستی آدرس استریم RTSP -->
-                    <Border Grid.Row="3"
-                            Background="#F8FAFC"
-                            BorderBrush="{StaticResource BorderLightBrush}"
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Padding="6">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="اسلات انتخابی:" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,3,0" />
-                                    <TextBlock x:Name="ActiveSlotLabel" Text="کانال ۱" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
-                                </StackPanel>
-
-                                <Border Grid.Column="1" Background="#DCFCE7" CornerRadius="2" Padding="4,1">
-                                    <TextBlock Text="DPAPI امن" FontSize="8" FontWeight="Bold" Foreground="#15803D" />
-                                </Border>
-                            </Grid>
-
-                            <!-- کادر ورود آدرس استریم RTSP -->
-                            <TextBox x:Name="ManualRtspInput"
-                                     Height="24"
-                                     FontSize="9.5"
-                                     FontFamily="JetBrains Mono, Consolas"
-                                     Padding="4,1"
-                                     FlowDirection="LeftToRight"
-                                     Margin="0,0,0,4" />
-
-                            <!-- پریست‌های سریع تیاندی (/1/1, /1/2, /1/3) و دکمه اعمال -->
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                    <Button Content="/1/1" Style="{StaticResource SecondaryButtonStyle}" Padding="4,1" Height="20" FontSize="8.5" Margin="0,0,2,0" ToolTip="پریست استریم اصلی تیاندی" Click="Preset11_Click" />
-                                    <Button Content="/1/2" Style="{StaticResource SecondaryButtonStyle}" Padding="4,1" Height="20" FontSize="8.5" Margin="0,0,2,0" ToolTip="پریست استریم فرعی تیاندی" Click="Preset12_Click" />
-                                    <Button Content="/1/3" Style="{StaticResource SecondaryButtonStyle}" Padding="4,1" Height="20" FontSize="8.5" ToolTip="پریست استریم سوم تیاندی" Click="Preset13_Click" />
-                                </StackPanel>
-
-                                <Button Grid.Column="1"
-                                        Content="اعمال آدرس"
-                                        Style="{StaticResource PrimaryButtonStyle}"
-                                        Height="20"
-                                        Padding="6,0"
-                                        FontSize="9"
-                                        Click="ApplyManualRtsp_Click" />
-                            </Grid>
-                        </StackPanel>
+                            ClipToBounds="True">
+                        <UniformGrid x:Name="CameraGrid"
+                                     Rows="2"
+                                     Columns="2"
+                                     Margin="1">
+                            <controls:CameraCell x:Name="CameraCell0" />
+                            <controls:CameraCell x:Name="CameraCell1" />
+                            <controls:CameraCell x:Name="CameraCell2" />
+                            <controls:CameraCell x:Name="CameraCell3" />
+                            <controls:CameraCell x:Name="CameraCell4" />
+                            <controls:CameraCell x:Name="CameraCell5" />
+                            <controls:CameraCell x:Name="CameraCell6" />
+                            <controls:CameraCell x:Name="CameraCell7" />
+                            <controls:CameraCell x:Name="CameraCell8" />
+                        </UniformGrid>
                     </Border>
                 </Grid>
-            </Border>
 
-            <!-- ============================================================= -->
-            <!-- بخش وال ویدیویی تیره بزرگ (Large Dark Multi-Camera Video Wall) -->
-            <!-- اشغال‌کننده اکثریت فضای پنجره با حاشیه‌های بسیار ظریف و فشرده     -->
-            <!-- ============================================================= -->
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <!-- بنر اطلاع‌رسانی حالت تمام‌صفحه (در زمان ماکسیمایز) -->
-                    <RowDefinition Height="Auto" />
-                    <!-- شبکه ماتریسی بزرگ وال دوربین‌ها -->
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <!-- بنر شناور بازگشت از تمام‌صفحه (Maximized State Floating Banner) -->
-                <Border x:Name="MaximizedBanner"
-                        Grid.Row="0"
-                        Background="#0F172A"
-                        BorderBrush="{StaticResource AccentPurpleBrush}"
+                <!-- ========================================================= -->
+                <!-- ستون ۲ در RTL: پنل زنده چهره‌های شناسایی‌شده با شات بزرگ‌تر -->
+                <!-- ========================================================= -->
+                <Border Grid.Column="2"
+                        x:Name="LiveFacePanelBorder"
+                        Background="#1B202C"
+                        BorderBrush="#2C3548"
                         BorderThickness="1"
                         CornerRadius="4"
-                        Padding="10,5"
-                        Margin="0,0,0,4"
-                        Visibility="Collapsed">
+                        Padding="8"
+                        Margin="6,0,0,0">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <!-- سربرگ پنل چهره‌های زنده با بج شمارنده -->
+                            <RowDefinition Height="Auto" />
+                            <!-- دکمه‌های سریع جستجو و باز کردن آرشیو تاریخی -->
+                            <RowDefinition Height="Auto" />
+                            <!-- لیست وقایع چهره‌های شناسایی‌شده لحظه‌ای -->
+                            <RowDefinition Height="*" />
+                            <!-- پاورقی تنظیمات سریع چهره -->
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="🔍" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
-                            <TextBlock x:Name="MaximizedBannerText"
-                                       Text="حالت تمام‌صفحه با استریم باکیفیت اصلی (Main-Stream /1/1) فعال است."
-                                       FontSize="11"
-                                       FontWeight="Bold"
-                                       Foreground="#38BDF8"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Text="— جهت بازگشت به چیدمان قبلی کلید Esc یا دابل‌کلیک کنید."
-                                       FontSize="10"
-                                       Foreground="#94A3B8"
-                                       VerticalAlignment="Center"
-                                       Margin="8,0,0,0" />
-                        </StackPanel>
+                        <!-- سربرگ پنل -->
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-                        <Button Grid.Column="1"
-                                Content="بازگشت به چیدمان قبلی ❐"
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Height="24"
-                                Padding="10,0"
-                                FontSize="10"
-                                Click="RestoreMaximized_Click" />
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="👤 چهره‌های شناسایی‌شده زنده"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="#F1F5F9"
+                                           VerticalAlignment="Center" />
+                                <Border Background="#064E3B"
+                                        CornerRadius="8"
+                                        Padding="6,1"
+                                        Margin="5,0,0,0">
+                                    <TextBlock x:Name="LiveFaceCountBadgeText" Text="۰" FontSize="9.5" FontWeight="Bold" Foreground="#34D399" />
+                                </Border>
+                            </StackPanel>
+
+                            <!-- دکمه بستن سریع پنل -->
+                            <Button Grid.Column="1"
+                                    Content="✕"
+                                    ToolTip="بستن این پنل جانبی"
+                                    Style="{StaticResource IconToolButtonStyle}"
+                                    Width="20" Height="20"
+                                    FontSize="9.5"
+                                    Click="CloseLiveFacePanel_Click" />
+                        </Grid>
+
+                        <!-- نوار دکمه‌های جستجوی تاریخی و ساعتی -->
+                        <Border Grid.Row="1"
+                                Background="#141822"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="6,5"
+                                Margin="0,0,0,6">
+                            <StackPanel>
+                                <Button Content="🔍 جستجوی تاریخی و ساعتی چهره‌ها..."
+                                        ToolTip="باز کردن پنجره آرشیو برای جستجوی پیشرفته بر اساس تاریخ، ساعت و دوربین"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Height="25"
+                                        FontSize="10"
+                                        Margin="0,0,0,5"
+                                        Click="OpenFaceArchiveWindow_Click" />
+
+                                <CheckBox x:Name="MasterFaceDetectionToggle"
+                                          Content="⚡ پردازش هوش مصنوعی چهره (فعال)"
+                                          IsChecked="True"
+                                          FontWeight="Bold"
+                                          Foreground="#34D399"
+                                          FontSize="10"
+                                          Margin="0,0,0,4"
+                                          Click="MasterFaceDetectionToggle_Click" />
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox x:Name="FaceOverlayLiveToggle"
+                                              Content="نمایش کادر سبز روی زنده"
+                                              IsChecked="True"
+                                              Foreground="#CBD5E1"
+                                              FontSize="9.5"
+                                              VerticalAlignment="Center"
+                                              Click="FaceOverlayLiveToggle_Click" />
+                                    <Button Grid.Column="1"
+                                            Content="پاک‌سازی لیست"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Height="19"
+                                            FontSize="8.5"
+                                            Padding="5,0"
+                                            Click="ClearLiveFacesList_Click" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- لیست فید چهره‌های شناسایی‌شده لحظه‌ای (با پرتره بزرگ ۵۶×۵۶) -->
+                        <Border Grid.Row="2"
+                                Background="#141822"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <ListBox x:Name="LiveFaceCaptureListBox"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#202634"
+                                                BorderBrush="#2C3548"
+                                                BorderThickness="1"
+                                                CornerRadius="5"
+                                                Padding="6,5"
+                                                Margin="0,2">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <!-- آیکون و عکس پرتره چهره بزرگ‌تر (۶۰ پیکسل) -->
+                                                    <ColumnDefinition Width="60" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- تصویر پیش‌نمایش برش‌خورده چهره با کادر سبز درخشان مانیتورینگ -->
+                                                <Border Grid.Column="0"
+                                                        Width="54" Height="54"
+                                                        Background="#0F172A"
+                                                        BorderBrush="#22C55E"
+                                                        BorderThickness="1.5"
+                                                        CornerRadius="4"
+                                                        ClipToBounds="True"
+                                                        VerticalAlignment="Center">
+                                                    <Grid>
+                                                        <TextBlock Text="👤" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#64748B" />
+                                                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                    </Grid>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding CameraName}" FontWeight="SemiBold" FontSize="10" Foreground="#F1F5F9" MaxWidth="115" TextTrimming="CharacterEllipsis" />
+                                                        <Border Background="#064E3B" CornerRadius="3" Padding="4,1" Margin="4,0,0,0">
+                                                            <TextBlock Text="{Binding ConfidenceText}" FontSize="8.5" FontWeight="Bold" Foreground="#34D399" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                        <TextBlock Text="زمان: " FontSize="9" Foreground="#94A3B8" />
+                                                        <TextBlock Text="{Binding TimestampString}" FontSize="9" FontFamily="JetBrains Mono, Consolas" Foreground="#38BDF8" FlowDirection="LeftToRight" />
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- دکمه جزئیات یا مشاهده در آرشیو -->
+                                                <Button Grid.Column="2"
+                                                        Content="آرشیو"
+                                                        ToolTip="مشاهده در آرشیو چهره"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        FontSize="8.5"
+                                                        Padding="5,2"
+                                                        Height="22"
+                                                        VerticalAlignment="Center"
+                                                        Click="ViewFaceInArchive_Click" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+
+                        <!-- وضعیت فعال‌بودن هوش مصنوعی -->
+                        <Border Grid.Row="3" Background="#141822" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="3" Padding="6,4" Margin="0,6,0,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse x:Name="FaceAiStatusDot" Width="6.5" Height="6.5" Fill="#10B981" Margin="0,0,5,0" />
+                                <TextBlock x:Name="FaceAiStatusText" Text="هوش مصنوعی چهره فعال است" FontSize="9" Foreground="#CBD5E1" />
+                            </StackPanel>
+                        </Border>
                     </Grid>
-                </Border>
-
-                <!-- کادر وال ویدیویی سینمایی تیره با فاصله فشرده سلول‌ها -->
-                <Border Grid.Row="1"
-                        Background="{StaticResource DarkVideoWallBrush}"
-                        BorderBrush="#1E293B"
-                        BorderThickness="1"
-                        CornerRadius="3"
-                        ClipToBounds="True">
-                    <UniformGrid x:Name="CameraGrid"
-                                 Rows="2"
-                                 Columns="2"
-                                 Margin="1">
-                        <controls:CameraCell x:Name="CameraCell0" />
-                        <controls:CameraCell x:Name="CameraCell1" />
-                        <controls:CameraCell x:Name="CameraCell2" />
-                        <controls:CameraCell x:Name="CameraCell3" />
-                        <controls:CameraCell x:Name="CameraCell4" />
-                        <controls:CameraCell x:Name="CameraCell5" />
-                        <controls:CameraCell x:Name="CameraCell6" />
-                        <controls:CameraCell x:Name="CameraCell7" />
-                        <controls:CameraCell x:Name="CameraCell8" />
-                    </UniformGrid>
                 </Border>
             </Grid>
-
-            <!-- ============================================================= -->
-            <!-- ستون ۲ در RTL: پنل زنده چهره‌های شناسایی‌شده (Live Face Capture) -->
-            <!-- ============================================================= -->
-            <Border Grid.Column="2"
-                    x:Name="LiveFacePanelBorder"
-                    Background="{StaticResource CardBackgroundBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8"
-                    Margin="6,0,0,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <!-- سربرگ پنل چهره‌های زنده با بج شمارنده -->
-                        <RowDefinition Height="Auto" />
-                        <!-- دکمه‌های سریع جستجو و باز کردن آرشیو تاریخی -->
-                        <RowDefinition Height="Auto" />
-                        <!-- لیست وقایع چهره‌های شناسایی‌شده لحظه‌ای -->
-                        <RowDefinition Height="*" />
-                        <!-- پاورقی تنظیمات سریع چهره -->
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <!-- سربرگ پنل -->
-                    <Grid Grid.Row="0" Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="👤 چهره‌های شناسایی‌شده زنده"
-                                       FontSize="11"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       VerticalAlignment="Center" />
-                            <Border Background="#DCFCE7"
-                                    CornerRadius="8"
-                                    Padding="5,1"
-                                    Margin="5,0,0,0">
-                                <TextBlock x:Name="LiveFaceCountBadgeText" Text="۰" FontSize="9" FontWeight="Bold" Foreground="#15803D" />
-                            </Border>
-                        </StackPanel>
-
-                        <!-- دکمه بستن سریع پنل -->
-                        <Button Grid.Column="1"
-                                Content="✕"
-                                ToolTip="بستن این پنل جانبی"
-                                Style="{StaticResource IconToolButtonStyle}"
-                                Width="20" Height="20"
-                                FontSize="9.5"
-                                Click="CloseLiveFacePanel_Click" />
-                    </Grid>
-
-                    <!-- نوار دکمه‌های جستجوی تاریخی و ساعتی -->
-                    <Border Grid.Row="1"
-                            Background="#F8FAFC"
-                            BorderBrush="{StaticResource BorderLightBrush}"
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Padding="6,4"
-                            Margin="0,0,0,6">
-                        <StackPanel>
-                            <Button Content="🔍 جستجوی تاریخی و ساعتی چهره‌ها..."
-                                    ToolTip="باز کردن پنجره آرشیو برای جستجوی پیشرفته بر اساس تاریخ، ساعت و دوربین"
-                                    Style="{StaticResource PrimaryButtonStyle}"
-                                    Height="24"
-                                    FontSize="10"
-                                    Margin="0,0,0,4"
-                                    Click="OpenFaceArchiveWindow_Click" />
-
-                            <CheckBox x:Name="MasterFaceDetectionToggle"
-                                      Content="⚡ پردازش هوش مصنوعی چهره (فعال)"
-                                      IsChecked="True"
-                                      FontWeight="Bold"
-                                      Foreground="#15803D"
-                                      FontSize="10"
-                                      Margin="0,0,0,4"
-                                      Click="MasterFaceDetectionToggle_Click" />
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <CheckBox x:Name="FaceOverlayLiveToggle"
-                                          Content="نمایش کادر سبز روی زنده"
-                                          IsChecked="True"
-                                          FontSize="9.5"
-                                          VerticalAlignment="Center"
-                                          Click="FaceOverlayLiveToggle_Click" />
-                                <Button Grid.Column="1"
-                                        Content="پاک‌سازی لیست"
-                                        Style="{StaticResource SecondaryButtonStyle}"
-                                        Height="18"
-                                        FontSize="8.5"
-                                        Padding="4,0"
-                                        Click="ClearLiveFacesList_Click" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- لیست فید چهره‌های شناسایی‌شده لحظه‌ای -->
-                    <Border Grid.Row="2"
-                            Background="#F8FAFC"
-                            BorderBrush="{StaticResource BorderLightBrush}"
-                            BorderThickness="1"
-                            CornerRadius="4">
-                        <ListBox x:Name="LiveFaceCaptureListBox"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#FFFFFF"
-                                            BorderBrush="{StaticResource BorderLightBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="4"
-                                            Padding="6,4"
-                                            Margin="0,2">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <!-- آیکون چهره با کادر سبز رنگ -->
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- تصویر پیش‌نمایش برش‌خورده چهره با کادر سبز درخشان مانیتورینگ -->
-                                            <Border Grid.Column="0"
-                                                    Width="38" Height="38"
-                                                    Background="#0F172A"
-                                                    BorderBrush="#22C55E"
-                                                    BorderThickness="1.5"
-                                                    CornerRadius="3"
-                                                    ClipToBounds="True"
-                                                    VerticalAlignment="Center">
-                                                <Grid>
-                                                    <TextBlock Text="👤" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#94A3B8" />
-                                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
-                                                </Grid>
-                                            </Border>
-
-                                            <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding CameraName}" FontWeight="SemiBold" FontSize="10" Foreground="#0F172A" TextTrimming="CharacterEllipsis" />
-                                                    <Border Background="#DCFCE7" CornerRadius="2" Padding="3,0" Margin="4,0,0,0">
-                                                        <TextBlock Text="{Binding ConfidenceText}" FontSize="8" FontWeight="Bold" Foreground="#15803D" />
-                                                    </Border>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                    <TextBlock Text="زمان: " FontSize="8.5" Foreground="{StaticResource TextMutedBrush}" />
-                                                    <TextBlock Text="{Binding TimestampString}" FontSize="8.5" FontFamily="JetBrains Mono, Consolas" Foreground="{StaticResource PrimaryBrush}" FlowDirection="LeftToRight" />
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <!-- دکمه جزئیات یا مشاهده در آرشیو -->
-                                            <Button Grid.Column="2"
-                                                    Content="آرشیو"
-                                                    ToolTip="مشاهده در آرشیو چهره"
-                                                    Style="{StaticResource SecondaryButtonStyle}"
-                                                    FontSize="8.5"
-                                                    Padding="4,1"
-                                                    Height="20"
-                                                    VerticalAlignment="Center"
-                                                    Click="ViewFaceInArchive_Click" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Border>
-
-                    <!-- وضعیت فعال‌بودن هوش مصنوعی -->
-                    <Border Grid.Row="3" Background="#F1F5F9" CornerRadius="3" Padding="6,3" Margin="0,6,0,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="FaceAiStatusDot" Width="6" Height="6" Fill="#16A34A" Margin="0,0,5,0" />
-                            <TextBlock x:Name="FaceAiStatusText" Text="هوش مصنوعی چهره فعال است" FontSize="9" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </Border>
         </Grid>
 
         <!-- ================================================================= -->
-        <!-- ۳. نوار تایم‌لاین پخش و کنترل‌های فشرده (Bottom Playback Timeline) -->
-        <!-- شامل نوار زمان ۲۴ ساعته و کنترل‌های فشرده مورد پشتیبانی عملکرد سیستم -->
+        <!-- ۳. نوار تایم‌لاین ۲۴ ساعته، کنترل‌های پخش و گزارشات فنی LibVLC       -->
         <!-- ================================================================= -->
         <Border Grid.Row="2"
-                Background="#0F172A"
-                BorderBrush="#1E293B"
+                Background="#11151E"
+                BorderBrush="#252D3D"
                 BorderThickness="0,1,0,0"
                 Padding="10,4">
             <StackPanel>
                 <!-- ردیف اول: نوار بصری تایم‌لاین ۲۴ ساعته مانیتورینگ VMS -->
-                <Border Background="#1E293B"
-                        BorderBrush="#334155"
+                <Border Background="#181E2C"
+                        BorderBrush="#2C3548"
                         BorderThickness="1"
                         CornerRadius="3"
                         Padding="8,3"
@@ -762,11 +1136,8 @@
 
                         <!-- ترک بصری تایم‌لاین با محدوده فعال و نشانگر موقعیت زنده -->
                         <Grid Grid.Row="1" Height="8">
-                            <!-- خط پایه خاکستری -->
-                            <Rectangle Fill="#334155" Height="4" RadiusX="2" RadiusY="2" VerticalAlignment="Center" />
-                            <!-- نوار استریم فعال مانیتورینگ با رنگ بنفش/آبی -->
-                            <Rectangle Fill="{StaticResource PrimaryBrush}" Height="4" RadiusX="2" RadiusY="2" Width="280" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                            <!-- نشانگر قرمز/سبز نقطه زنده (LIVE Playhead) -->
+                            <Rectangle Fill="#2C3548" Height="4" RadiusX="2" RadiusY="2" VerticalAlignment="Center" />
+                            <Rectangle Fill="#1A73E8" Height="4" RadiusX="2" RadiusY="2" Width="280" HorizontalAlignment="Right" VerticalAlignment="Center" />
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,-2,2,0">
                                 <Ellipse Width="8" Height="8" Fill="#10B981" />
                             </StackPanel>
@@ -777,17 +1148,13 @@
                 <!-- ردیف دوم: کنترل‌های فشرده پخش و تله‌متری موتور -->
                 <Grid Height="24">
                     <Grid.ColumnDefinitions>
-                        <!-- عملیات پخش و پرش زنده -->
                         <ColumnDefinition Width="Auto" />
-                        <!-- خلاصه وضعیت پایش و سخت‌افزار -->
                         <ColumnDefinition Width="*" />
-                        <!-- کلید باز کردن وقایع لاگ LibVLC -->
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <!-- کنترل‌های فشرده پخش -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- دکمه سوئیچ پخش/توقف تمام استریم‌ها -->
                         <Button Style="{StaticResource TimelineButtonStyle}"
                                 ToolTip="اتصال تمام استریم‌های فعال"
                                 Margin="0,0,4,0"
@@ -821,7 +1188,7 @@
                         <TextBlock Text="RTSP over TCP" FontSize="9.5" FontFamily="JetBrains Mono" Foreground="#34D399" FontWeight="Bold" Margin="0,0,14,0" />
 
                         <TextBlock Text="شتاب‌دهنده گرافیکی:" FontSize="9.5" Foreground="#94A3B8" Margin="0,0,4,0" />
-                        <TextBlock Text="Direct3D11 / DirectX" FontSize="9.5" FontFamily="JetBrains Mono" Foreground="{StaticResource AccentPurpleBrush}" FontWeight="Bold" />
+                        <TextBlock Text="Direct3D11 / DirectX" FontSize="9.5" FontFamily="JetBrains Mono" Foreground="#60A5FA" FontWeight="Bold" />
                     </StackPanel>
 
                     <!-- دکمه پنل کشویی لاگ‌های بومی -->

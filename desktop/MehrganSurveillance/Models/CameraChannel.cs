@@ -34,8 +34,8 @@ namespace MehrganSurveillance.Models
 
         // تنظیمات هوش مصنوعی و آرشیو مختص هر کانال
         public bool IsFaceDetectionEnabled { get; set; } = true;
-        public bool IsFaceArchiveEnabled { get; set; } = false;
-        public bool IsAnprEnabled { get; set; } = false;
+        public bool IsFaceArchiveEnabled { get; set; } = true;
+        public bool IsAnprEnabled { get; set; } = true;
 
         /// <summary>
         /// دریافت آدرس موثر استریم با در نظر گرفتن نوع تقاضا (فرعی یا اصلی) و منطق تبدیل خودکار تیاندی

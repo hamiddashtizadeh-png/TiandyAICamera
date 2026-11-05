@@ -772,10 +772,27 @@ namespace MehrganSurveillance.Controls
 
             foreach (var face in faces)
             {
-                double boxWidth = Math.Max(22, face.NormalizedWidth * canvasWidth);
-                double boxHeight = Math.Max(22, face.NormalizedHeight * canvasHeight);
-                double left = Math.Clamp(face.NormalizedX * canvasWidth, 0, Math.Max(0, canvasWidth - boxWidth));
-                double top = Math.Clamp(face.NormalizedY * canvasHeight, 0, Math.Max(0, canvasHeight - boxHeight));
+                // گسترش استاندارد کادر سبز روی تصویر زنده تا تمام سر، صورت و بخشی از سرشانه را دربرگیرد و خیلی کوچک نیفتد
+                double rawW = face.NormalizedWidth * canvasWidth;
+                double rawH = face.NormalizedHeight * canvasHeight;
+                double rawX = face.NormalizedX * canvasWidth;
+                double rawY = face.NormalizedY * canvasHeight;
+
+                double padX = Math.Max(rawW * 0.35, 16);
+                double padTop = Math.Max(rawH * 0.32, 14);
+                double padBottom = Math.Max(rawH * 0.45, 20);
+
+                double minBoxW = Math.Max(78, canvasWidth * 0.18);
+                double minBoxH = Math.Max(92, canvasHeight * 0.24);
+
+                double boxWidth = Math.Max(minBoxW, rawW + (padX * 2));
+                double boxHeight = Math.Max(minBoxH, rawH + padTop + padBottom);
+
+                double centerX = rawX + (rawW / 2.0);
+                double centerY = rawY + (rawH / 2.0) + (padBottom - padTop) * 0.25;
+
+                double left = Math.Clamp(centerX - (boxWidth / 2.0), 2, Math.Max(2, canvasWidth - boxWidth - 2));
+                double top = Math.Clamp(centerY - (boxHeight / 2.0), 2, Math.Max(2, canvasHeight - boxHeight - 2));
 
                 var rect = new System.Windows.Shapes.Rectangle
                 {
@@ -783,9 +800,9 @@ namespace MehrganSurveillance.Controls
                     Height = boxHeight,
                     Stroke = new SolidColorBrush(Color.FromRgb(34, 197, 94)), // Vibrant Green (#22C55E)
                     StrokeThickness = 2.5,
-                    Fill = new SolidColorBrush(Color.FromArgb(28, 34, 197, 94)),
-                    RadiusX = 3,
-                    RadiusY = 3
+                    Fill = new SolidColorBrush(Color.FromArgb(24, 34, 197, 94)),
+                    RadiusX = 4,
+                    RadiusY = 4
                 };
 
                 Canvas.SetLeft(rect, left);
@@ -795,20 +812,20 @@ namespace MehrganSurveillance.Controls
                 // برچسب هوشمند درصد اطمینان و کادر چهره
                 var labelBorder = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(220, 21, 128, 61)),
-                    CornerRadius = new CornerRadius(2),
-                    Padding = new Thickness(4, 1, 4, 1)
+                    Background = new SolidColorBrush(Color.FromArgb(230, 21, 128, 61)),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(5, 1, 5, 1)
                 };
                 var labelText = new TextBlock
                 {
                     Text = $"👤 {Math.Round(face.Confidence * 100)}%",
                     Foreground = Brushes.White,
-                    FontSize = 9,
+                    FontSize = 9.5,
                     FontWeight = FontWeights.Bold
                 };
                 labelBorder.Child = labelText;
                 Canvas.SetLeft(labelBorder, left);
-                Canvas.SetTop(labelBorder, Math.Max(0, top - 18));
+                Canvas.SetTop(labelBorder, Math.Max(0, top - 20));
                 FaceOverlayCanvas.Children.Add(labelBorder);
             }
 

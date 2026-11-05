@@ -452,6 +452,8 @@ namespace MehrganSurveillance.Controls
             RequestAssignCamera?.Invoke(this, this);
         }
 
+        #endregion
+
         #region لایه نمایش رویداد تشخیص چهره (Face Detection Overlay)
 
         public bool IsFaceOverlayEnabled { get; set; } = true;

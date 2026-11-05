@@ -34,6 +34,7 @@ public partial class FaceArchiveWindow : Window
         if (_archiveService != null)
         {
             FaceArchiveToggle.IsChecked = _archiveService.Config.IsEnabled;
+            await _archiveService.InitializeAsync();
         }
 
         UpdateDiskUsageDisplay();

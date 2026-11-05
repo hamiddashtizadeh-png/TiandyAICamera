@@ -42,6 +42,7 @@ namespace MehrganSurveillance
         private readonly AnprPipeline _anprPipeline = new();
         private AnprArchiveService? _anprArchiveService;
         private readonly System.Collections.ObjectModel.ObservableCollection<LiveFaceFeedItem> _liveFaceFeed = new();
+        private readonly ConcurrentDictionary<string, DateTime> _lastLiveFeedTimePerCamera = new();
         private long _liveFaceCounter;
 
         // صف لاگ‌های باچ‌شده و تایمر اختصاصی جهت جلوگیری از فریز UI
@@ -139,36 +140,52 @@ namespace MehrganSurveillance
 
                 LiveFaceCaptureListBox.ItemsSource = _liveFaceFeed;
 
-                // اتصال رویداد تشخیص فریم به آرشیو، نمایش کادر سبز روی سلول و افزودن به پنل زنده
+                // اتصال رویداد تشخیص فریم به آرشیو، نمایش کادر سبز روی سلول و افزودن به پنل زنده با کنترل نرخ ثبت و استخراج عکس
                 _facePipeline.FrameFaceDetected += (result, frame) =>
                 {
                     _archiveService?.OnFaceDetected(result, frame);
 
+                    var faces = result.Faces;
+                    int chIndex = result.ChannelIndex;
+                    string camId = result.CameraId;
+
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        if (result.ChannelIndex >= 0 && result.ChannelIndex < _cells.Count)
+                        if (chIndex >= 0 && chIndex < _cells.Count)
                         {
-                            _cells[result.ChannelIndex].UpdateFaceDetections(result.Faces);
+                            _cells[chIndex].UpdateFaceDetections(faces);
                         }
 
-                        if (result.Faces != null && result.Faces.Count > 0)
+                        if (faces != null && faces.Count > 0)
                         {
-                            string camName = (result.ChannelIndex >= 0 && result.ChannelIndex < _channels.Count)
-                                ? _channels[result.ChannelIndex].DisplayName
-                                : $"کانال {result.ChannelIndex + 1}";
-
-                            foreach (var face in result.Faces)
+                            // کنترل نرخ ثبت رویدادهای زنده در فید (حداکثر یک‌بار در هر ۲ ثانیه برای هر دوربین)
+                            var now = DateTime.UtcNow;
+                            if (_lastLiveFeedTimePerCamera.TryGetValue(camId, out var lastTime))
                             {
+                                if ((now - lastTime).TotalSeconds < 2.0)
+                                {
+                                    return; // جلوگیری از اسپم فید و افزایش بی‌رویه شمارنده
+                                }
+                            }
+                            _lastLiveFeedTimePerCamera[camId] = now;
+
+                            string camName = (chIndex >= 0 && chIndex < _channels.Count)
+                                ? _channels[chIndex].DisplayName
+                                : $"کانال {chIndex + 1}";
+
+                            foreach (var face in faces)
+                            {
+                                var thumb = CreateThumbnailFromFrame(frame, face);
                                 Interlocked.Increment(ref _liveFaceCounter);
                                 _liveFaceFeed.Insert(0, new LiveFaceFeedItem
                                 {
                                     CameraName = camName,
                                     TimestampString = DateTime.Now.ToString("HH:mm:ss"),
                                     ConfidenceText = $"{Math.Round(face.Confidence * 100)}%",
-                                    ChannelIndex = result.ChannelIndex
+                                    ChannelIndex = chIndex,
+                                    Thumbnail = thumb
                                 });
 
-                                // محدودسازی لیست فید زنده به ۵۰ مورد اخیر جهت حفظ روان بودن
                                 while (_liveFaceFeed.Count > 50)
                                 {
                                     _liveFaceFeed.RemoveAt(_liveFaceFeed.Count - 1);
@@ -867,6 +884,48 @@ namespace MehrganSurveillance
                 StopAiAcquisitionForChannel(args.Cell.Channel.SlotIndex);
             }
         }
+
+        private static System.Windows.Media.ImageSource? CreateThumbnailFromFrame(AcquiredFrame frame, FaceBoundingBox face)
+        {
+            try
+            {
+                var (cx, cy, cw, ch) = face.ToPixelCoordinates(frame.Width, frame.Height);
+                if (cw <= 4 || ch <= 4) return null;
+
+                // حاشیه برای قاب‌بندی زیباتر پرتره
+                int padX = (int)(cw * 0.12);
+                int padY = (int)(ch * 0.12);
+                cx = Math.Max(0, cx - padX);
+                cy = Math.Max(0, cy - padY);
+                cw = Math.Min(frame.Width - cx, cw + (padX * 2));
+                ch = Math.Min(frame.Height - cy, ch + (padY * 2));
+
+                int stride = cw * 4;
+                byte[] crop = new byte[stride * ch];
+                var raw = frame.PixelData.Span;
+
+                for (int y = 0; y < ch; y++)
+                {
+                    int srcOffset = ((cy + y) * frame.Stride) + (cx * 4);
+                    int dstOffset = y * stride;
+                    if (srcOffset + stride <= raw.Length && dstOffset + stride <= crop.Length)
+                    {
+                        raw.Slice(srcOffset, stride).CopyTo(crop.AsSpan(dstOffset, stride));
+                    }
+                }
+
+                var bitmap = System.Windows.Media.Imaging.BitmapSource.Create(
+                    cw, ch, 96, 96,
+                    System.Windows.Media.PixelFormats.Bgra32,
+                    null, crop, stride);
+                bitmap.Freeze();
+                return bitmap;
+            }
+            catch
+            {
+                return null;
+            }
+        }
         #endregion
     }
 
@@ -879,5 +938,6 @@ namespace MehrganSurveillance
         public string TimestampString { get; init; } = string.Empty;
         public string ConfidenceText { get; init; } = string.Empty;
         public int ChannelIndex { get; init; }
+        public System.Windows.Media.ImageSource? Thumbnail { get; init; }
     }
 }

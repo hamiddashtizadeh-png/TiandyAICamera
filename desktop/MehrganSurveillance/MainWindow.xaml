@@ -659,15 +659,19 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
 
-                                            <!-- کادر نمادین یا پیش‌نمایش چهره با استروک سبز -->
+                                            <!-- تصویر پیش‌نمایش برش‌خورده چهره با کادر سبز درخشان مانیتورینگ -->
                                             <Border Grid.Column="0"
-                                                    Width="36" Height="36"
-                                                    Background="#F0FDF4"
+                                                    Width="38" Height="38"
+                                                    Background="#0F172A"
                                                     BorderBrush="#22C55E"
                                                     BorderThickness="1.5"
                                                     CornerRadius="3"
+                                                    ClipToBounds="True"
                                                     VerticalAlignment="Center">
-                                                <TextBlock Text="👤" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Grid>
+                                                    <TextBlock Text="👤" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#94A3B8" />
+                                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                </Grid>
                                             </Border>
 
                                             <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">

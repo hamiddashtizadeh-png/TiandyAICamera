@@ -178,37 +178,26 @@
                   MouseLeftButtonDown="VideoArea_MouseLeftButtonDown"
                   MouseRightButtonDown="VideoArea_MouseRightButtonDown">
                 
-                <!-- کنترل رندر ویدیوی حقیقی بومی LibVLC با روکش پیش‌زمینه (Foreground Overlay) -->
+                <!-- کنترل رندر ویدیوی حقیقی بومی LibVLC -->
                 <vlc:VideoView x:Name="CellVideoView"
                                HorizontalAlignment="Stretch"
-                               VerticalAlignment="Stretch">
-                    <!-- لایه روکش تعاملی شفاف و بوم کادرهای سبز چهره -->
-                    <Grid Background="#01000000"
-                          MouseLeftButtonDown="VideoArea_MouseLeftButtonDown"
-                          MouseRightButtonDown="VideoArea_MouseRightButtonDown">
-                        
-                        <!-- لایه ترسیم مستطیل چهره و بج رویداد (Face Detection Overlay) -->
-                        <Canvas x:Name="FaceOverlayCanvas"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch"
-                                IsHitTestVisible="False"
-                                Visibility="Visible" />
+                               VerticalAlignment="Stretch" />
 
-                        <!-- بج شناور تشخیص چهره -->
-                        <Border x:Name="FaceDetectedBadge"
-                                Background="#15803D"
-                                CornerRadius="3"
-                                Padding="5,2"
-                                Margin="6"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Top"
-                                Visibility="Collapsed">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="👤 چهره شناسایی شد" FontSize="8.5" FontWeight="Bold" Foreground="White" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </vlc:VideoView>
+                <!-- لایه پاپ‌آپ شفاف کادر سبز زنده چهره‌ها مستقیماً روی سطح گرافیکی DirectX بدون مشکل Airspace -->
+                <Popup x:Name="FaceOverlayPopup"
+                       AllowsTransparency="True"
+                       PlacementTarget="{Binding ElementName=CellVideoView}"
+                       Placement="Relative"
+                       HorizontalOffset="0"
+                       VerticalOffset="0"
+                       IsOpen="False"
+                       Focusable="False"
+                       IsHitTestVisible="False"
+                       Opened="FaceOverlayPopup_Opened">
+                    <Canvas x:Name="FaceOverlayCanvas"
+                            Background="Transparent"
+                            IsHitTestVisible="False" />
+                </Popup>
 
                 <!-- لایه نگه‌دارنده شیک مانیتورینگ با خطوط هدایت Viewfinder در زمان عدم پخش -->
                 <Border x:Name="PlaceholderOverlay"

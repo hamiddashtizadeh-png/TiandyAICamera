@@ -17,6 +17,7 @@ public sealed class FaceArchiveDatabase : IAsyncDisposable, IDisposable
     private readonly string _connectionString;
     private readonly string _dbPath;
     private readonly SemaphoreSlim _writeGate = new(1, 1);
+    private int _isInitialized;
     private bool _isDisposed;
 
     public FaceArchiveDatabase(string dbPath)
@@ -35,6 +36,15 @@ public sealed class FaceArchiveDatabase : IAsyncDisposable, IDisposable
             DefaultTimeout = 5000
         };
         _connectionString = csb.ConnectionString;
+    }
+
+    public async Task EnsureInitializedAsync()
+    {
+        if (Volatile.Read(ref _isInitialized) == 0)
+        {
+            await InitializeAsync();
+            Volatile.Write(ref _isInitialized, 1);
+        }
     }
 
     public async Task InitializeAsync()
@@ -91,6 +101,7 @@ public sealed class FaceArchiveDatabase : IAsyncDisposable, IDisposable
         if (ev == null) throw new ArgumentNullException(nameof(ev));
         if (crops == null) throw new ArgumentNullException(nameof(crops));
 
+        await EnsureInitializedAsync();
         await _writeGate.WaitAsync();
         try
         {
@@ -144,6 +155,7 @@ public sealed class FaceArchiveDatabase : IAsyncDisposable, IDisposable
 
     public async Task<List<FaceEventRecord>> QueryEventsAsync(FaceArchiveFilter filter)
     {
+        await EnsureInitializedAsync();
         var results = new List<FaceEventRecord>();
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();

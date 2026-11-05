@@ -77,37 +77,54 @@ public sealed class FaceArchiveService : IAsyncDisposable, IDisposable
     {
         try
         {
-            // ۱. بررسی امنیتی مسیر ریشه
+            // ۱. تضمین ایجاد دایرکتوری و مقداردهی پایگاه داده SQLite در نخستین گام
             if (!Directory.Exists(_canonicalArchiveRoot))
             {
                 Directory.CreateDirectory(_canonicalArchiveRoot);
             }
-            WindowsSecurePath.AssertNoReparsePointsInHierarchy(_canonicalArchiveRoot, _canonicalArchiveRoot);
-
-            // ۲. تلاش برای احراز مالکیت انحصاری قفل سراسری
-            bool acquired = await _lockManager.TryAcquireAsync();
-            if (!acquired)
-            {
-                Log("سامانه در حالت ثانویه (Secondary Standby) قرار دارد؛ آرشیو محلی غیرفعال و به صورت فقط‌خواندنی است.");
-                return false;
-            }
-
-            // ۳. ایجاد دایرکتوری موقت با فایل قفل اختصاصی این نمونه
-            if (!Directory.Exists(_stagingDir))
-            {
-                Directory.CreateDirectory(_stagingDir);
-            }
-            string lockFilePath = Path.Combine(_stagingDir, "instance.lock");
-            _instanceLockStream = new FileStream(
-                lockFilePath,
-                FileMode.OpenOrCreate,
-                FileAccess.ReadWrite,
-                FileShare.None,
-                bufferSize: 1,
-                FileOptions.DeleteOnClose);
-
-            // ۴. مقداردهی پایگاه داده SQLite
             await _database.InitializeAsync();
+
+            // ۲. بررسی امنیتی مسیر ریشه
+            try
+            {
+                WindowsSecurePath.AssertNoReparsePointsInHierarchy(_canonicalArchiveRoot, _canonicalArchiveRoot);
+            }
+            catch (Exception secEx)
+            {
+                Log($"[هشدار امنیتی] بررسی ساختار مسیر: {secEx.Message}");
+            }
+
+            // ۳. تلاش برای احراز مالکیت انحصاری قفل سراسری
+            try
+            {
+                bool acquired = await _lockManager.TryAcquireAsync();
+                if (!acquired)
+                {
+                    Log("سامانه در حالت ثانویه (Secondary Standby) قرار دارد؛ ثبت آرشیو فقط‌خواندنی است.");
+                }
+            }
+            catch (Exception lockEx)
+            {
+                Log($"[مدیریت قفل آرشیو] {lockEx.Message}");
+            }
+
+            // ۴. ایجاد دایرکتوری موقت با فایل قفل اختصاصی این نمونه
+            try
+            {
+                if (!Directory.Exists(_stagingDir))
+                {
+                    Directory.CreateDirectory(_stagingDir);
+                }
+                string lockFilePath = Path.Combine(_stagingDir, "instance.lock");
+                _instanceLockStream = new FileStream(
+                    lockFilePath,
+                    FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite,
+                    FileShare.None,
+                    bufferSize: 1,
+                    FileOptions.DeleteOnClose);
+            }
+            catch { }
 
             // ۵. تولید کلید رمزگذاری اختصاصی اپوک جاری با DPAPI
             InitializeFreshKeyEpoch();

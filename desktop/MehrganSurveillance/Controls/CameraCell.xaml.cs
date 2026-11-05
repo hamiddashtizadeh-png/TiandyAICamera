@@ -42,6 +42,8 @@ namespace MehrganSurveillance.Controls
         public CameraCell()
         {
             InitializeComponent();
+            Loaded += CameraCell_Loaded;
+            Unloaded += CameraCell_Unloaded;
         }
 
         public void SetSharedLibVlc(LibVLC libVlc)
@@ -180,6 +182,11 @@ namespace MehrganSurveillance.Controls
                 {
                     _mediaPlayer = null;
                     CellVideoView.MediaPlayer = null;
+                    if (FaceOverlayPopup != null)
+                    {
+                        FaceOverlayPopup.IsOpen = false;
+                    }
+                    FaceOverlayCanvas.Children.Clear();
                 }
             }
         }
@@ -576,13 +583,82 @@ namespace MehrganSurveillance.Controls
 
         public bool IsFaceOverlayEnabled { get; set; } = true;
 
+        private void CameraCell_Loaded(object sender, RoutedEventArgs e)
+        {
+            HookParentWindow();
+            CellVideoView.SizeChanged += (s, ev) => RepositionOverlay();
+        }
+
+        private void CameraCell_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (FaceOverlayPopup != null)
+            {
+                FaceOverlayPopup.IsOpen = false;
+            }
+        }
+
+        private void HookParentWindow()
+        {
+            var win = Window.GetWindow(this);
+            if (win != null)
+            {
+                win.LocationChanged += (s, e) => RepositionOverlay();
+                win.SizeChanged += (s, e) => RepositionOverlay();
+                win.Deactivated += (s, e) => { if (FaceOverlayPopup != null) FaceOverlayPopup.IsOpen = false; };
+                win.Activated += (s, e) => { if (FaceOverlayPopup != null && IsFaceOverlayEnabled && Channel.IsConnected) RepositionOverlay(); };
+            }
+        }
+
+        private void RepositionOverlay()
+        {
+            if (FaceOverlayPopup != null && FaceOverlayPopup.IsOpen)
+            {
+                double w = CellVideoView.ActualWidth > 0 ? CellVideoView.ActualWidth : ActualWidth;
+                double h = CellVideoView.ActualHeight > 0 ? CellVideoView.ActualHeight : ActualHeight;
+                if (w > 0 && h > 0)
+                {
+                    FaceOverlayPopup.Width = w;
+                    FaceOverlayPopup.Height = h;
+                    FaceOverlayCanvas.Width = w;
+                    FaceOverlayCanvas.Height = h;
+
+                    var offset = FaceOverlayPopup.HorizontalOffset;
+                    FaceOverlayPopup.HorizontalOffset = offset + 0.001;
+                    FaceOverlayPopup.HorizontalOffset = offset;
+                }
+            }
+        }
+
+        private void FaceOverlayPopup_Opened(object? sender, EventArgs e)
+        {
+            try
+            {
+                var hwndSource = (System.Windows.Interop.HwndSource?)System.Windows.PresentationSource.FromVisual(FaceOverlayCanvas);
+                if (hwndSource != null && hwndSource.Handle != IntPtr.Zero)
+                {
+                    int exStyle = GetWindowLong(hwndSource.Handle, -20); // GWL_EXSTYLE
+                    SetWindowLong(hwndSource.Handle, -20, exStyle | 0x00000020); // WS_EX_TRANSPARENT
+                }
+            }
+            catch { }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+
         public void SetFaceOverlayVisible(bool isVisible)
         {
             IsFaceOverlayEnabled = isVisible;
             if (!isVisible)
             {
                 FaceOverlayCanvas.Children.Clear();
-                FaceDetectedBadge.Visibility = Visibility.Collapsed;
+                if (FaceOverlayPopup != null)
+                {
+                    FaceOverlayPopup.IsOpen = false;
+                }
             }
         }
 
@@ -594,24 +670,33 @@ namespace MehrganSurveillance.Controls
                 return;
             }
 
-            if (!IsFaceOverlayEnabled || faces == null || faces.Count == 0)
+            if (!IsFaceOverlayEnabled || faces == null || faces.Count == 0 || !Channel.IsConnected)
             {
                 FaceOverlayCanvas.Children.Clear();
-                FaceDetectedBadge.Visibility = Visibility.Collapsed;
+                if (FaceOverlayPopup != null)
+                {
+                    FaceOverlayPopup.IsOpen = false;
+                }
                 return;
             }
 
-            FaceOverlayCanvas.Children.Clear();
-            double canvasWidth = FaceOverlayCanvas.ActualWidth > 0 ? FaceOverlayCanvas.ActualWidth : CellVideoView.ActualWidth;
-            double canvasHeight = FaceOverlayCanvas.ActualHeight > 0 ? FaceOverlayCanvas.ActualHeight : CellVideoView.ActualHeight;
+            double canvasWidth = CellVideoView.ActualWidth > 0 ? CellVideoView.ActualWidth : ActualWidth;
+            double canvasHeight = CellVideoView.ActualHeight > 0 ? CellVideoView.ActualHeight : ActualHeight;
 
-            if (canvasWidth <= 0) canvasWidth = ActualWidth > 0 ? ActualWidth : 320;
-            if (canvasHeight <= 0) canvasHeight = ActualHeight > 0 ? ActualHeight : 240;
+            if (canvasWidth <= 0) canvasWidth = 320;
+            if (canvasHeight <= 0) canvasHeight = 240;
+
+            FaceOverlayPopup.Width = canvasWidth;
+            FaceOverlayPopup.Height = canvasHeight;
+            FaceOverlayCanvas.Width = canvasWidth;
+            FaceOverlayCanvas.Height = canvasHeight;
+
+            FaceOverlayCanvas.Children.Clear();
 
             foreach (var face in faces)
             {
-                double boxWidth = Math.Max(15, face.NormalizedWidth * canvasWidth);
-                double boxHeight = Math.Max(15, face.NormalizedHeight * canvasHeight);
+                double boxWidth = Math.Max(20, face.NormalizedWidth * canvasWidth);
+                double boxHeight = Math.Max(20, face.NormalizedHeight * canvasHeight);
                 double left = face.NormalizedX * canvasWidth;
                 double top = face.NormalizedY * canvasHeight;
 
@@ -635,22 +720,22 @@ namespace MehrganSurveillance.Controls
                 {
                     Background = new SolidColorBrush(Color.FromArgb(220, 21, 128, 61)),
                     CornerRadius = new CornerRadius(2),
-                    Padding = new Thickness(3, 1, 3, 1)
+                    Padding = new Thickness(4, 1, 4, 1)
                 };
                 var labelText = new TextBlock
                 {
                     Text = $"👤 {Math.Round(face.Confidence * 100)}%",
                     Foreground = Brushes.White,
-                    FontSize = 8.5,
+                    FontSize = 9,
                     FontWeight = FontWeights.Bold
                 };
                 labelBorder.Child = labelText;
                 Canvas.SetLeft(labelBorder, left);
-                Canvas.SetTop(labelBorder, Math.Max(0, top - 16));
+                Canvas.SetTop(labelBorder, Math.Max(0, top - 18));
                 FaceOverlayCanvas.Children.Add(labelBorder);
             }
 
-            FaceDetectedBadge.Visibility = Visibility.Visible;
+            FaceOverlayPopup.IsOpen = true;
         }
 
         #endregion

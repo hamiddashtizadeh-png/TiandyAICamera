@@ -42,7 +42,7 @@ namespace MehrganSurveillance
         private readonly AnprPipeline _anprPipeline = new();
         private AnprArchiveService? _anprArchiveService;
         private readonly System.Collections.ObjectModel.ObservableCollection<LiveFaceFeedItem> _liveFaceFeed = new();
-        private readonly ConcurrentDictionary<string, DateTime> _lastLiveFeedTimePerCamera = new();
+        private readonly ConcurrentDictionary<string, (DateTime Timestamp, FaceBoundingBox Box, float Confidence)> _lastCapturedFacePerCamera = new();
         private long _liveFaceCounter;
 
         // صف لاگ‌های باچ‌شده و تایمر اختصاصی جهت جلوگیری از فریز UI
@@ -140,60 +140,88 @@ namespace MehrganSurveillance
 
                 LiveFaceCaptureListBox.ItemsSource = _liveFaceFeed;
 
-                // اتصال رویداد تشخیص فریم به آرشیو، نمایش کادر سبز روی سلول و افزودن به پنل زنده با کنترل نرخ ثبت و استخراج عکس
+                // اتصال رویداد تشخیص فریم به آرشیو، نمایش کادر سبز روی سلول و افزودن بهترین شات به پنل زنده بدون اسپم
                 _facePipeline.FrameFaceDetected += (result, frame) =>
                 {
-                    _archiveService?.OnFaceDetected(result, frame);
-
                     var faces = result.Faces;
                     int chIndex = result.ChannelIndex;
                     string camId = result.CameraId;
 
+                    // ۱. به‌روزرسانی کادر سبز زنده روی تصویر دوربین در هر فریم
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         if (chIndex >= 0 && chIndex < _cells.Count)
                         {
                             _cells[chIndex].UpdateFaceDetections(faces);
                         }
+                    }));
 
-                        if (faces != null && faces.Count > 0)
+                    if (faces == null || faces.Count == 0)
+                    {
+                        return;
+                    }
+
+                    // ۲. انتخاب بهترین و واضح‌ترین چهره در فریم جاری (Best-Shot Selection)
+                    var bestFace = faces.OrderByDescending(f => f.Confidence).First();
+                    var now = DateTime.UtcNow;
+                    bool shouldCaptureShot = false;
+
+                    if (!_lastCapturedFacePerCamera.TryGetValue(camId, out var lastState))
+                    {
+                        shouldCaptureShot = true;
+                    }
+                    else
+                    {
+                        double elapsedSec = (now - lastState.Timestamp).TotalSeconds;
+                        float dx = Math.Abs(bestFace.NormalizedX - lastState.Box.NormalizedX);
+                        float dy = Math.Abs(bestFace.NormalizedY - lastState.Box.NormalizedY);
+                        bool movedSignificantly = (dx > 0.14f || dy > 0.14f);
+                        bool muchBetterConfidence = (bestFace.Confidence > lastState.Confidence + 0.04f) && elapsedSec >= 3.0;
+
+                        // اگر شخص جدید/جابه‌جا شده باشد (حداقل ۳ ثانیه)، یا تصویر بسیار باکیفیت‌تری به دست آمده باشد، یا بیش از ۱۵ ثانیه از آخرین ثبت گذشته باشد
+                        if ((movedSignificantly && elapsedSec >= 3.0) || muchBetterConfidence || elapsedSec >= 15.0)
                         {
-                            // کنترل نرخ ثبت رویدادهای زنده در فید (حداکثر یک‌بار در هر ۲ ثانیه برای هر دوربین)
-                            var now = DateTime.UtcNow;
-                            if (_lastLiveFeedTimePerCamera.TryGetValue(camId, out var lastTime))
-                            {
-                                if ((now - lastTime).TotalSeconds < 2.0)
-                                {
-                                    return; // جلوگیری از اسپم فید و افزایش بی‌رویه شمارنده
-                                }
-                            }
-                            _lastLiveFeedTimePerCamera[camId] = now;
-
-                            string camName = (chIndex >= 0 && chIndex < _channels.Count)
-                                ? _channels[chIndex].DisplayName
-                                : $"کانال {chIndex + 1}";
-
-                            foreach (var face in faces)
-                            {
-                                var thumb = CreateThumbnailFromFrame(frame, face);
-                                Interlocked.Increment(ref _liveFaceCounter);
-                                _liveFaceFeed.Insert(0, new LiveFaceFeedItem
-                                {
-                                    CameraName = camName,
-                                    TimestampString = DateTime.Now.ToString("HH:mm:ss"),
-                                    ConfidenceText = $"{Math.Round(face.Confidence * 100)}%",
-                                    ChannelIndex = chIndex,
-                                    Thumbnail = thumb
-                                });
-
-                                while (_liveFaceFeed.Count > 50)
-                                {
-                                    _liveFaceFeed.RemoveAt(_liveFaceFeed.Count - 1);
-                                }
-                            }
-
-                            LiveFaceCountBadgeText.Text = _liveFaceCounter.ToString();
+                            shouldCaptureShot = true;
                         }
+                    }
+
+                    if (!shouldCaptureShot)
+                    {
+                        return;
+                    }
+
+                    _lastCapturedFacePerCamera[camId] = (now, bestFace, bestFace.Confidence);
+
+                    // ۳. ثبت در آرشیو امن فقط برای بهترین شات منتخب (جلوگیری از پر شدن بی‌رویه آرشیو)
+                    _archiveService?.OnFaceDetected(result, frame);
+
+                    // ۴. استخراج فوری تصویر بندانگشتی چهره در همین نخ قبل از آزاد شدن بافر فریم به ArrayPool!
+                    var capturedThumb = CreateThumbnailFromFrame(frame, bestFace);
+                    string timeStr = DateTime.Now.ToString("HH:mm:ss");
+                    string confStr = $"{Math.Round(bestFace.Confidence * 100)}%";
+
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        string camName = (chIndex >= 0 && chIndex < _channels.Count)
+                            ? _channels[chIndex].DisplayName
+                            : $"کانال {chIndex + 1}";
+
+                        long count = Interlocked.Increment(ref _liveFaceCounter);
+                        _liveFaceFeed.Insert(0, new LiveFaceFeedItem
+                        {
+                            CameraName = camName,
+                            TimestampString = timeStr,
+                            ConfidenceText = confStr,
+                            ChannelIndex = chIndex,
+                            Thumbnail = capturedThumb
+                        });
+
+                        while (_liveFaceFeed.Count > 50)
+                        {
+                            _liveFaceFeed.RemoveAt(_liveFaceFeed.Count - 1);
+                        }
+
+                        LiveFaceCountBadgeText.Text = count.ToString();
                     }));
                 };
 
@@ -621,8 +649,17 @@ namespace MehrganSurveillance
             }
         }
 
+        private void HideAllCellOverlays()
+        {
+            foreach (var cell in _cells)
+            {
+                cell.HideFaceOverlayImmediate();
+            }
+        }
+
         private async void OpenDiscoveryWindow_Click(object sender, RoutedEventArgs e)
         {
+            HideAllCellOverlays();
             LogEvent("کاربر پنجره کشف هوشمند دوربین‌ها را گشود.");
             var discoveryWin = new DiscoveryWindow
             {
@@ -731,6 +768,7 @@ namespace MehrganSurveillance
 
         private void OpenFaceArchiveWindow_Click(object sender, RoutedEventArgs e)
         {
+            HideAllCellOverlays();
             var archiveWin = new FaceArchiveWindow(_archiveService, _facePipeline)
             {
                 Owner = this
@@ -740,6 +778,7 @@ namespace MehrganSurveillance
 
         private void OpenAnprWindow_Click(object sender, RoutedEventArgs e)
         {
+            HideAllCellOverlays();
             var anprWin = new AnprWindow(_anprPipeline, _anprArchiveService)
             {
                 Owner = this

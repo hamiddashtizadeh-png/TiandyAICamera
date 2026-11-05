@@ -183,11 +183,12 @@
                                HorizontalAlignment="Stretch"
                                VerticalAlignment="Stretch" />
 
-                <!-- لایه پاپ‌آپ شفاف کادر سبز زنده چهره‌ها مستقیماً روی سطح گرافیکی DirectX بدون مشکل Airspace -->
+                <!-- لایه پاپ‌آپ شفاف کادر سبز زنده چهره‌ها مستقیماً روی سطح گرافیکی DirectX بدون مشکل Airspace و با جهت چپ به راست فریم ویدیو -->
                 <Popup x:Name="FaceOverlayPopup"
                        AllowsTransparency="True"
                        PlacementTarget="{Binding ElementName=CellVideoView}"
                        Placement="Relative"
+                       FlowDirection="LeftToRight"
                        HorizontalOffset="0"
                        VerticalOffset="0"
                        IsOpen="False"
@@ -196,6 +197,7 @@
                        Opened="FaceOverlayPopup_Opened">
                     <Canvas x:Name="FaceOverlayCanvas"
                             Background="Transparent"
+                            FlowDirection="LeftToRight"
                             IsHitTestVisible="False" />
                 </Popup>
 

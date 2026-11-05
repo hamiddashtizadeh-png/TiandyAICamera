@@ -24,6 +24,13 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.11" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- تضمین کپی خودکار مدل‌های هوش مصنوعی ONNX به مسیر خروجی برنامه -->
+    <None Update="Models\Weights\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <PropertyGroup>
     <!-- مدیریت هشدارهای امنیتی بسته‌های ترانزیتی SQLite محلی -->
     <NoWarn>$(NoWarn);NU1903</NoWarn>

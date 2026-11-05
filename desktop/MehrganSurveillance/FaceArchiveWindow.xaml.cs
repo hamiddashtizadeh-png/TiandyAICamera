@@ -145,10 +145,41 @@ public partial class FaceArchiveWindow : Window
         await LoadEventsAsync();
     }
 
-    private void EventsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void EventsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (EventsDataGrid.SelectedItem is FaceEventRecord selectedEvent)
         {
+            if (_archiveService != null)
+            {
+                foreach (var crop in selectedEvent.Crops)
+                {
+                    if (crop.PreviewImage == null && !string.IsNullOrEmpty(crop.EncryptedFilePath))
+                    {
+                        try
+                        {
+                            byte[]? decrypted = await _archiveService.DecryptCropImageAsync(crop.EncryptedFilePath);
+                            if (decrypted != null && decrypted.Length > 4)
+                            {
+                                // بررسی سرآیند JPEG (0xFF, 0xD8)
+                                if (decrypted[0] == 0xFF && decrypted[1] == 0xD8)
+                                {
+                                    using var ms = new MemoryStream(decrypted);
+                                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                                    bmp.BeginInit();
+                                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                                    bmp.StreamSource = ms;
+                                    bmp.EndInit();
+                                    bmp.Freeze();
+                                    crop.PreviewImage = bmp;
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+
+            CropsItemsControl.ItemsSource = null;
             CropsItemsControl.ItemsSource = selectedEvent.Crops;
         }
     }

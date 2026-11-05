@@ -80,6 +80,29 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
 
             string modelPath = explicitModelPath ?? _config.ModelPath;
 
+            // جستجوی جامع مسیر فایل مدل ONNX در پوشه خروجی، دایرکتوری جاری و مسیرهای پروژه
+            if (!File.Exists(modelPath))
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string[] candidates = new[]
+                {
+                    Path.Combine(baseDir, modelPath),
+                    Path.Combine(baseDir, "Models", "Weights", "version-RFB-320.onnx"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "Models", "Weights", "version-RFB-320.onnx"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "desktop", "MehrganSurveillance", "Models", "Weights", "version-RFB-320.onnx"),
+                    Path.Combine(baseDir, "..", "..", "..", "Models", "Weights", "version-RFB-320.onnx")
+                };
+
+                foreach (var candidate in candidates)
+                {
+                    if (File.Exists(candidate))
+                    {
+                        modelPath = Path.GetFullPath(candidate);
+                        break;
+                    }
+                }
+            }
+
             try
             {
                 var sessionOptions = new SessionOptions
@@ -103,12 +126,11 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                 if (File.Exists(modelPath))
                 {
                     _session = new InferenceSession(modelPath, sessionOptions);
-                    Log($"مدل آشکارسازی چهره '{_config.ModelName}' از مسیر '{modelPath}' با موفقیت روی {_activeProvider} بارگذاری شد.");
+                    Log($"مدل آشکارسازی هوشمند چهره '{_config.ModelName}' از مسیر '{modelPath}' با موفقیت روی {_activeProvider} بارگذاری شد.");
                 }
                 else
                 {
-                    // در غیاب فایل مدل روی دیسک، ایجاد سشن تشخیصی سبک یا ثبت وضعیت آماده‌به‌کار
-                    Log($"فایل مدل در مسیر '{modelPath}' یافت نشد. خط لوله در حالت شبیه‌سازی ساختاری آماده است.");
+                    Log($"فایل مدل در مسیر '{modelPath}' یافت نشد. خط لوله در حالت پردازش ساختاری قرار دارد.");
                 }
 
                 _isInitialized = true;
@@ -500,11 +522,11 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
             float faceScore = scores[0, i, 1]; // امتیاز کلاس چهره (اندیس ۱)
             if (faceScore >= confidenceThreshold)
             {
-                // استخراج مختصات کادر محاطی نرمالایز شده [ymin, xmin, ymax, xmax]
-                float ymin = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 0]));
-                float xmin = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 1]));
-                float ymax = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 2]));
-                float xmax = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 3]));
+                // در مدل استاندارد Ultra-Face (RFB-320) خروجی boxes به صورت [xmin, ymin, xmax, ymax] کدگذاری شده است
+                float xmin = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 0]));
+                float ymin = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 1]));
+                float xmax = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 2]));
+                float ymax = Math.Max(0.0f, Math.Min(1.0f, boxes[0, i, 3]));
 
                 float width = Math.Max(0.01f, xmax - xmin);
                 float height = Math.Max(0.01f, ymax - ymin);

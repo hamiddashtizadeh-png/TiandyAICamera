@@ -32,6 +32,7 @@ public record FaceCropRecord
     public float NormH { get; init; }
     public string EncryptedFilePath { get; init; } = string.Empty;
     public bool IsPendingDeletion { get; init; }
+    public System.Windows.Media.ImageSource? PreviewImage { get; set; }
 }
 
 /// <summary>

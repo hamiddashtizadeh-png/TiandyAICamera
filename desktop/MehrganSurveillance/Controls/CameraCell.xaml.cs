@@ -582,15 +582,41 @@ namespace MehrganSurveillance.Controls
         #region لایه نمایش رویداد تشخیص چهره (Face Detection Overlay)
 
         public bool IsFaceOverlayEnabled { get; set; } = true;
+        private System.Windows.Threading.DispatcherTimer? _overlayExpireTimer;
 
         private void CameraCell_Loaded(object sender, RoutedEventArgs e)
         {
             HookParentWindow();
             CellVideoView.SizeChanged += (s, ev) => RepositionOverlay();
+            IsVisibleChanged += (s, ev) =>
+            {
+                if (!IsVisible && FaceOverlayPopup != null)
+                {
+                    FaceOverlayPopup.IsOpen = false;
+                }
+            };
+
+            if (_overlayExpireTimer == null)
+            {
+                _overlayExpireTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(1400)
+                };
+                _overlayExpireTimer.Tick += (s, ev) =>
+                {
+                    _overlayExpireTimer.Stop();
+                    FaceOverlayCanvas.Children.Clear();
+                    if (FaceOverlayPopup != null)
+                    {
+                        FaceOverlayPopup.IsOpen = false;
+                    }
+                };
+            }
         }
 
         private void CameraCell_Unloaded(object sender, RoutedEventArgs e)
         {
+            _overlayExpireTimer?.Stop();
             if (FaceOverlayPopup != null)
             {
                 FaceOverlayPopup.IsOpen = false;
@@ -604,8 +630,37 @@ namespace MehrganSurveillance.Controls
             {
                 win.LocationChanged += (s, e) => RepositionOverlay();
                 win.SizeChanged += (s, e) => RepositionOverlay();
+                win.StateChanged += (s, e) =>
+                {
+                    if (win.WindowState == WindowState.Minimized)
+                    {
+                        if (FaceOverlayPopup != null) FaceOverlayPopup.IsOpen = false;
+                    }
+                    else
+                    {
+                        RepositionOverlay();
+                    }
+                };
                 win.Deactivated += (s, e) => { if (FaceOverlayPopup != null) FaceOverlayPopup.IsOpen = false; };
-                win.Activated += (s, e) => { if (FaceOverlayPopup != null && IsFaceOverlayEnabled && Channel.IsConnected) RepositionOverlay(); };
+                win.Activated += (s, e) =>
+                {
+                    if (FaceOverlayPopup != null && IsFaceOverlayEnabled && Channel.IsConnected && FaceOverlayCanvas.Children.Count > 0 && IsVisible)
+                    {
+                        FaceOverlayPopup.IsOpen = true;
+                        RepositionOverlay();
+                    }
+                };
+                win.IsVisibleChanged += (s, e) => { if (!win.IsVisible && FaceOverlayPopup != null) FaceOverlayPopup.IsOpen = false; };
+            }
+        }
+
+        public void HideFaceOverlayImmediate()
+        {
+            _overlayExpireTimer?.Stop();
+            FaceOverlayCanvas.Children.Clear();
+            if (FaceOverlayPopup != null)
+            {
+                FaceOverlayPopup.IsOpen = false;
             }
         }
 
@@ -613,6 +668,13 @@ namespace MehrganSurveillance.Controls
         {
             if (FaceOverlayPopup != null && FaceOverlayPopup.IsOpen)
             {
+                var win = Window.GetWindow(this);
+                if (win == null || !win.IsVisible || win.WindowState == WindowState.Minimized || !win.IsActive || !IsVisible)
+                {
+                    FaceOverlayPopup.IsOpen = false;
+                    return;
+                }
+
                 double w = CellVideoView.ActualWidth > 0 ? CellVideoView.ActualWidth : ActualWidth;
                 double h = CellVideoView.ActualHeight > 0 ? CellVideoView.ActualHeight : ActualHeight;
                 if (w > 0 && h > 0)
@@ -636,8 +698,20 @@ namespace MehrganSurveillance.Controls
                 var hwndSource = (System.Windows.Interop.HwndSource?)System.Windows.PresentationSource.FromVisual(FaceOverlayCanvas);
                 if (hwndSource != null && hwndSource.Handle != IntPtr.Zero)
                 {
-                    int exStyle = GetWindowLong(hwndSource.Handle, -20); // GWL_EXSTYLE
-                    SetWindowLong(hwndSource.Handle, -20, exStyle | 0x00000020); // WS_EX_TRANSPARENT
+                    IntPtr popupHwnd = hwndSource.Handle;
+                    int exStyle = GetWindowLong(popupHwnd, -20); // GWL_EXSTYLE
+                    // WS_EX_TRANSPARENT (0x20) | WS_EX_TOOLWINDOW (0x80) | WS_EX_NOACTIVATE (0x08000000)
+                    SetWindowLong(popupHwnd, -20, exStyle | 0x00000020 | 0x00000080 | 0x08000000);
+
+                    var win = Window.GetWindow(this);
+                    if (win != null)
+                    {
+                        IntPtr parentHwnd = new System.Windows.Interop.WindowInteropHelper(win).Handle;
+                        if (parentHwnd != IntPtr.Zero)
+                        {
+                            SetWindowLongPtr(popupHwnd, -8, parentHwnd); // GWLP_HWNDPARENT
+                        }
+                    }
                 }
             }
             catch { }
@@ -649,16 +723,15 @@ namespace MehrganSurveillance.Controls
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
 
+        [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
         public void SetFaceOverlayVisible(bool isVisible)
         {
             IsFaceOverlayEnabled = isVisible;
             if (!isVisible)
             {
-                FaceOverlayCanvas.Children.Clear();
-                if (FaceOverlayPopup != null)
-                {
-                    FaceOverlayPopup.IsOpen = false;
-                }
+                HideFaceOverlayImmediate();
             }
         }
 
@@ -670,8 +743,12 @@ namespace MehrganSurveillance.Controls
                 return;
             }
 
-            if (!IsFaceOverlayEnabled || faces == null || faces.Count == 0 || !Channel.IsConnected)
+            var win = Window.GetWindow(this);
+            bool isWinActive = win != null && win.IsVisible && win.WindowState != WindowState.Minimized && win.IsActive && IsVisible;
+
+            if (!IsFaceOverlayEnabled || faces == null || faces.Count == 0 || !Channel.IsConnected || !isWinActive)
             {
+                _overlayExpireTimer?.Stop();
                 FaceOverlayCanvas.Children.Clear();
                 if (FaceOverlayPopup != null)
                 {
@@ -695,10 +772,10 @@ namespace MehrganSurveillance.Controls
 
             foreach (var face in faces)
             {
-                double boxWidth = Math.Max(20, face.NormalizedWidth * canvasWidth);
-                double boxHeight = Math.Max(20, face.NormalizedHeight * canvasHeight);
-                double left = face.NormalizedX * canvasWidth;
-                double top = face.NormalizedY * canvasHeight;
+                double boxWidth = Math.Max(22, face.NormalizedWidth * canvasWidth);
+                double boxHeight = Math.Max(22, face.NormalizedHeight * canvasHeight);
+                double left = Math.Clamp(face.NormalizedX * canvasWidth, 0, Math.Max(0, canvasWidth - boxWidth));
+                double top = Math.Clamp(face.NormalizedY * canvasHeight, 0, Math.Max(0, canvasHeight - boxHeight));
 
                 var rect = new System.Windows.Shapes.Rectangle
                 {
@@ -707,8 +784,8 @@ namespace MehrganSurveillance.Controls
                     Stroke = new SolidColorBrush(Color.FromRgb(34, 197, 94)), // Vibrant Green (#22C55E)
                     StrokeThickness = 2.5,
                     Fill = new SolidColorBrush(Color.FromArgb(28, 34, 197, 94)),
-                    RadiusX = 2,
-                    RadiusY = 2
+                    RadiusX = 3,
+                    RadiusY = 3
                 };
 
                 Canvas.SetLeft(rect, left);
@@ -736,6 +813,8 @@ namespace MehrganSurveillance.Controls
             }
 
             FaceOverlayPopup.IsOpen = true;
+            _overlayExpireTimer?.Stop();
+            _overlayExpireTimer?.Start();
         }
 
         #endregion

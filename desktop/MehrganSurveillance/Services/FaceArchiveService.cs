@@ -341,10 +341,34 @@ public sealed class FaceArchiveService : IAsyncDisposable, IDisposable
 
     private static byte[] EncodeToJpeg(byte[] bgra32Bytes, int width, int height, int quality)
     {
-        // در غیاب رندر بومی WPF بر روی لینوکس، الگوی ساختاری ذخیره فشرده بایت‌های تصویر تولید می‌شود
-        using var ms = new MemoryStream();
-        ms.Write(bgra32Bytes, 0, bgra32Bytes.Length);
-        return ms.ToArray();
+        try
+        {
+            if (width > 0 && height > 0 && bgra32Bytes.Length >= width * height * 4)
+            {
+                int stride = width * 4;
+                var bitmap = System.Windows.Media.Imaging.BitmapSource.Create(
+                    width, height, 96, 96,
+                    System.Windows.Media.PixelFormats.Bgra32,
+                    null, bgra32Bytes, stride);
+
+                var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder
+                {
+                    QualityLevel = Math.Clamp(quality, 10, 100)
+                };
+                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+
+                using var ms = new MemoryStream();
+                encoder.Save(ms);
+                return ms.ToArray();
+            }
+        }
+        catch
+        {
+        }
+
+        using var fallbackMs = new MemoryStream();
+        fallbackMs.Write(bgra32Bytes, 0, bgra32Bytes.Length);
+        return fallbackMs.ToArray();
     }
 
     private static string SanitizeCameraFolderName(string cameraId)

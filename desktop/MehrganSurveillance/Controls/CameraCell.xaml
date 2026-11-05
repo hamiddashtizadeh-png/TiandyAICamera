@@ -148,6 +148,16 @@
                             <TextBlock x:Name="PlayPauseButtonText" Text="▶" FontSize="9" FontWeight="Bold" />
                         </Button>
 
+                        <!-- دکمه منوی پیشرفته گزینه‌ها -->
+                        <Button x:Name="CellMenuButton"
+                                ToolTip="منوی پیشرفته هوش مصنوعی، چهره، پلاک و تنظیمات (کلیک راست)"
+                                Style="{StaticResource IconToolButtonStyle}"
+                                Width="22" Height="22"
+                                Margin="0,0,3,0"
+                                Click="CellMenuButton_Click">
+                            <TextBlock Text="⋮" FontSize="13" FontWeight="Bold" Margin="0,-2,0,0" />
+                        </Button>
+
                         <!-- دکمه بزرگ‌نمایی تمام‌صفحه -->
                         <Button x:Name="MaximizeButton"
                                 ToolTip="بزرگ‌نمایی این تصویر (دابل‌کلیک)"
@@ -165,33 +175,40 @@
             <!-- ۲. فضای رندر ویدیوی نیتیو LibVLC و لایه وضعیت آماده‌باش -->
             <Grid Grid.Row="1"
                   Background="#060913"
-                  MouseLeftButtonDown="VideoArea_MouseLeftButtonDown">
+                  MouseLeftButtonDown="VideoArea_MouseLeftButtonDown"
+                  MouseRightButtonDown="VideoArea_MouseRightButtonDown">
                 
-                <!-- کنترل رندر ویدیوی حقیقی بومی LibVLC -->
+                <!-- کنترل رندر ویدیوی حقیقی بومی LibVLC با روکش پیش‌زمینه (Foreground Overlay) -->
                 <vlc:VideoView x:Name="CellVideoView"
                                HorizontalAlignment="Stretch"
-                               VerticalAlignment="Stretch" />
+                               VerticalAlignment="Stretch">
+                    <!-- لایه روکش تعاملی شفاف و بوم کادرهای سبز چهره -->
+                    <Grid Background="#01000000"
+                          MouseLeftButtonDown="VideoArea_MouseLeftButtonDown"
+                          MouseRightButtonDown="VideoArea_MouseRightButtonDown">
+                        
+                        <!-- لایه ترسیم مستطیل چهره و بج رویداد (Face Detection Overlay) -->
+                        <Canvas x:Name="FaceOverlayCanvas"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                IsHitTestVisible="False"
+                                Visibility="Visible" />
 
-                <!-- لایه ترسیم مستطیل چهره و بج رویداد (Face Detection Overlay) -->
-                <Canvas x:Name="FaceOverlayCanvas"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch"
-                        IsHitTestVisible="False"
-                        Visibility="Visible" />
-
-                <!-- بج شناور تشخیص چهره -->
-                <Border x:Name="FaceDetectedBadge"
-                        Background="#DC2626"
-                        CornerRadius="3"
-                        Padding="5,2"
-                        Margin="6"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Top"
-                        Visibility="Collapsed">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="👤 چهره شناسایی شد" FontSize="8.5" FontWeight="Bold" Foreground="White" />
-                    </StackPanel>
-                </Border>
+                        <!-- بج شناور تشخیص چهره -->
+                        <Border x:Name="FaceDetectedBadge"
+                                Background="#15803D"
+                                CornerRadius="3"
+                                Padding="5,2"
+                                Margin="6"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="👤 چهره شناسایی شد" FontSize="8.5" FontWeight="Bold" Foreground="White" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </vlc:VideoView>
 
                 <!-- لایه نگه‌دارنده شیک مانیتورینگ با خطوط هدایت Viewfinder در زمان عدم پخش -->
                 <Border x:Name="PlaceholderOverlay"
@@ -199,7 +216,9 @@
                         Opacity="0.98"
                         Visibility="Visible"
                         HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch">
+                        VerticalAlignment="Stretch"
+                        MouseLeftButtonDown="VideoArea_MouseLeftButtonDown"
+                        MouseRightButtonDown="VideoArea_MouseRightButtonDown">
                     <Grid>
                         <!-- خطوط کمکی و کراس‌هیر مهندسی مانیتورینگ -->
                         <Rectangle Width="28" Height="1" Fill="#1E293B" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-24,0,0" />

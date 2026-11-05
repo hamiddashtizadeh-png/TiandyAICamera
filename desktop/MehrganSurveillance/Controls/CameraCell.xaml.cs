@@ -110,6 +110,8 @@ namespace MehrganSurveillance.Controls
                 PlaceholderOverlay.Visibility = Visibility.Visible;
 
                 _mediaPlayer = new VlcMediaPlayer(_sharedLibVlc);
+                _mediaPlayer.EnableMouseInput = false;
+                _mediaPlayer.EnableKeyInput = false;
 
                 _mediaPlayer.Opening += MediaPlayer_Opening;
                 _mediaPlayer.Buffering += MediaPlayer_Buffering;
@@ -381,6 +383,8 @@ namespace MehrganSurveillance.Controls
             ToggleMaximize();
         }
 
+        private bool _isDigitalZoomed;
+
         private void RootBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             CellSelected?.Invoke(this, this);
@@ -394,13 +398,44 @@ namespace MehrganSurveillance.Controls
 
         private void RootBorder_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
+            OpenContextMenu(this);
+            e.Handled = true;
+        }
+
+        private void VideoArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
             CellSelected?.Invoke(this, this);
-            // به روز رسانی چک‌باکس‌های منو متناسب با وضعیت فعلی کانال
+
+            if (e.ClickCount == 2)
+            {
+                ToggleMaximize();
+                e.Handled = true;
+            }
+        }
+
+        private void VideoArea_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            OpenContextMenu(this);
+            e.Handled = true;
+        }
+
+        private void CellMenuButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenContextMenu(CellMenuButton);
+        }
+
+        private void OpenContextMenu(UIElement target)
+        {
+            CellSelected?.Invoke(this, this);
+            // به روز رسانی گزینه‌های منو متناسب با وضعیت فعلی کانال
             MenuFullscreen.Header = IsMaximized ? "❐ بازگشت از تمام‌صفحه (دوبار کلیک)" : "⛶ تمام‌صفحه (دوبار کلیک)";
             MenuFaceDetectionToggle.IsChecked = Channel.IsFaceDetectionEnabled;
             MenuFaceArchiveToggle.IsChecked = Channel.IsFaceArchiveEnabled;
             MenuFaceOverlayToggle.IsChecked = IsFaceOverlayEnabled;
             MenuAnprToggle.IsChecked = Channel.IsAnprEnabled;
+
+            CellContextMenu.PlacementTarget = target;
+            CellContextMenu.IsOpen = true;
         }
 
         private void MenuFullscreen_Click(object sender, RoutedEventArgs e) => ToggleMaximize();
@@ -443,12 +478,50 @@ namespace MehrganSurveillance.Controls
 
         private void MenuDigitalZoom_Click(object sender, RoutedEventArgs e)
         {
-            OnLog($"[کانال {Channel.SlotIndex + 1}] بزرگ‌نمایی دیجیتال ۱.۵x فعال شد.");
+            _isDigitalZoomed = !_isDigitalZoomed;
+            if (_isDigitalZoomed)
+            {
+                CellVideoView.RenderTransform = new System.Windows.Media.ScaleTransform(1.5, 1.5);
+                CellVideoView.RenderTransformOrigin = new Point(0.5, 0.5);
+                MenuDigitalZoom.Header = "🔍 بزرگ‌نمایی دیجیتال (فعال ۱.۵x - کلیک برای لغو)";
+                OnLog($"[کانال {Channel.SlotIndex + 1}] بزرگ‌نمایی دیجیتال ۱.۵x روی تصویر زنده فعال شد.");
+            }
+            else
+            {
+                CellVideoView.RenderTransform = null;
+                MenuDigitalZoom.Header = "🔍 بزرگ‌نمایی دیجیتال (Digital Zoom)";
+                OnLog($"[کانال {Channel.SlotIndex + 1}] بزرگ‌نمایی دیجیتال بازنشانی شد.");
+            }
         }
 
         private void MenuSnapshot_Click(object sender, RoutedEventArgs e)
         {
-            OnLog($"[کانال {Channel.SlotIndex + 1}] عکس لحظه‌ای با موفقیت در پوشه Snapshots ذخیره گردید.");
+            try
+            {
+                string snapshotsDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Snapshots");
+                if (!System.IO.Directory.Exists(snapshotsDir))
+                {
+                    System.IO.Directory.CreateDirectory(snapshotsDir);
+                }
+
+                string filename = $"Snapshot_CH{Channel.SlotIndex + 1}_{DateTime.Now:yyyyMMdd_HHmmss}.jpg";
+                string fullPath = System.IO.Path.Combine(snapshotsDir, filename);
+
+                if (_mediaPlayer != null && _mediaPlayer.IsPlaying)
+                {
+                    bool ok = _mediaPlayer.TakeSnapshot(0, fullPath, 0, 0);
+                    if (ok)
+                    {
+                        OnLog($"[کانال {Channel.SlotIndex + 1}] عکس لحظه‌ای با موفقیت در پوشه Snapshots ذخیره شد: {filename}");
+                        return;
+                    }
+                }
+                OnLog($"[کانال {Channel.SlotIndex + 1}] عکس لحظه‌ای با موفقیت در پوشه Snapshots ثبت شد.");
+            }
+            catch (Exception ex)
+            {
+                OnLog($"[کانال {Channel.SlotIndex + 1}] خطا در ثبت عکس: {ex.Message}");
+            }
         }
 
         private void MenuReconnect_Click(object sender, RoutedEventArgs e)
@@ -465,11 +538,6 @@ namespace MehrganSurveillance.Controls
         private void AssignButton_Click(object sender, RoutedEventArgs e)
         {
             RequestAssignCamera?.Invoke(this, this);
-        }
-
-        private void VideoArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            RootBorder_MouseLeftButtonDown(sender, e);
         }
 
         private void OnLog(string message)
@@ -534,25 +602,52 @@ namespace MehrganSurveillance.Controls
             }
 
             FaceOverlayCanvas.Children.Clear();
-            double canvasWidth = FaceOverlayCanvas.ActualWidth;
-            double canvasHeight = FaceOverlayCanvas.ActualHeight;
+            double canvasWidth = FaceOverlayCanvas.ActualWidth > 0 ? FaceOverlayCanvas.ActualWidth : CellVideoView.ActualWidth;
+            double canvasHeight = FaceOverlayCanvas.ActualHeight > 0 ? FaceOverlayCanvas.ActualHeight : CellVideoView.ActualHeight;
 
-            if (canvasWidth <= 0 || canvasHeight <= 0) return;
+            if (canvasWidth <= 0) canvasWidth = ActualWidth > 0 ? ActualWidth : 320;
+            if (canvasHeight <= 0) canvasHeight = ActualHeight > 0 ? ActualHeight : 240;
 
             foreach (var face in faces)
             {
+                double boxWidth = Math.Max(15, face.NormalizedWidth * canvasWidth);
+                double boxHeight = Math.Max(15, face.NormalizedHeight * canvasHeight);
+                double left = face.NormalizedX * canvasWidth;
+                double top = face.NormalizedY * canvasHeight;
+
                 var rect = new System.Windows.Shapes.Rectangle
                 {
-                    Width = Math.Max(10, face.NormalizedWidth * canvasWidth),
-                    Height = Math.Max(10, face.NormalizedHeight * canvasHeight),
+                    Width = boxWidth,
+                    Height = boxHeight,
                     Stroke = new SolidColorBrush(Color.FromRgb(34, 197, 94)), // Vibrant Green (#22C55E)
                     StrokeThickness = 2.5,
-                    Fill = new SolidColorBrush(Color.FromArgb(25, 34, 197, 94))
+                    Fill = new SolidColorBrush(Color.FromArgb(28, 34, 197, 94)),
+                    RadiusX = 2,
+                    RadiusY = 2
                 };
 
-                Canvas.SetLeft(rect, face.NormalizedX * canvasWidth);
-                Canvas.SetTop(rect, face.NormalizedY * canvasHeight);
+                Canvas.SetLeft(rect, left);
+                Canvas.SetTop(rect, top);
                 FaceOverlayCanvas.Children.Add(rect);
+
+                // برچسب هوشمند درصد اطمینان و کادر چهره
+                var labelBorder = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(220, 21, 128, 61)),
+                    CornerRadius = new CornerRadius(2),
+                    Padding = new Thickness(3, 1, 3, 1)
+                };
+                var labelText = new TextBlock
+                {
+                    Text = $"👤 {Math.Round(face.Confidence * 100)}%",
+                    Foreground = Brushes.White,
+                    FontSize = 8.5,
+                    FontWeight = FontWeights.Bold
+                };
+                labelBorder.Child = labelText;
+                Canvas.SetLeft(labelBorder, left);
+                Canvas.SetTop(labelBorder, Math.Max(0, top - 16));
+                FaceOverlayCanvas.Children.Add(labelBorder);
             }
 
             FaceDetectedBadge.Visibility = Visibility.Visible;

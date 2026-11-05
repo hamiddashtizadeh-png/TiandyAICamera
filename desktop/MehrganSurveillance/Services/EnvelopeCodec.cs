@@ -98,11 +98,11 @@ public static class EnvelopeCodec
     {
         if (float.IsNaN(x) || float.IsInfinity(x) || x is < 0.0f or > 1.0f) throw new ArgumentOutOfRangeException(nameof(x), "NormX invalid.");
         if (float.IsNaN(y) || float.IsInfinity(y) || y is < 0.0f or > 1.0f) throw new ArgumentOutOfRangeException(nameof(y), "NormY invalid.");
-        if (float.IsNaN(w) || float.IsInfinity(w) || w <= 0.0f or > 1.0f) throw new ArgumentOutOfRangeException(nameof(w), "NormW invalid.");
-        if (float.IsNaN(h) || float.IsInfinity(h) || h <= 0.0f or > 1.0f) throw new ArgumentOutOfRangeException(nameof(h), "NormH invalid.");
+        if (float.IsNaN(w) || float.IsInfinity(w) || w is <= 0.0f or > 1.0f) throw new ArgumentOutOfRangeException(nameof(w), "NormW invalid.");
+        if (float.IsNaN(h) || float.IsInfinity(h) || h is <= 0.0f or > 1.0f) throw new ArgumentOutOfRangeException(nameof(h), "NormH invalid.");
         if (float.IsNaN(c) || float.IsInfinity(c) || c is < 0.0f or > 1.0f) throw new ArgumentOutOfRangeException(nameof(c), "Confidence invalid.");
 
-        if (x + w > 1.000001f) throw new ArgumentOutOfRangeException("NormX + NormW exceeds 1.0.");
-        if (y + h > 1.000001f) throw new ArgumentOutOfRangeException("NormY + NormH exceeds 1.0.");
+        if (x + w > 1.0f) throw new ArgumentOutOfRangeException("NormX + NormW exceeds 1.0.");
+        if (y + h > 1.0f) throw new ArgumentOutOfRangeException("NormY + NormH exceeds 1.0.");
     }
 }

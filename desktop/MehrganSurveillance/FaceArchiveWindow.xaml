@@ -1,0 +1,194 @@
+<Window x:Class="MehrganSurveillance.FaceArchiveWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="آرشیو و رویدادهای چهره | سامانه نظارت تصویری مهرگان"
+        Height="800" Width="1200"
+        MinWidth="950" MinHeight="650"
+        FlowDirection="RightToLeft"
+        FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif"
+        Background="{StaticResource BackgroundLightBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <!-- سربرگ و کنترل‌های تنظیمات مدیر -->
+            <RowDefinition Height="Auto" />
+            <!-- کادر فیلترهای جستجو -->
+            <RowDefinition Height="Auto" />
+            <!-- محتوای اصلی: گالری رویدادها و پیش‌نمایش تصویر -->
+            <RowDefinition Height="*" />
+            <!-- نوار وضعیت و مصرف دیسک -->
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ۱. سربرگ و کلیدهای مدیریتی فعال‌سازی (Admin Controls) -->
+        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="🛡 آرشیو محلی رویدادها و چهره‌های شناسایی‌شده" FontSize="13.5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" />
+                        <Border Background="#EEF2FF" CornerRadius="4" Padding="6,1" Margin="10,0,0,0">
+                            <TextBlock Text="AES-256-GCM / محلی" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="ذخیره کاملاً محلی بدون ارسال به Cloud؛ نگهداری تا زمان حذف دستی توسط مدیر سامانه (بدون حذف خودکار)." FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+
+                <!-- سوئیچ‌های مدیریتی -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox x:Name="FaceDetectionToggle" Content="آشکارساز چهره" IsChecked="false" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="FaceDetectionToggle_Click" />
+                    <CheckBox x:Name="FaceArchiveToggle" Content="آرشیو و ذخیره محلی" IsChecked="false" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="FaceArchiveToggle_Click" />
+                    <Button Content="🔄 بروزرسانی" Style="{StaticResource SecondaryButtonStyle}" Height="26" Padding="10,0" FontSize="10.5" Click="RefreshButton_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ۲. نوار فیلترهای جستجو -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,14,0" VerticalAlignment="Center">
+                    <TextBlock Text="از تاریخ:" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <DatePicker x:Name="FromDatePicker" Height="26" Width="120" FontSize="10" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,14,0" VerticalAlignment="Center">
+                    <TextBlock Text="تا تاریخ:" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <DatePicker x:Name="ToDatePicker" Height="26" Width="120" FontSize="10" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,14,0" VerticalAlignment="Center">
+                    <TextBlock Text="دوربین:" FontSize="10.5" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <ComboBox x:Name="CameraFilterCombo" Height="26" Width="140" FontSize="10" />
+                </StackPanel>
+
+                <Button Grid.Column="3" Content="🔍 جستجو و اعمال فیلتر" Style="{StaticResource PrimaryButtonStyle}" Height="26" Padding="12,0" FontSize="10.5" Click="ApplyFilter_Click" />
+
+                <!-- دکمه‌های عملیات گروهی حذف -->
+                <StackPanel Grid.Column="5" Orientation="Horizontal">
+                    <Button x:Name="BulkDeleteButton" Content="🗑 حذف گروهی انتخاب‌شده‌ها" Style="{StaticResource DangerButtonStyle}" Height="26" Padding="10,0" FontSize="10.5" Click="BulkDelete_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ۳. محتوای اصلی: گرید رویدادها (راست) و پیش‌نمایش تصویر رمزگشایی‌شده (چپ) -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <!-- لیست رویدادها -->
+                <ColumnDefinition Width="*" />
+                <!-- پنل جزئیات و گالری برش‌های رویداد انتخابی -->
+                <ColumnDefinition Width="380" />
+            </Grid.ColumnDefinitions>
+
+            <!-- جدول رویدادهای چهره -->
+            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Margin="0,0,8,0">
+                <DataGrid x:Name="EventsDataGrid"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          RowHeight="32"
+                          HeadersVisibility="Column"
+                          FontSize="10.5"
+                          SelectionChanged="EventsDataGrid_SelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="شناسه رویداد" Binding="{Binding EventId}" Width="110" />
+                        <DataGridTextColumn Header="دوربین" Binding="{Binding CameraId}" Width="120" />
+                        <DataGridTextColumn Header="کانال" Binding="{Binding ChannelIndex}" Width="50" />
+                        <DataGridTextColumn Header="تعداد چهره" Binding="{Binding FaceCount}" Width="70" />
+                        <DataGridTextColumn Header="زمان وقوع (UTC)" Binding="{Binding TimestampUtc, StringFormat='{}{0:yyyy/MM/dd HH:mm:ss}'}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <!-- پنل پیش‌نمایش تصویر رمزگشایی‌شده و عملیات تک‌موردی -->
+            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🖼 گالری برش‌های رویداد انتخابی" FontSize="11.5" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+
+                    <!-- لیست و پیش‌نمایش برش‌های چهره -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="CropsItemsControl">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- کادر تصویر یا آیکون امنیتی -->
+                                            <Border Grid.Column="0" Width="64" Height="64" Background="#E2E8F0" CornerRadius="4">
+                                                <TextBlock Text="👤" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="برش شماره: " FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                    <TextBlock Text="{Binding CropIndex}" FontWeight="Bold" FontSize="10" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="اطمینان: " FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                    <TextBlock Text="{Binding Confidence, StringFormat='{}{0:P0}'}" FontWeight="SemiBold" FontSize="9.5" Foreground="#16A34A" />
+                                                </StackPanel>
+                                                <TextBlock Text="رمزگذاری شده (AES-GCM)" FontSize="8.5" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+                                            </StackPanel>
+
+                                            <!-- دکمه حذف تکی -->
+                                            <Button Grid.Column="2" Content="حذف 🗑" Style="{StaticResource DangerButtonStyle}" Height="24" Padding="6,0" FontSize="9.5" VerticalAlignment="Center" Tag="{Binding}" Click="SingleCropDelete_Click" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <Border Grid.Row="2" Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,8,0,0">
+                        <TextBlock Text="⚠️ حذف دستی قطعی و غیرقابل بازگشت است." FontSize="9.5" Foreground="#DC2626" TextAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ۴. نوار وضعیت و فضای مصرفی ذخیره‌سازی -->
+        <Border Grid.Row="3" Background="#0F172A" CornerRadius="6" Padding="12,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusMessageText" Text="وضعیت آرشیو: سالم و آماده‌به‌کار" FontSize="10" Foreground="#38BDF8" Margin="0,0,16,0" />
+                    <TextBlock Text="مصرف دیسک:" FontSize="10" Foreground="#94A3B8" Margin="0,0,6,0" />
+                    <TextBlock x:Name="DiskUsageText" Text="محاسبه نشده" FontSize="10" FontWeight="Bold" Foreground="#34D399" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="TotalArchivedBadge" Text="۰ تصویر ثبت‌شده" FontSize="9.5" FontWeight="Bold" Foreground="#A7F3D0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

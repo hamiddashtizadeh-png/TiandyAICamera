@@ -34,6 +34,10 @@ namespace MehrganSurveillance
         private int? _maximizedSlotIndex = null;
         private int _selectedSlotIndex = 0;
 
+        // سرویس‌های هوش مصنوعی و آرشیو محلی چهره
+        private readonly FaceDetectionPipeline _facePipeline = new();
+        private FaceArchiveService? _archiveService;
+
         // صف لاگ‌های باچ‌شده و تایمر اختصاصی جهت جلوگیری از فریز UI
         private readonly ConcurrentQueue<string> _logQueue = new();
         private readonly DispatcherTimer _logBatchTimer = new();
@@ -99,6 +103,22 @@ namespace MehrganSurveillance
 
                 // ۳. بارگذاری لیست دوربین‌های ثبت‌شده در رجیستری به صورت غیرهمگام
                 await LoadRegisteredCamerasAsync();
+
+                // ۴. مقداردهی اولیه پایپ‌لاین چهره و اتصال به سرویس آرشیو
+                _facePipeline.Initialize();
+                _archiveService = new FaceArchiveService();
+                await _archiveService.InitializeAsync();
+
+                // اتصال رویداد تشخیص فریم به آرشیو و نمایش کادر روی سلول مرتبط
+                _facePipeline.FrameFaceDetected += (result, frame) =>
+                {
+                    _archiveService?.OnFaceDetected(result, frame);
+
+                    if (result.ChannelIndex >= 0 && result.ChannelIndex < _cells.Count)
+                    {
+                        _cells[result.ChannelIndex].UpdateFaceDetections(result.Faces);
+                    }
+                };
 
                 // ۴. مقداردهی اسلات‌های ۹ گانه
                 InitializeCameraSlots();
@@ -621,6 +641,15 @@ namespace MehrganSurveillance
         private void Layout1x1Button_Click(object sender, RoutedEventArgs e) => SetLayout(1);
         private void Layout2x2Button_Click(object sender, RoutedEventArgs e) => SetLayout(4);
         private void Layout3x3Button_Click(object sender, RoutedEventArgs e) => SetLayout(9);
+
+        private void OpenFaceArchiveWindow_Click(object sender, RoutedEventArgs e)
+        {
+            var archiveWin = new FaceArchiveWindow(_archiveService, _facePipeline)
+            {
+                Owner = this
+            };
+            archiveWin.ShowDialog();
+        }
         #endregion
     }
 }

@@ -408,5 +408,61 @@ namespace MehrganSurveillance.Controls
         }
 
         #endregion
+
+        #region لایه نمایش رویداد تشخیص چهره (Face Detection Overlay)
+
+        public bool IsFaceOverlayEnabled { get; set; } = true;
+
+        public void SetFaceOverlayVisible(bool isVisible)
+        {
+            IsFaceOverlayEnabled = isVisible;
+            if (!isVisible)
+            {
+                FaceOverlayCanvas.Children.Clear();
+                FaceDetectedBadge.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        public void UpdateFaceDetections(System.Collections.Generic.List<FaceBoundingBox> faces)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => UpdateFaceDetections(faces)));
+                return;
+            }
+
+            if (!IsFaceOverlayEnabled || faces == null || faces.Count == 0)
+            {
+                FaceOverlayCanvas.Children.Clear();
+                FaceDetectedBadge.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            FaceOverlayCanvas.Children.Clear();
+            double canvasWidth = FaceOverlayCanvas.ActualWidth;
+            double canvasHeight = FaceOverlayCanvas.ActualHeight;
+
+            if (canvasWidth <= 0 || canvasHeight <= 0) return;
+
+            foreach (var face in faces)
+            {
+                var rect = new System.Windows.Shapes.Rectangle
+                {
+                    Width = Math.Max(10, face.NormalizedWidth * canvasWidth),
+                    Height = Math.Max(10, face.NormalizedHeight * canvasHeight),
+                    Stroke = new SolidColorBrush(Color.FromArgb(220, 220, 38, 38)), // Red Accent
+                    StrokeThickness = 2,
+                    Fill = new SolidColorBrush(Color.FromArgb(30, 239, 68, 68))
+                };
+
+                Canvas.SetLeft(rect, face.NormalizedX * canvasWidth);
+                Canvas.SetTop(rect, face.NormalizedY * canvasHeight);
+                FaceOverlayCanvas.Children.Add(rect);
+            }
+
+            FaceDetectedBadge.Visibility = Visibility.Visible;
+        }
+
+        #endregion
     }
 }

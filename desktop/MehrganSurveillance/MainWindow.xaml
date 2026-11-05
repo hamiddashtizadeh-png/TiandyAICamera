@@ -90,7 +90,17 @@
                                     Height="24"
                                     Padding="10,2"
                                     FontSize="10.5"
+                                    Margin="0,0,2,0"
                                     Click="OpenDiscoveryWindow_Click" />
+
+                            <!-- تب ۳: آرشیو و رویدادهای چهره -->
+                            <Button Content="🛡 آرشیو چهره"
+                                    ToolTip="مشاهده، جستجو و مدیریت آرشیو محلی چهره‌ها"
+                                    Style="{StaticResource NavTabButtonStyle}"
+                                    Height="24"
+                                    Padding="10,2"
+                                    FontSize="10.5"
+                                    Click="OpenFaceArchiveWindow_Click" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

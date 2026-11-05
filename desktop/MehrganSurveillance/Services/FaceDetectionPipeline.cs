@@ -49,6 +49,7 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
     public double LastInferenceDurationMs => _lastInferenceDurationMs;
 
     public event Action<FaceDetectionResult>? FaceDetected;
+    public event Action<FaceDetectionResult, AcquiredFrame>? FrameFaceDetected;
     public event Action<string>? LogMessage;
 
     public FaceDetectionPipeline(
@@ -189,6 +190,7 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                             _lastInferenceDurationMs = result.InferenceLatencyMs;
 
                             FaceDetected?.Invoke(result);
+                            FrameFaceDetected?.Invoke(result, frame);
                         }
                     }
                     catch (Exception ex)

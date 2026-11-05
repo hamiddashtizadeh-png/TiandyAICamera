@@ -140,6 +140,27 @@
                                HorizontalAlignment="Stretch"
                                VerticalAlignment="Stretch" />
 
+                <!-- لایه ترسیم مستطیل چهره و بج رویداد (Face Detection Overlay) -->
+                <Canvas x:Name="FaceOverlayCanvas"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        IsHitTestVisible="False"
+                        Visibility="Visible" />
+
+                <!-- بج شناور تشخیص چهره -->
+                <Border x:Name="FaceDetectedBadge"
+                        Background="#DC2626"
+                        CornerRadius="3"
+                        Padding="5,2"
+                        Margin="6"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="👤 چهره شناسایی شد" FontSize="8.5" FontWeight="Bold" Foreground="White" />
+                    </StackPanel>
+                </Border>
+
                 <!-- لایه نگه‌دارنده شیک مانیتورینگ با خطوط هدایت Viewfinder در زمان عدم پخش -->
                 <Border x:Name="PlaceholderOverlay"
                         Background="#090E1A"

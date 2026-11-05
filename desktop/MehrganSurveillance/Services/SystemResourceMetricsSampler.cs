@@ -233,7 +233,7 @@ public class SystemResourceMetricsSampler
         try
         {
             // ارسال اکشن سبک به صف دیسپچر با اولویت نرمال
-            dispatcher.BeginInvoke(new Action(() =>
+            _ = dispatcher.BeginInvoke(new Action(() =>
             {
                 tcs.TrySetResult(true);
             }), System.Windows.Threading.DispatcherPriority.Normal);

@@ -309,7 +309,7 @@ public sealed class AnprArchiveDatabase : IAsyncDisposable, IDisposable
             int deletedCount = 0;
             await using var tx = await conn.BeginTransactionAsync();
             await using var cmd = conn.CreateCommand();
-            cmd.Transaction = tx;
+            cmd.Transaction = (SqliteTransaction)tx;
             cmd.CommandText = "DELETE FROM AnprEvents WHERE EventId = $EventId;";
             var pId = cmd.Parameters.Add("$EventId", SqliteType.Text);
 

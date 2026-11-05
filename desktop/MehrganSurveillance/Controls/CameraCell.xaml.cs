@@ -452,6 +452,46 @@ namespace MehrganSurveillance.Controls
             RequestAssignCamera?.Invoke(this, this);
         }
 
+        private void AssignButton_Click(object sender, RoutedEventArgs e)
+        {
+            RequestAssignCamera?.Invoke(this, this);
+        }
+
+        private void VideoArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            RootBorder_MouseLeftButtonDown(sender, e);
+        }
+
+        private void OnLog(string message)
+        {
+            LogMessage?.Invoke(this, message);
+        }
+
+        public void ToggleMaximize()
+        {
+            IsMaximized = !IsMaximized;
+            if (IsMaximized)
+            {
+                RequestMaximize?.Invoke(this, this);
+            }
+            else
+            {
+                RequestRestore?.Invoke(this, this);
+            }
+        }
+
+        public void SwitchStreamProfile(bool useSubStream)
+        {
+            if (IsUsingSubStream == useSubStream && Channel.IsConnected) return;
+            IsUsingSubStream = useSubStream;
+            UpdateStreamQualityBadge();
+            if (Channel.IsConnected)
+            {
+                StopPlayback();
+                StartPlayback();
+            }
+        }
+
         #endregion
 
         #region لایه نمایش رویداد تشخیص چهره (Face Detection Overlay)

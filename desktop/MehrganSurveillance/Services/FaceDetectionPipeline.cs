@@ -88,11 +88,9 @@ public sealed class FaceDetectionPipeline : IFrameConsumer, IAsyncDisposable
                 };
 
                 // تلاش برای فعال‌سازی شتاب‌دهنده DirectML با دستگاه پیش‌فرض
-                bool directMlAttached = false;
                 try
                 {
                     sessionOptions.AppendExecutionProvider_DML(0);
-                    directMlAttached = true;
                     _activeProvider = "DirectML";
                 }
                 catch (Exception dmlEx)

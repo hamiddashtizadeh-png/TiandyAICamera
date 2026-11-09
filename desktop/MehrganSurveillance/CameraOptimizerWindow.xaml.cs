@@ -141,6 +141,15 @@ namespace MehrganSurveillance
             }
         }
 
+        private void QuickPort_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is string portStr)
+            {
+                CameraPortTextBox.Text = portStr;
+                DetectCapabilitiesButton_Click(sender, e);
+            }
+        }
+
         private async void DetectCapabilitiesButton_Click(object sender, RoutedEventArgs e)
         {
             string ip = CameraIpTextBox.Text.Trim();
@@ -153,21 +162,45 @@ namespace MehrganSurveillance
 
             try
             {
+                // تلاش اول با پورت مشخص شده
                 _currentCapabilities = await _optimizerService.DetectCapabilitiesAsync(
                     $"cam_{ip}", ip, port, user, pass, ManufacturerTextBlock.Text);
+
+                // اگر پورت داده شده پاسخ نداد، جستجوی سریع در پورت‌های متداول ONVIF (8899, 3000, 8000, 5000)
+                if (!_currentCapabilities.IsVerified || _currentCapabilities.VerificationSummary.Contains("حالت تطبیقی"))
+                {
+                    int[] commonPorts = new[] { 8899, 3000, 8000, 5000, 8080 };
+                    foreach (var altPort in commonPorts)
+                    {
+                        if (altPort == port) continue;
+                        try
+                        {
+                            var altCap = await _optimizerService.DetectCapabilitiesAsync(
+                                $"cam_{ip}", ip, altPort, user, pass, ManufacturerTextBlock.Text);
+                            if (altCap.IsVerified && !altCap.VerificationSummary.Contains("حالت تطبیقی"))
+                            {
+                                _currentCapabilities = altCap;
+                                port = altPort;
+                                CameraPortTextBox.Text = altPort.ToString();
+                                break;
+                            }
+                        }
+                        catch { }
+                    }
+                }
 
                 UpdateCapabilitiesUI(_currentCapabilities);
                 await GenerateRecommendationCoreAsync($"cam_{ip}", ip, port, _currentCapabilities.Manufacturer, _currentCapabilities.Model);
 
                 if (_currentCapabilities.IsVerified && !_currentCapabilities.VerificationSummary.Contains("حالت تطبیقی"))
                 {
-                    SetStatus("شناسایی قابلیت‌های سخت‌افزاری ONVIF Imaging با موفقیت انجام شد.", true);
-                    ConnectionStateTextBlock.Text = "وضعیت: متصل و تأییدشده";
+                    SetStatus($"سرویس ONVIF Imaging با موفقیت در پورت {port} متصل و تأیید گردید.", true);
+                    ConnectionStateTextBlock.Text = $"وضعیت: متصل به پورت {port}";
                     ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
                 }
                 else
                 {
-                    SetStatus($"دوربین در پورت {port} به وب‌سرویس Imaging پاسخ نداد (احتمال پورت متفاوت مانند 3000, 8000, 8899). حالت تطبیقی فعال شد.", false);
+                    SetStatus($"دوربین در پورت {port} پاسخ مستقیم نداد (پورت‌های متداول تست شدند). حالت تطبیقی با قابلیت‌های استاندارد فعال است.", false);
                     ConnectionStateTextBlock.Text = "وضعیت: حالت تطبیقی";
                     ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
                 }

@@ -199,10 +199,22 @@
                                     <TextBox x:Name="CameraIpTextBox" Height="28" Background="#161B26" Foreground="White" BorderBrush="#334155" Padding="6,4" Text="192.168.1.100" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1">
-                                    <TextBlock Text="پورت وب:" FontSize="10.5" Foreground="#94A3B8" Margin="0,0,0,2" />
+                                    <TextBlock Text="پورت وب / ONVIF:" FontSize="10.5" Foreground="#94A3B8" Margin="0,0,0,2" />
                                     <TextBox x:Name="CameraPortTextBox" Height="28" Background="#161B26" Foreground="White" BorderBrush="#334155" Padding="6,4" Text="80" />
                                 </StackPanel>
                             </Grid>
+
+                            <!-- دکمه‌های انتخاب سریع پورت‌های متداول دوربین‌های مداربسته -->
+                            <StackPanel Margin="0,0,0,10">
+                                <TextBlock Text="پورت‌های متداول سازندگان (کلیک سریع):" FontSize="9.5" Foreground="#64748B" Margin="0,0,0,3" />
+                                <WrapPanel>
+                                    <Button Content="80 (استاندارد)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="80" />
+                                    <Button Content="8899 (Security Dev / XM)" Background="#1E293B" Foreground="#38BDF8" BorderThickness="1" BorderBrush="#0284C7" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="8899" />
+                                    <Button Content="3000 (Tiandy)" Background="#1E293B" Foreground="#38BDF8" BorderThickness="1" BorderBrush="#0284C7" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="3000" />
+                                    <Button Content="8000 (Hikvision)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="8000" />
+                                    <Button Content="5000 (Generic)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="5000" />
+                                </WrapPanel>
+                            </StackPanel>
 
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>

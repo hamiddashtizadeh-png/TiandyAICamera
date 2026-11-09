@@ -82,6 +82,32 @@ namespace MehrganSurveillance.Services.Optimization
             return firstOpen?.Port;
         }
 
+        /// <summary>
+        /// اسکن تفصیلی و هم‌زمان تمام پورت‌های متداول دوربین مداربسته
+        /// </summary>
+        public static async Task<List<(int Port, bool IsOpen, string ServiceName)>> ScanPortsDetailAsync(string ip, int timeoutMs = 250)
+        {
+            var portsToCheck = new (int Port, string Name)[]
+            {
+                (8899, "ONVIF (Security Dev / XM)"),
+                (80, "Web / HTTP"),
+                (554, "RTSP Stream"),
+                (34567, "XM Netip / CMS"),
+                (8000, "Hikvision"),
+                (3000, "Tiandy"),
+                (5000, "Generic Media")
+            };
+
+            var tasks = portsToCheck.Select(async item =>
+            {
+                bool open = await IsPortOpenAsync(ip, item.Port, timeoutMs);
+                return (item.Port, open, item.Name);
+            });
+
+            var results = await Task.WhenAll(tasks);
+            return results.ToList();
+        }
+
         public async Task<CameraCapabilityProfile> DetectCapabilitiesAsync(
             string ip, int port, string username, string password, CancellationToken ct = default)
         {

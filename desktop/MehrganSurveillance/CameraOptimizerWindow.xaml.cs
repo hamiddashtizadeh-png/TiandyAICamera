@@ -103,24 +103,55 @@ namespace MehrganSurveillance
         private async void ScanPortsButton_Click(object sender, RoutedEventArgs e)
         {
             string ip = CameraIpTextBox.Text.Trim();
-            SetStatus($"در حال اسکن سریع پورت‌های باز {ip} (کمتر از ۳۰۰ میلی‌ثانیه)...", true);
+            SetStatus($"در حال بررسی و اسکن سوکت‌های شبکه {ip}...", true);
             ScanPortsButton.IsEnabled = false;
 
             try
             {
-                int[] probePorts = new[] { 80, 8899, 3000, 554, 34567, 8000, 5000, 8080 };
-                int? openPort = await OnvifImagingProvider.FindOpenPortAsync(ip, 8899, probePorts, 250);
-                if (openPort.HasValue)
+                var details = await OnvifImagingProvider.ScanPortsDetailAsync(ip, 250);
+                var openPorts = details.Where(x => x.IsOpen).ToList();
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"گزارش اسکن پورت‌های دوربین ({ip}):");
+                sb.AppendLine("----------------------------------------");
+
+                foreach (var d in details)
                 {
-                    CameraPortTextBox.Text = openPort.Value.ToString();
-                    SetStatus($"پورت باز {openPort.Value} با موفقیت شناسایی و تنظیم شد.", true);
-                    await RunDetectionAndOptimizationAsync(autoScanPortsIfClosed: false);
+                    sb.AppendLine($"{(d.IsOpen ? "✔ باز" : "✖ بسته")} | پورت {d.Port}: {d.ServiceName}");
+                }
+
+                int selectedPort = 80;
+                if (details.Any(d => d.Port == 8899 && d.IsOpen))
+                {
+                    selectedPort = 8899;
+                    sb.AppendLine("\nنتیجه: پورت ۸۸۹۹ (ONVIF اختصاصی Security Dev) باز است و به عنوان پورت کنترل انتخاب شد.");
+                }
+                else if (details.Any(d => d.Port == 80 && d.IsOpen))
+                {
+                    selectedPort = 80;
+                    sb.AppendLine("\nنتیجه: پورت ۸۰ (Web HTTP) باز است و انتخاب شد.");
+                }
+                else if (details.Any(d => d.Port == 34567 && d.IsOpen))
+                {
+                    selectedPort = 34567;
+                    sb.AppendLine("\nنتیجه: پورت ۳۴۵۶۷ (پروتکل اختصاصی XM) باز است و انتخاب شد.");
+                }
+                else if (openPorts.Any())
+                {
+                    selectedPort = openPorts.First().Port;
+                    sb.AppendLine($"\nنتیجه: پورت باز {selectedPort} انتخاب شد.");
                 }
                 else
                 {
-                    SetStatus($"هیچ پورت وب مستقیمی باز نبود؛ استعلام بر روی پورت {CameraPortTextBox.Text} انجام شد.", false);
-                    await RunDetectionAndOptimizationAsync(autoScanPortsIfClosed: false);
+                    sb.AppendLine("\nهشدار: هیچ‌یک از پورت‌های وب و ONVIF باز پاسخ ندادند؛ ارتباط فقط از طریق استریم تصویر انجام می‌شود.");
                 }
+
+                CameraPortTextBox.Text = selectedPort.ToString();
+                SetStatus($"اسکن کامل شد. پورت فعال: {selectedPort}", true);
+
+                MessageBox.Show(sb.ToString(), "نتیجه اسکن پورت‌های دوربین", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                await RunDetectionAndOptimizationAsync(autoScanPortsIfClosed: false);
             }
             finally
             {

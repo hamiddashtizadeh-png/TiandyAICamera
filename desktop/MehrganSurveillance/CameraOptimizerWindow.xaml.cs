@@ -44,7 +44,7 @@ namespace MehrganSurveillance
         {
             try
             {
-                var cameras = _cameraRegistry.GetCameras();
+                var cameras = _cameraRegistry.GetAllCameras();
                 CameraSelectorComboBox.Items.Clear();
 
                 if (cameras.Count > 0)
@@ -53,7 +53,7 @@ namespace MehrganSurveillance
                     {
                         var item = new ComboBoxItem
                         {
-                            Content = $"{cam.Name} ({cam.IpAddress}:{cam.Port}) - {cam.Brand}",
+                            Content = $"{cam.Name} ({cam.IpAddress}:{cam.RtspPort}) - {cam.Brand}",
                             Tag = cam
                         };
                         CameraSelectorComboBox.Items.Add(item);
@@ -71,7 +71,7 @@ namespace MehrganSurveillance
                             Id = "tiandy-01",
                             Name = "دوربین ورودی پلاک‌خوان",
                             IpAddress = "192.168.1.100",
-                            Port = 80,
+                            RtspPort = 554,
                             Username = "admin",
                             Brand = "Tiandy",
                             Model = "TC-NC214"
@@ -92,7 +92,7 @@ namespace MehrganSurveillance
             if (CameraSelectorComboBox.SelectedItem is ComboBoxItem item && item.Tag is RegisteredCamera cam)
             {
                 CameraIpTextBox.Text = cam.IpAddress;
-                CameraPortTextBox.Text = cam.Port > 0 ? cam.Port.ToString() : "80";
+                CameraPortTextBox.Text = "80";
                 CameraUserTextBox.Text = !string.IsNullOrEmpty(cam.Username) ? cam.Username : "admin";
                 ManufacturerTextBlock.Text = !string.IsNullOrWhiteSpace(cam.Brand) ? cam.Brand : "Tiandy Technologies";
 
@@ -109,13 +109,16 @@ namespace MehrganSurveillance
                 ConnectionStateTextBlock.Text = "وضعیت: در حال بررسی...";
                 ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
 
+                int httpPort = 80;
+                if (int.TryParse(CameraPortTextBox.Text.Trim(), out int p) && p > 0) httpPort = p;
+
                 _currentCapabilities = await _optimizerService.DetectCapabilitiesAsync(
-                    cam.Id, cam.IpAddress, cam.Port > 0 ? cam.Port : 80,
+                    cam.Id, cam.IpAddress, httpPort,
                     CameraUserTextBox.Text.Trim(), CameraPasswordBox.Password,
                     cam.Brand, cam.Model);
 
                 UpdateCapabilitiesUI(_currentCapabilities);
-                await GenerateRecommendationCoreAsync(cam.Id, cam.IpAddress, cam.Port > 0 ? cam.Port : 80, cam.Brand, cam.Model);
+                await GenerateRecommendationCoreAsync(cam.Id, cam.IpAddress, httpPort, cam.Brand, cam.Model);
 
                 SetStatus("شناسایی قابلیت‌های دوربین و تحلیل اولیه با موفقیت انجام شد.", true);
                 ConnectionStateTextBlock.Text = "وضعیت: متصل و تأییدشده";

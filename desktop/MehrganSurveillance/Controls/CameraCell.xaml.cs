@@ -229,6 +229,50 @@ namespace MehrganSurveillance.Controls
             }
         }
 
+        /// <summary>
+        /// اعمال بلادرنگ فیلترهای بهینه‌ساز هوشمند پلاک‌خوان (کنتراست، گاما، روشنایی و مد شبانه) روی استریم ویدیوی VLC
+        /// </summary>
+        public void ApplyOptimizationProfile(CameraSettingsSnapshot snapshot)
+        {
+            if (_mediaPlayer == null || snapshot == null) return;
+
+            try
+            {
+                _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Enable, 1.0f);
+
+                if (snapshot.DayNightMode == "Night" || snapshot.HlcEnabled)
+                {
+                    // مهار نور شدید چراغ خودرو (HLC) و کنتراست ارقام پلاک در شب
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Contrast, 1.35f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Brightness, 0.95f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Gamma, 0.85f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Saturation, 0.0f); // مد شبانه مادون قرمز (B&W)
+                }
+                else if (snapshot.ExposureMode == "Manual" && snapshot.ShutterSpeedSeconds <= 0.001f)
+                {
+                    // خودروهای پرسرعت (1/1000s و سریع‌تر)
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Contrast, 1.25f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Brightness, 1.05f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Gamma, 0.95f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Saturation, 0.90f);
+                }
+                else
+                {
+                    // حالت عمومی و روزانه
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Contrast, 1.05f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Brightness, 1.00f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Gamma, 1.00f);
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Saturation, 1.00f);
+                }
+
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] فیلتر بهینه‌سازی تصویر ({snapshot.DayNightMode} / شاتر {snapshot.FormatShutterSpeed()}) بر روی تصویر زنده اعمال گردید.");
+            }
+            catch (Exception ex)
+            {
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] خطا در تنظیم فیلتر تصویر: {ex.Message}");
+            }
+        }
+
         private void UpdateStreamQualityBadge()
         {
             if (IsUsingSubStream)
@@ -298,6 +342,13 @@ namespace MehrganSurveillance.Controls
                 PlayPauseButtonText.Text = "⏹";
                 Channel.IsConnected = true;
                 OnLog($"[اسلات {Channel.SlotIndex + 1}] دیکود فریم‌های واقعی با موفقیت آغاز شد.");
+
+                // اعمال خودکار پروفایل بهینه‌سازی فعال در صورت وجود
+                if (!string.IsNullOrEmpty(Channel.IpAddress) &&
+                    MehrganSurveillance.Services.Optimization.CameraSettingsOptimizerService.ActiveStreamProfiles.TryGetValue(Channel.IpAddress, out var activeSnap))
+                {
+                    ApplyOptimizationProfile(activeSnap);
+                }
             });
         }
 

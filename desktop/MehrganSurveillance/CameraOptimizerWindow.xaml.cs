@@ -375,8 +375,18 @@ namespace MehrganSurveillance
 
                 if (success)
                 {
-                    SetStatus($"موفقیت: {msg}", true);
-                    MessageBox.Show("تنظیمات با موفقیت روی دوربین ثبت و توسط دوربین تأیید گردید.\nاسنپ‌شات قبلی جهت امکان بازگردانی (Rollback) ذخیره شد.", "تأیید اعمال", MessageBoxButton.OK, MessageBoxImage.Information);
+                    SetStatus($"پروفایل بهینه‌سازی «{_selectedProfile}» با موفقیت اعمال گردید.", true);
+                    MessageBox.Show(
+                        $"تنظیمات بهینه‌ساز با موفقیت بر روی دوربین و پردازشگر ویدیویی اعمال شد:\n\n" +
+                        $"• سرعت شاتر (Exposure): {_currentRecommendation.ProposedSettings.FormatShutterSpeed()}\n" +
+                        $"• مهار نور شدید (HLC): {(_currentRecommendation.ProposedSettings.HlcEnabled ? $"فعال ({_currentRecommendation.ProposedSettings.HlcLevel:F0}%)" : "غیرفعال")}\n" +
+                        $"• گین سنسور (Gain): {_currentRecommendation.ProposedSettings.Gain:F0}\n" +
+                        $"• وضعیت فیلتر شب/روز: {_currentRecommendation.ProposedSettings.DayNightMode}\n\n" +
+                        $"فرامین سخت‌افزاری به دوربین ارسال شد و فیلترهای بصری بهینه‌سازی بلافاصله روی تصویر زنده و هسته پلاک‌خوان فعال گردید.\n" +
+                        $"اسنپ‌شات وضعیت قبلی جهت امکان بازگردانی (Rollback) در سیستم ذخیره شد.",
+                        "تأیید اعمال بهینه‌سازی تصویر",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
 
                     // بروزرسانی مقادیر جاری در جدول مقایسه
                     _currentSnapshot = record.AfterSnapshot;

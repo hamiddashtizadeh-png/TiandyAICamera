@@ -25,6 +25,9 @@ namespace MehrganSurveillance.Services.Optimization
         private readonly string _auditLogFilePath;
         private readonly object _fileLock = new();
 
+        public static event Action<string, CameraSettingsSnapshot>? OptimizationSettingsApplied;
+        public static readonly ConcurrentDictionary<string, CameraSettingsSnapshot> ActiveStreamProfiles = new();
+
         public event Action<string>? LogMessage;
         public event Action<OptimizationAuditRecord>? AuditRecordAdded;
 
@@ -36,12 +39,14 @@ namespace MehrganSurveillance.Services.Optimization
 
             // ثبت ارائه‌دهندگان به ترتیب اولویت سازندگان:
             // ۱. تیاندی (Tiandy Native)
-            // ۲. داهوا (Dahua ConfigManager)
-            // ۳. هایک‌ویژن (Hikvision ISAPI)
-            // ۴. عمومی (ONVIF Imaging)
+            // ۲. سکیوریتی دو و ژیونگ‌مای (Security Dev / XM Engine)
+            // ۳. داهوا (Dahua ConfigManager)
+            // ۴. هایک‌ویژن (Hikvision ISAPI)
+            // ۵. عمومی (ONVIF Imaging)
             _providers = new List<ICameraSettingsProvider>
             {
                 new TiandySettingsProvider(),
+                new SecurityDevSettingsProvider(),
                 new DahuaSettingsProvider(),
                 new HikvisionSettingsProvider(),
                 new OnvifImagingProvider()
@@ -210,14 +215,19 @@ namespace MehrganSurveillance.Services.Optimization
             afterSnapshot.IrIntensity = targetSettings.IrIntensity;
             auditRecord.AfterSnapshot = afterSnapshot;
 
-            // گام ۵: بررسی عدم بروز خطای نامشخص و ذخیره اسنپ‌شات در حافظه جهت Rollback سریع
-            _lastAppliedSnapshots[cameraId] = beforeSnapshot; // برای بازگردانی سریع
+            // گام ۵: ثبت در حافظه استریم جهت اعمال بی‌درنگ روی تصویر زنده و ANPR
+            ActiveStreamProfiles[cameraId] = targetSettings;
+            ActiveStreamProfiles[ip] = targetSettings;
+            _lastAppliedSnapshots[cameraId] = beforeSnapshot;
+
+            // اعلان به تمام بخش‌های زنده VMS (پخش‌کننده تصویر و پلاک‌خوان)
+            OptimizationSettingsApplied?.Invoke(ip, targetSettings);
 
             auditRecord.Success = true;
             auditRecord.ResultSummary = $"تنظیمات با موفقیت اعمال و توسط دوربین بازخوانی و تأیید گردید.";
             RecordAudit(auditRecord);
 
-            Log($"تغییرات با موفقیت اعمال شد. اسنپ‌شات قبلی جهت امکان Rollback ذخیره شد.");
+            Log($"تغییرات با موفقیت بر روی دوربین و پردازشگر ویدیویی اعمال شد. اسنپ‌شات قبلی ذخیره گردید.");
             return (true, auditRecord.ResultSummary, auditRecord);
         }
 

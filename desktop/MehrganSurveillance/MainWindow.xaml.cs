@@ -130,6 +130,21 @@ namespace MehrganSurveillance
                 _anprArchiveService = new AnprArchiveService();
                 await _anprArchiveService.InitializeAsync();
 
+                // ۶. اتصال رویداد بهینه‌ساز هوشمند دوربین به سلول‌های ویدیویی زنده
+                MehrganSurveillance.Services.Optimization.CameraSettingsOptimizerService.OptimizationSettingsApplied += (camIp, snap) =>
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        foreach (var cell in _cells)
+                        {
+                            if (cell.Channel != null && cell.Channel.IpAddress == camIp)
+                            {
+                                cell.ApplyOptimizationProfile(snap);
+                            }
+                        }
+                    });
+                };
+
                 _anprPipeline.FramePlateRecognized += (anprResult, frame) =>
                 {
                     if (_anprArchiveService != null)

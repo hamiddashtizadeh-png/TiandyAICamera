@@ -120,9 +120,18 @@ namespace MehrganSurveillance
                 UpdateCapabilitiesUI(_currentCapabilities);
                 await GenerateRecommendationCoreAsync(cam.Id, cam.IpAddress, httpPort, cam.Brand, cam.Model);
 
-                SetStatus("شناسایی قابلیت‌های دوربین و تحلیل اولیه با موفقیت انجام شد.", true);
-                ConnectionStateTextBlock.Text = "وضعیت: متصل و تأییدشده";
-                ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
+                if (_currentCapabilities.IsVerified && !_currentCapabilities.VerificationSummary.Contains("حالت تطبیقی"))
+                {
+                    SetStatus("سرویس ONVIF Imaging دوربین با موفقیت متصل و تأیید گردید.", true);
+                    ConnectionStateTextBlock.Text = "وضعیت: متصل به ONVIF";
+                    ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
+                }
+                else
+                {
+                    SetStatus($"دوربین در پورت {httpPort} به وب‌سرویس ONVIF Imaging پاسخ نداد؛ حالت تطبیقی فعال است. در صورت نیاز پورت وب را تغییر دهید.", false);
+                    ConnectionStateTextBlock.Text = "وضعیت: حالت تطبیقی";
+                    ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                }
             }
             catch (Exception ex)
             {
@@ -139,7 +148,7 @@ namespace MehrganSurveillance
             string user = CameraUserTextBox.Text.Trim();
             string pass = CameraPasswordBox.Password;
 
-            SetStatus($"در حال استعلام قابلیت‌های {ip}...", true);
+            SetStatus($"در حال استعلام قابلیت‌های {ip} در پورت {port}...", true);
             DetectCapabilitiesButton.IsEnabled = false;
 
             try
@@ -150,7 +159,18 @@ namespace MehrganSurveillance
                 UpdateCapabilitiesUI(_currentCapabilities);
                 await GenerateRecommendationCoreAsync($"cam_{ip}", ip, port, _currentCapabilities.Manufacturer, _currentCapabilities.Model);
 
-                SetStatus("شناسایی قابلیت‌ها با موفقیت به‌روزرسانی شد.", true);
+                if (_currentCapabilities.IsVerified && !_currentCapabilities.VerificationSummary.Contains("حالت تطبیقی"))
+                {
+                    SetStatus("شناسایی قابلیت‌های سخت‌افزاری ONVIF Imaging با موفقیت انجام شد.", true);
+                    ConnectionStateTextBlock.Text = "وضعیت: متصل و تأییدشده";
+                    ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
+                }
+                else
+                {
+                    SetStatus($"دوربین در پورت {port} به وب‌سرویس Imaging پاسخ نداد (احتمال پورت متفاوت مانند 3000, 8000, 8899). حالت تطبیقی فعال شد.", false);
+                    ConnectionStateTextBlock.Text = "وضعیت: حالت تطبیقی";
+                    ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                }
             }
             catch (Exception ex)
             {

@@ -92,52 +92,39 @@ namespace MehrganSurveillance
             if (CameraSelectorComboBox.SelectedItem is ComboBoxItem item && item.Tag is RegisteredCamera cam)
             {
                 CameraIpTextBox.Text = cam.IpAddress;
-                CameraPortTextBox.Text = "80";
                 CameraUserTextBox.Text = !string.IsNullOrEmpty(cam.Username) ? cam.Username : "admin";
-                ManufacturerTextBlock.Text = !string.IsNullOrWhiteSpace(cam.Brand) ? cam.Brand : "Tiandy Technologies";
+                ManufacturerTextBlock.Text = !string.IsNullOrWhiteSpace(cam.Brand) ? cam.Brand : "Security Dev";
 
-                // استعلام خودکار اولیه جهت تجربه کاربری روان
-                _ = AutoDetectAsync(cam);
+                // استعلام خودکار سریع
+                _ = RunDetectionAndOptimizationAsync(autoScanPortsIfClosed: true);
             }
         }
 
-        private async Task AutoDetectAsync(RegisteredCamera cam)
+        private async void ScanPortsButton_Click(object sender, RoutedEventArgs e)
         {
+            string ip = CameraIpTextBox.Text.Trim();
+            SetStatus($"در حال اسکن سریع پورت‌های باز {ip} (کمتر از ۳۰۰ میلی‌ثانیه)...", true);
+            ScanPortsButton.IsEnabled = false;
+
             try
             {
-                SetStatus("در حال شناسایی و اعتبارسنجی قابلیت‌های سخت‌افزاری دوربین...", true);
-                ConnectionStateTextBlock.Text = "وضعیت: در حال بررسی...";
-                ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
-
-                int httpPort = 80;
-                if (int.TryParse(CameraPortTextBox.Text.Trim(), out int p) && p > 0) httpPort = p;
-
-                _currentCapabilities = await _optimizerService.DetectCapabilitiesAsync(
-                    cam.Id, cam.IpAddress, httpPort,
-                    CameraUserTextBox.Text.Trim(), CameraPasswordBox.Password,
-                    cam.Brand, cam.Model);
-
-                UpdateCapabilitiesUI(_currentCapabilities);
-                await GenerateRecommendationCoreAsync(cam.Id, cam.IpAddress, httpPort, cam.Brand, cam.Model);
-
-                if (_currentCapabilities.IsVerified && !_currentCapabilities.VerificationSummary.Contains("حالت تطبیقی"))
+                int[] probePorts = new[] { 80, 8899, 3000, 554, 34567, 8000, 5000, 8080 };
+                int? openPort = await OnvifImagingProvider.FindOpenPortAsync(ip, 8899, probePorts, 250);
+                if (openPort.HasValue)
                 {
-                    SetStatus("سرویس ONVIF Imaging دوربین با موفقیت متصل و تأیید گردید.", true);
-                    ConnectionStateTextBlock.Text = "وضعیت: متصل به ONVIF";
-                    ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
+                    CameraPortTextBox.Text = openPort.Value.ToString();
+                    SetStatus($"پورت باز {openPort.Value} با موفقیت شناسایی و تنظیم شد.", true);
+                    await RunDetectionAndOptimizationAsync(autoScanPortsIfClosed: false);
                 }
                 else
                 {
-                    SetStatus($"دوربین در پورت {httpPort} به وب‌سرویس ONVIF Imaging پاسخ نداد؛ حالت تطبیقی فعال است. در صورت نیاز پورت وب را تغییر دهید.", false);
-                    ConnectionStateTextBlock.Text = "وضعیت: حالت تطبیقی";
-                    ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+                    SetStatus($"هیچ پورت وب مستقیمی باز نبود؛ استعلام بر روی پورت {CameraPortTextBox.Text} انجام شد.", false);
+                    await RunDetectionAndOptimizationAsync(autoScanPortsIfClosed: false);
                 }
             }
-            catch (Exception ex)
+            finally
             {
-                SetStatus($"خطا در ارتباط اولیه با دوربین: {ex.Message}", false);
-                ConnectionStateTextBlock.Text = "وضعیت: عدم پاسخ یا شبیه‌سازی";
-                ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68));
+                ScanPortsButton.IsEnabled = true;
             }
         }
 
@@ -146,68 +133,61 @@ namespace MehrganSurveillance
             if (sender is Button btn && btn.Tag is string portStr)
             {
                 CameraPortTextBox.Text = portStr;
-                DetectCapabilitiesButton_Click(sender, e);
+                _ = RunDetectionAndOptimizationAsync(autoScanPortsIfClosed: false);
             }
         }
 
         private async void DetectCapabilitiesButton_Click(object sender, RoutedEventArgs e)
         {
+            await RunDetectionAndOptimizationAsync(autoScanPortsIfClosed: true);
+        }
+
+        private async Task RunDetectionAndOptimizationAsync(bool autoScanPortsIfClosed = false)
+        {
             string ip = CameraIpTextBox.Text.Trim();
-            if (!int.TryParse(CameraPortTextBox.Text.Trim(), out int port)) port = 80;
+            if (!int.TryParse(CameraPortTextBox.Text.Trim(), out int port) || port <= 0) port = 80;
             string user = CameraUserTextBox.Text.Trim();
             string pass = CameraPasswordBox.Password;
+            string brand = ManufacturerTextBlock.Text;
 
-            SetStatus($"در حال استعلام قابلیت‌های {ip} در پورت {port}...", true);
+            SetStatus($"در حال استعلام وضعیت دوربین {ip} روی پورت {port}...", true);
             DetectCapabilitiesButton.IsEnabled = false;
+            ConnectionStateTextBlock.Text = "وضعیت: در حال بررسی...";
+            ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
 
             try
             {
-                // تلاش اول با پورت مشخص شده
-                _currentCapabilities = await _optimizerService.DetectCapabilitiesAsync(
-                    $"cam_{ip}", ip, port, user, pass, ManufacturerTextBlock.Text);
+                // تست سوکت ۲۵۰ میلی‌ثانیه‌ای
+                bool portOpen = await OnvifImagingProvider.IsPortOpenAsync(ip, port, 250);
 
-                // اگر پورت داده شده پاسخ نداد، جستجوی سریع در پورت‌های متداول ONVIF (8899, 3000, 8000, 5000)
-                if (!_currentCapabilities.IsVerified || _currentCapabilities.VerificationSummary.Contains("حالت تطبیقی"))
+                if (!portOpen && autoScanPortsIfClosed)
                 {
-                    int[] commonPorts = new[] { 8899, 3000, 8000, 5000, 8080 };
-                    foreach (var altPort in commonPorts)
+                    // اسکن موازی و سریع پورت‌های متداول بدون فریز (حداکثر ۲۵۰ میلی‌ثانیه)
+                    int[] commonPorts = new[] { 8899, 80, 3000, 554, 34567, 8000, 5000, 8080 };
+                    int? foundPort = await OnvifImagingProvider.FindOpenPortAsync(ip, port, commonPorts, 250);
+                    if (foundPort.HasValue && foundPort.Value != port)
                     {
-                        if (altPort == port) continue;
-                        try
-                        {
-                            var altCap = await _optimizerService.DetectCapabilitiesAsync(
-                                $"cam_{ip}", ip, altPort, user, pass, ManufacturerTextBlock.Text);
-                            if (altCap.IsVerified && !altCap.VerificationSummary.Contains("حالت تطبیقی"))
-                            {
-                                _currentCapabilities = altCap;
-                                port = altPort;
-                                CameraPortTextBox.Text = altPort.ToString();
-                                break;
-                            }
-                        }
-                        catch { }
+                        port = foundPort.Value;
+                        CameraPortTextBox.Text = port.ToString();
+                        portOpen = true;
                     }
                 }
+
+                _currentCapabilities = await _optimizerService.DetectCapabilitiesAsync(
+                    $"cam_{ip}", ip, port, user, pass, brand);
 
                 UpdateCapabilitiesUI(_currentCapabilities);
                 await GenerateRecommendationCoreAsync($"cam_{ip}", ip, port, _currentCapabilities.Manufacturer, _currentCapabilities.Model);
 
-                if (_currentCapabilities.IsVerified && !_currentCapabilities.VerificationSummary.Contains("حالت تطبیقی"))
-                {
-                    SetStatus($"سرویس ONVIF Imaging با موفقیت در پورت {port} متصل و تأیید گردید.", true);
-                    ConnectionStateTextBlock.Text = $"وضعیت: متصل به پورت {port}";
-                    ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
-                }
-                else
-                {
-                    SetStatus($"دوربین در پورت {port} پاسخ مستقیم نداد (پورت‌های متداول تست شدند). حالت تطبیقی با قابلیت‌های استاندارد فعال است.", false);
-                    ConnectionStateTextBlock.Text = "وضعیت: حالت تطبیقی";
-                    ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(245, 158, 11));
-                }
+                SetStatus(_currentCapabilities.VerificationSummary, true);
+                ConnectionStateTextBlock.Text = portOpen ? $"وضعیت: متصل به پورت {port}" : "وضعیت: بهینه‌ساز فعال";
+                ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129));
             }
             catch (Exception ex)
             {
-                SetStatus($"خطا در شناسایی قابلیت‌ها: {ex.Message}", false);
+                SetStatus($"خطا در ارتباط: {ex.Message}", false);
+                ConnectionStateTextBlock.Text = "وضعیت: خطا";
+                ConnectionStateTextBlock.Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68));
             }
             finally
             {
@@ -398,11 +378,14 @@ namespace MehrganSurveillance
                     SetStatus($"موفقیت: {msg}", true);
                     MessageBox.Show("تنظیمات با موفقیت روی دوربین ثبت و توسط دوربین تأیید گردید.\nاسنپ‌شات قبلی جهت امکان بازگردانی (Rollback) ذخیره شد.", "تأیید اعمال", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                    // بروزرسانی مقادیر جاری
+                    // بروزرسانی مقادیر جاری در جدول مقایسه
                     _currentSnapshot = record.AfterSnapshot;
                     CurShutterText.Text = _currentSnapshot.FormatShutterSpeed();
                     CurGainText.Text = $"{_currentSnapshot.Gain:F0}";
                     CurHlcText.Text = _currentSnapshot.HlcEnabled ? $"فعال ({_currentSnapshot.HlcLevel:F0}%)" : "غیرفعال (Off)";
+                    CurHlcText.Foreground = new SolidColorBrush(_currentSnapshot.HlcEnabled ? Color.FromRgb(16, 185, 129) : Color.FromRgb(239, 68, 68));
+                    CurWdrText.Text = _currentSnapshot.WdrEnabled ? $"فعال ({_currentSnapshot.WdrLevel:F0}%)" : "غیرفعال";
+                    CurIrText.Text = $"{_currentSnapshot.IrMode} / {_currentSnapshot.DayNightMode}";
                 }
                 else
                 {

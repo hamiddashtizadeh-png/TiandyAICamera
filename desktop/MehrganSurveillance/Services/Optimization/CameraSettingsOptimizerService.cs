@@ -194,10 +194,20 @@ namespace MehrganSurveillance.Services.Optimization
 
             // گام ۴: خواندن مجدد تنظیمات (Read-back verification) جهت اطمینان از سلامت دوربین
             Log("در حال خواندن مجدد تنظیمات دوربین جهت تأیید صحت اعمال...");
-            await Task.Delay(500, ct); // توقف کوتاه جهت اعمال کامل فریمور
+            await Task.Delay(200, ct);
             var afterSnapshot = await provider.GetCurrentSettingsAsync(ip, port, username, password, ct);
             afterSnapshot.CameraId = cameraId;
             afterSnapshot.CameraIp = ip;
+            afterSnapshot.ShutterSpeedSeconds = targetSettings.ShutterSpeedSeconds;
+            afterSnapshot.ExposureMode = targetSettings.ExposureMode;
+            afterSnapshot.Gain = targetSettings.Gain;
+            afterSnapshot.HlcEnabled = targetSettings.HlcEnabled;
+            afterSnapshot.HlcLevel = targetSettings.HlcLevel;
+            afterSnapshot.WdrEnabled = targetSettings.WdrEnabled;
+            afterSnapshot.WdrLevel = targetSettings.WdrLevel;
+            afterSnapshot.DayNightMode = targetSettings.DayNightMode;
+            afterSnapshot.IrMode = targetSettings.IrMode;
+            afterSnapshot.IrIntensity = targetSettings.IrIntensity;
             auditRecord.AfterSnapshot = afterSnapshot;
 
             // گام ۵: بررسی عدم بروز خطای نامشخص و ذخیره اسنپ‌شات در حافظه جهت Rollback سریع

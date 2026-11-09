@@ -206,13 +206,21 @@
 
                             <!-- دکمه‌های انتخاب سریع پورت‌های متداول دوربین‌های مداربسته -->
                             <StackPanel Margin="0,0,0,10">
-                                <TextBlock Text="پورت‌های متداول سازندگان (کلیک سریع):" FontSize="9.5" Foreground="#64748B" Margin="0,0,0,3" />
+                                <Grid Margin="0,0,0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="پورت‌های متداول دوربین (انتخاب سریع):" FontSize="9.5" Foreground="#64748B" VerticalAlignment="Center" />
+                                    <Button x:Name="ScanPortsButton" Grid.Column="1" Content="⚡ اسکن پورت باز" Background="#1E293B" Foreground="#38BDF8" BorderThickness="1" BorderBrush="#0284C7" Padding="6,1" FontSize="9" Cursor="Hand" Click="ScanPortsButton_Click" ToolTip="یافتن خودکار پورت باز دوربین در کمتر از ۳۰۰ میلی‌ثانیه" />
+                                </Grid>
                                 <WrapPanel>
-                                    <Button Content="80 (استاندارد)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="80" />
-                                    <Button Content="8899 (Security Dev / XM)" Background="#1E293B" Foreground="#38BDF8" BorderThickness="1" BorderBrush="#0284C7" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="8899" />
+                                    <Button Content="80 (Web)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="80" />
+                                    <Button Content="8899 (ONVIF/Dev)" Background="#1E293B" Foreground="#38BDF8" BorderThickness="1" BorderBrush="#0284C7" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="8899" />
                                     <Button Content="3000 (Tiandy)" Background="#1E293B" Foreground="#38BDF8" BorderThickness="1" BorderBrush="#0284C7" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="3000" />
-                                    <Button Content="8000 (Hikvision)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="8000" />
-                                    <Button Content="5000 (Generic)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="5000" />
+                                    <Button Content="554 (RTSP)" Background="#1E293B" Foreground="#10B981" BorderThickness="1" BorderBrush="#059669" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="554" />
+                                    <Button Content="34567 (XM)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="34567" />
+                                    <Button Content="8000 (Hik)" Background="#1E293B" Foreground="#94A3B8" BorderThickness="1" BorderBrush="#334155" Padding="5,2" Margin="0,0,4,4" FontSize="9.5" Cursor="Hand" Click="QuickPort_Click" Tag="8000" />
                                 </WrapPanel>
                             </StackPanel>
 

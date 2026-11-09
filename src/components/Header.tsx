@@ -6,6 +6,7 @@ export type AppNavTab =
   | 'executor'
   | 'player'
   | 'faces'
+  | 'optimizer'
   | 'scanner'
   | 'mediamtx'
   | 'diagnostics'
@@ -83,6 +84,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <span>رویدادهای چهره (AI)</span>
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="سیستم فعال پایش چهره" />
+            </button>
+            <button
+              onClick={() => setActiveTab('optimizer')}
+              className={`transition-colors whitespace-nowrap shrink-0 py-2 border-b-2 font-medium flex items-center gap-1.5 ${
+                activeTab === 'optimizer'
+                  ? 'border-blue-600 text-blue-800 font-bold'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>بهینه‌ساز دوربین (فاز ۸)</span>
+              <span className="w-2 h-2 rounded-full bg-sky-500" title="موتور بهینه‌ساز ONVIF تیاندی" />
             </button>
             <button
               onClick={() => setActiveTab('scanner')}

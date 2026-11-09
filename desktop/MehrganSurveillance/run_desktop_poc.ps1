@@ -3,8 +3,12 @@
 # سامانه نظارت تصویری مهرگان - اسکریپت اجرای خودکار پایلوت ویندوزی (C# / WPF)
 # ==============================================================================
 
+param(
+    [switch]$TestOptimizer
+)
+
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$Host.UI.RawUI.WindowTitle = "سامانه نظارت تصویری مهرگان - فاز ۱"
+$Host.UI.RawUI.WindowTitle = "سامانه نظارت تصویری مهرگان"
 
 Write-Host "======================================================================" -ForegroundColor Cyan
 Write-Host "     سامانه نظارت تصویری مهرگان (Mehrgan AI Surveillance)            " -ForegroundColor Yellow
@@ -56,7 +60,12 @@ Write-Host "[۴/۴] اجرای برنامه بومی سامانه نظارت ت�
 Write-Host "  (پنجره برنامه دسکتاپ با تم روشن و زبان فارسی باز خواهد شد)" -ForegroundColor Cyan
 Write-Host "----------------------------------------------------------------------" -ForegroundColor DarkGray
 
-dotnet run --project MehrganSurveillance.csproj -c Debug -r win-x64 --no-build
+if ($TestOptimizer) {
+    Write-Host "  در حال اجرای آزمون‌های جامع ۱۰گانه بهینه‌ساز دوربین..." -ForegroundColor Magenta
+    dotnet run --project MehrganSurveillance.csproj -c Debug -r win-x64 --no-build -- --test-optimizer
+} else {
+    dotnet run --project MehrganSurveillance.csproj -c Debug -r win-x64 --no-build
+}
 
 Write-Host ""
 Write-Host "برنامه با موفقیت خاتمه یافت." -ForegroundColor Gray

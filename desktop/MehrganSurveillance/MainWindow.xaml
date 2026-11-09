@@ -127,7 +127,15 @@
                                 FontSize="11"
                                 Click="OpenAnprWindow_Click" />
 
-                        <!-- تب ۶: پنل زنده چهره‌ها -->
+                        <!-- تب ۶: بهینه‌ساز هوشمند دوربین (Camera Optimizer) -->
+                        <Button Content="⚙️ بهینه‌ساز تصویر دوربین"
+                                ToolTip="بهینه‌سازی هوشمند شاتر، نوردهی، گین و HLC جهت ارتقای دقت پلاک‌خوان در شب و روز"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Padding="12,0"
+                                FontSize="11"
+                                Click="OpenCameraOptimizerWindow_Click" />
+
+                        <!-- تب ۷: پنل زنده چهره‌ها -->
                         <Button x:Name="ToggleLiveFacePanelButton"
                                 Content="🪪 پنل چهره زنده"
                                 ToolTip="باز / بسته کردن پنل جانبی نمایش چهره‌های شناسایی‌شده لحظه‌ای"
@@ -500,7 +508,7 @@
                                 BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="20,22">
-                            <UniformGrid Columns="10" Rows="1">
+                            <UniformGrid Columns="11" Rows="1">
                                 <!-- ۱. System configuration -->
                                 <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenDiscoveryWindow_Click">
                                     <StackPanel HorizontalAlignment="Center">
@@ -598,6 +606,16 @@
                                             <TextBlock Text="🎬" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <TextBlock Text="پخش‌کننده ویدیو" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۱۱. Camera Optimizer -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenCameraOptimizerWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#6366F1" Margin="0,0,0,8">
+                                            <TextBlock Text="⚙️" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="بهینه‌ساز دوربین" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
                                     </StackPanel>
                                 </Button>
                             </UniformGrid>

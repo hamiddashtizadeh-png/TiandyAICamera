@@ -1,0 +1,516 @@
+<Window x:Class="MehrganSurveillance.CameraOptimizerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="بهینه‌ساز هوشمند تنظیمات دوربین و تصویرسازی پلاک‌خوان | Smart Camera Settings Optimizer"
+        Height="880" Width="1380"
+        MinWidth="1100" MinHeight="700"
+        FlowDirection="RightToLeft"
+        FontFamily="Vazirmatn, Tahoma, Segoe UI, sans-serif"
+        Background="#161B26"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- رنگ‌های استاندارد پالت NetVideo Enterprise -->
+        <SolidColorBrush x:Key="NetVideoDarkBg" Color="#161B26" />
+        <SolidColorBrush x:Key="NetVideoHeaderBg" Color="#11151E" />
+        <SolidColorBrush x:Key="NetVideoCardBg" Color="#202634" />
+        <SolidColorBrush x:Key="NetVideoCardBorder" Color="#2D3748" />
+        <SolidColorBrush x:Key="NetVideoPrimary" Color="#1A73E8" />
+        <SolidColorBrush x:Key="NetVideoAccent" Color="#38BDF8" />
+        <SolidColorBrush x:Key="NetVideoSuccess" Color="#10B981" />
+        <SolidColorBrush x:Key="NetVideoWarning" Color="#F59E0B" />
+        <SolidColorBrush x:Key="NetVideoDanger" Color="#EF4444" />
+
+        <Style x:Key="SectionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#202634" />
+            <Setter Property="BorderBrush" Value="#2D3748" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <Style x:Key="NetVideoActionButton" TargetType="Button">
+            <Setter Property="Background" Value="#1A73E8" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#2563EB" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#334155" />
+                                <Setter Property="Foreground" Value="#64748B" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NetVideoSecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#2A3446" />
+            <Setter Property="Foreground" Value="#CBD5E1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="BorderBrush" Value="#3B4861" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#37455C" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#1E293B" />
+                                <Setter Property="Foreground" Value="#475569" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NetVideoDangerButton" TargetType="Button">
+            <Setter Property="Background" Value="#991B1B" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#DC2626" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#334155" />
+                                <Setter Property="Foreground" Value="#64748B" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- ۱. هدر شل NetVideo VMS -->
+            <RowDefinition Height="54" />
+            <!-- ۲. فضای کاری اصلی دو ستونه -->
+            <RowDefinition Height="*" />
+            <!-- ۳. نوار وضعیت و اتصالات -->
+            <RowDefinition Height="34" />
+        </Grid.RowDefinitions>
+
+        <!-- ========================================== -->
+        <!-- ۱. هدر بالای پنجره -->
+        <!-- ========================================== -->
+        <Border Grid.Row="0" Background="#11151E" BorderBrush="#252D3D" BorderThickness="0,0,0,1" Padding="18,0">
+            <Grid VerticalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="32" Height="32" Background="#1A73E8" CornerRadius="8" Margin="0,0,10,0">
+                        <TextBlock Text="⚙️" FontSize="16" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="موتور بهینه‌سازی هوشمند تنظیمات دوربین (Smart Camera Settings Optimizer)"
+                                   FontSize="14" FontWeight="Bold" Foreground="#38BDF8" />
+                        <TextBlock Text="بهینه‌سازی دینامیک شاتر، نوردهی، گین و HLC جهت ارتقای دقت پلاک‌خوان در شرایط شب و روز"
+                                   FontSize="10" Foreground="#94A3B8" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- دکمه بستن پنجره -->
+                <Button Grid.Column="2" Content="✕ بستن"
+                        Style="{StaticResource NetVideoSecondaryButton}"
+                        VerticalAlignment="Center"
+                        Click="CloseButton_Click" />
+            </Grid>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- ۲. فضای کاری اصلی دو ستونه -->
+        <!-- ========================================== -->
+        <Grid Grid.Row="1" Margin="14">
+            <Grid.ColumnDefinitions>
+                <!-- ستون راست: انتخاب دوربین، شناسایی قابلیت‌ها و پروفایل بهینه‌سازی (380px) -->
+                <ColumnDefinition Width="380" />
+                <!-- ستون چپ: مقایسه تنظیمات، دلایل فنی، تأیید مدیر و تاریخچه تغییرات (*) -->
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ========================= -->
+            <!-- ستون راست: پنل پیکربندی -->
+            <!-- ========================= -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,10,0">
+                <StackPanel>
+                    <!-- کارت ۱: انتخاب دوربین و احراز هویت -->
+                    <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="۱. انتخاب و اتصال به دوربین" FontSize="12.5" FontWeight="Bold" Foreground="#60A5FA" Margin="0,0,0,10" />
+
+                            <TextBlock Text="انتخاب از دوربین‌های ثبت‌شده سامانه:" FontSize="11" Foreground="#94A3B8" Margin="0,0,0,4" />
+                            <ComboBox x:Name="CameraSelectorComboBox"
+                                      Height="32"
+                                      Background="#161B26"
+                                      Foreground="White"
+                                      Margin="0,0,0,10"
+                                      SelectionChanged="CameraSelectorComboBox_SelectionChanged" />
+
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                    <TextBlock Text="آدرس آی‌پی (IP):" FontSize="10.5" Foreground="#94A3B8" Margin="0,0,0,2" />
+                                    <TextBox x:Name="CameraIpTextBox" Height="28" Background="#161B26" Foreground="White" BorderBrush="#334155" Padding="6,4" Text="192.168.1.100" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="پورت وب:" FontSize="10.5" Foreground="#94A3B8" Margin="0,0,0,2" />
+                                    <TextBox x:Name="CameraPortTextBox" Height="28" Background="#161B26" Foreground="White" BorderBrush="#334155" Padding="6,4" Text="80" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                    <TextBlock Text="نام کاربری:" FontSize="10.5" Foreground="#94A3B8" Margin="0,0,0,2" />
+                                    <TextBox x:Name="CameraUserTextBox" Height="28" Background="#161B26" Foreground="White" BorderBrush="#334155" Padding="6,4" Text="admin" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="رمز عبور:" FontSize="10.5" Foreground="#94A3B8" Margin="0,0,0,2" />
+                                    <PasswordBox x:Name="CameraPasswordBox" Height="28" Background="#161B26" Foreground="White" BorderBrush="#334155" Padding="6,4" Password="admin" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Button x:Name="DetectCapabilitiesButton"
+                                    Content="🔍 بررسی و شناسایی قابلیت‌های دوربین"
+                                    Style="{StaticResource NetVideoActionButton}"
+                                    Click="DetectCapabilitiesButton_Click" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- کارت ۲: مشخصات سخت‌افزاری و قابلیت‌های تأییدشده -->
+                    <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="۲. وضعیت سخت‌افزار و قابلیت‌های واقعی" FontSize="12.5" FontWeight="Bold" Foreground="#60A5FA" Margin="0,0,0,8" />
+
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="سازنده / برند:" FontSize="11" Foreground="#94A3B8" />
+                                <TextBlock x:Name="ManufacturerTextBlock" Grid.Column="1" Text="Tiandy Technologies" FontWeight="Bold" Foreground="#E2E8F0" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="موتور ارائه‌دهنده:" FontSize="11" Foreground="#94A3B8" />
+                                <TextBlock x:Name="ProviderNameTextBlock" Grid.Column="1" Text="Tiandy Native Engine" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="وضعیت تأیید:" FontSize="11" Foreground="#94A3B8" />
+                                <TextBlock x:Name="VerificationStatusTextBlock" Grid.Column="1" Text="تأییدشده و فعال" FontWeight="Bold" Foreground="#10B981" HorizontalAlignment="Right" />
+                            </Grid>
+
+                            <!-- تگ‌های قابلیت‌های پشتیبانی‌شده -->
+                            <TextBlock Text="پارامترهای قابل کنترل در این مدل:" FontSize="10.5" Foreground="#94A3B8" Margin="0,4,0,6" />
+                            <WrapPanel x:Name="CapabilitiesWrapPanel" Margin="0,0,0,4">
+                                <Border Background="#1E293B" CornerRadius="4" Padding="6,3" Margin="2">
+                                    <TextBlock x:Name="TagShutter" Text="✔ کنترل شاتر (Exposure)" FontSize="10" Foreground="#38BDF8" />
+                                </Border>
+                                <Border Background="#1E293B" CornerRadius="4" Padding="6,3" Margin="2">
+                                    <TextBlock x:Name="TagGain" Text="✔ گین آنالوگ (Gain)" FontSize="10" Foreground="#38BDF8" />
+                                </Border>
+                                <Border Background="#1E293B" CornerRadius="4" Padding="6,3" Margin="2">
+                                    <TextBlock x:Name="TagWdr" Text="✔ دامنه دینامیکی (WDR)" FontSize="10" Foreground="#38BDF8" />
+                                </Border>
+                                <Border Background="#1E293B" CornerRadius="4" Padding="6,3" Margin="2">
+                                    <TextBlock x:Name="TagHlc" Text="✔ مهار نور چراغ (HLC)" FontSize="10" Foreground="#10B981" FontWeight="Bold" />
+                                </Border>
+                                <Border Background="#1E293B" CornerRadius="4" Padding="6,3" Margin="2">
+                                    <TextBlock x:Name="TagDayNight" Text="✔ سوئیچ روز/شب (ICR)" FontSize="10" Foreground="#38BDF8" />
+                                </Border>
+                                <Border Background="#1E293B" CornerRadius="4" Padding="6,3" Margin="2">
+                                    <TextBlock x:Name="TagIr" Text="✔ مادون قرمز (Smart IR)" FontSize="10" Foreground="#38BDF8" />
+                                </Border>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- کارت ۳: انتخاب پروفایل هوشمند -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="۳. سناریو و پروفایل بهینه‌سازی" FontSize="12.5" FontWeight="Bold" Foreground="#60A5FA" Margin="0,0,0,10" />
+
+                            <RadioButton x:Name="ProfileNightPlateRadio" Content="🌙 پلاک‌خوانی در شب (Nighttime ANPR + HLC)" GroupName="Profiles" IsChecked="True" Foreground="White" FontSize="11.5" Margin="0,0,0,8" Checked="ProfileRadio_Checked" />
+                            <RadioButton x:Name="ProfileDayPlateRadio" Content="☀️ پلاک‌خوانی در روز (Daytime ANPR - Fast Shutter)" GroupName="Profiles" Foreground="White" FontSize="11.5" Margin="0,0,0,8" Checked="ProfileRadio_Checked" />
+                            <RadioButton x:Name="ProfileHighSpeedRadio" Content="🏎 خودروهای پرسرعت (High-Speed Vehicle 1/2000s)" GroupName="Profiles" Foreground="White" FontSize="11.5" Margin="0,0,0,8" Checked="ProfileRadio_Checked" />
+                            <RadioButton x:Name="ProfileLowLightRadio" Content="🔦 دید در شب محیطی (Low-Light Environment)" GroupName="Profiles" Foreground="White" FontSize="11.5" Margin="0,0,0,8" Checked="ProfileRadio_Checked" />
+                            <RadioButton x:Name="ProfileGeneralRadio" Content="🏢 نظارت عمومی پیش‌فرض (General Surveillance)" GroupName="Profiles" Foreground="White" FontSize="11.5" Margin="0,0,0,12" Checked="ProfileRadio_Checked" />
+
+                            <Button x:Name="GenerateRecommendationButton"
+                                    Content="⚡ تحلیل تصویر و تولید پیشنهاد هوشمند"
+                                    Style="{StaticResource NetVideoSecondaryButton}"
+                                    Click="GenerateRecommendationButton_Click" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========================= -->
+            <!-- ستون چپ: مقایسه، دلایل و اعمال -->
+            <!-- ========================= -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <!-- بخش الف: جدول مقایسه Side-by-Side قبل و بعد (210px) -->
+                    <RowDefinition Height="220" />
+                    <!-- بخش ب: دلایل تحلیلی هوش مصنوعی به تفکیک پارامتر (180px) -->
+                    <RowDefinition Height="190" />
+                    <!-- بخش ج: پنل تایید مدیر و دکمه‌های عملیاتی (85px) -->
+                    <RowDefinition Height="90" />
+                    <!-- بخش د: تاریخچه تغییرات و ممیزی (Rollback) (*) -->
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- الف: جدول مقایسه مقادیر فعلی در برابر مقادیر پیشنهادی -->
+                <Border Grid.Row="0" Style="{StaticResource SectionCardStyle}" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="📊 مقایسه تنظیمات فعلی دوربین و مقادیر پیشنهادی هوشمند" FontSize="12.5" FontWeight="Bold" Foreground="#60A5FA" />
+                            <TextBlock x:Name="EngineConfidenceTextBlock" Text="(میزان اطمینان موتور: ۹۴٪)" FontSize="11" Foreground="#10B981" Margin="12,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- جدول سه ستونه مقایسه -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="26" />
+                                <RowDefinition Height="26" />
+                                <RowDefinition Height="26" />
+                                <RowDefinition Height="26" />
+                                <RowDefinition Height="26" />
+                                <RowDefinition Height="26" />
+                            </Grid.RowDefinitions>
+
+                            <!-- ردیف عنوان -->
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="پارامتر" FontWeight="Bold" Foreground="#94A3B8" FontSize="11" />
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="مقدار فعلی دوربین (Current)" FontWeight="Bold" Foreground="#94A3B8" FontSize="11" />
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="مقدار پیشنهادی هوشمند (Proposed)" FontWeight="Bold" Foreground="#38BDF8" FontSize="11" />
+
+                            <!-- پارامتر شاتر -->
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="سرعت شاتر (Exposure):" Foreground="#E2E8F0" FontSize="11" />
+                            <TextBlock x:Name="CurShutterText" Grid.Row="1" Grid.Column="1" Text="1/50 ثانیه (Auto)" Foreground="#CBD5E1" FontSize="11" />
+                            <TextBlock x:Name="PropShutterText" Grid.Row="1" Grid.Column="2" Text="1/400 ثانیه (Manual)" FontWeight="Bold" Foreground="#38BDF8" FontSize="11" />
+
+                            <!-- پارامتر گین سنسور -->
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="گین سنسور (Gain):" Foreground="#E2E8F0" FontSize="11" />
+                            <TextBlock x:Name="CurGainText" Grid.Row="2" Grid.Column="1" Text="50 (پیش‌فرض)" Foreground="#CBD5E1" FontSize="11" />
+                            <TextBlock x:Name="PropGainText" Grid.Row="2" Grid.Column="2" Text="35 (کنترل نویز)" FontWeight="Bold" Foreground="#38BDF8" FontSize="11" />
+
+                            <!-- پارامتر مهار نور HLC -->
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="مهار نور شدید (HLC):" Foreground="#E2E8F0" FontSize="11" />
+                            <TextBlock x:Name="CurHlcText" Grid.Row="3" Grid.Column="1" Text="غیرفعال (Off)" Foreground="#EF4444" FontSize="11" />
+                            <TextBlock x:Name="PropHlcText" Grid.Row="3" Grid.Column="2" Text="فعال - سطح 75% (پلاک‌خوانی)" FontWeight="Bold" Foreground="#10B981" FontSize="11" />
+
+                            <!-- پارامتر WDR -->
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="دامنه دینامیکی (WDR):" Foreground="#E2E8F0" FontSize="11" />
+                            <TextBlock x:Name="CurWdrText" Grid.Row="4" Grid.Column="1" Text="غیرفعال" Foreground="#CBD5E1" FontSize="11" />
+                            <TextBlock x:Name="PropWdrText" Grid.Row="4" Grid.Column="2" Text="فعال - سطح 30%" FontWeight="Bold" Foreground="#38BDF8" FontSize="11" />
+
+                            <!-- پارامتر روز/شب و مادون قرمز -->
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="مادون قرمز و روز/شب:" Foreground="#E2E8F0" FontSize="11" />
+                            <TextBlock x:Name="CurIrText" Grid.Row="5" Grid.Column="1" Text="Auto IR" Foreground="#CBD5E1" FontSize="11" />
+                            <TextBlock x:Name="PropIrText" Grid.Row="5" Grid.Column="2" Text="Smart IR 65% / فیلتر شب" FontWeight="Bold" Foreground="#38BDF8" FontSize="11" />
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ب: دلایل تحلیلی مهندسی به زبان فارسی -->
+                <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="🧠 دلایل و توجیه فنی تغییرات (تولیدشده توسط هوش مصنوعی بر اساس فیدبک ANPR)"
+                                   FontSize="12" FontWeight="Bold" Foreground="#60A5FA" Margin="0,0,0,6" />
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="ReasonsContainer">
+                                <Border Background="#161B26" CornerRadius="6" Padding="10,6" Margin="0,0,0,5">
+                                    <TextBlock x:Name="ExecutiveSummaryTextBlock"
+                                               Text="پیکربندی تخصصی پلاک‌خوانی شبانه: فعال‌سازی قطعی HLC جهت مهار پرتوهای مستقیم چراغ‌های جلو، شاتر 1/400s جهت جلوگیری از کشیدگی پلاک و کنترل توان مادون قرمز جهت خوانایی بی‌نقص OCR."
+                                               FontSize="11" Foreground="#E2E8F0" TextWrapping="Wrap" />
+                                </Border>
+                                <TextBlock x:Name="ShutterReasonTextBlock" Text="• شاتر: تنظیم روی 1/400 ثانیه جهت خنثی‌سازی تاری حرکتی خودرو در سرعت 60km/h." FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,2" />
+                                <TextBlock x:Name="HlcReasonTextBlock" Text="• مهار نور HLC: فعال‌سازی ضروری جهت جلوگیری از سوختگی نور چراغ‌های زنون روی صفحه آلومینیومی پلاک." FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,2" />
+                                <TextBlock x:Name="GainReasonTextBlock" Text="• گین سنسور: توازن دقیق روی ۳۵ جهت تأمین روشنایی فریم همراه با حفظ شفافیت لبه حروف." FontSize="10.5" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,2" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+
+                <!-- ج: بخش کنترل، تایید صریح مدیر و دکمه‌های اعمال/Rollback -->
+                <Border Grid.Row="2" Style="{StaticResource SectionCardStyle}" Margin="0,0,0,10" Background="#1A2232">
+                    <Grid VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- چک‌باکس الزام تایید مدیر -->
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <CheckBox x:Name="AdminApprovalCheckBox"
+                                      Content="اینجانب به عنوان مدیر سیستم، مقادیر پیشنهادی را بررسی کرده و با اعمال آن‌ها موافقم."
+                                      Foreground="#F59E0B"
+                                      FontWeight="Bold"
+                                      FontSize="11.5"
+                                      Checked="AdminApprovalCheckBox_CheckedChanged"
+                                      Unchecked="AdminApprovalCheckBox_CheckedChanged" />
+                            <TextBlock Text="طبق پروتکل امنیت تصویر مهرگان، هیچ تغییری بدون تأیید صریح مدیر بر روی دوربین ثبت نمی‌گردد."
+                                       FontSize="9.5" Foreground="#94A3B8" Margin="22,3,0,0" />
+                        </StackPanel>
+
+                        <!-- دکمه‌های عملیاتی -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="RollbackButton"
+                                    Content="↩ بازگردانی به تنظیمات قبل (Rollback)"
+                                    Style="{StaticResource NetVideoDangerButton}"
+                                    Margin="0,0,10,0"
+                                    Click="RollbackButton_Click" />
+
+                            <Button x:Name="ApplySettingsButton"
+                                    Content="✓ اعمال تنظیمات روی دوربین"
+                                    Style="{StaticResource NetVideoActionButton}"
+                                    IsEnabled="False"
+                                    Click="ApplySettingsButton_Click" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- د: تاریخچه تغییرات و ممیزی (Audit Log) -->
+                <Border Grid.Row="3" Style="{StaticResource SectionCardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="📜 تاریخچه و لاگ ممیزی تغییرات اعمال‌شده بر دوربین (بدون افشای رمز عبور)"
+                                       FontSize="12" FontWeight="Bold" Foreground="#60A5FA" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="🔄 بروزرسانی لاگ"
+                                    Style="{StaticResource NetVideoSecondaryButton}"
+                                    Padding="10,4" FontSize="10.5"
+                                    Click="RefreshAuditLogButton_Click" />
+                        </Grid>
+
+                        <DataGrid x:Name="AuditLogDataGrid"
+                                  Grid.Row="1"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  Background="#161B26"
+                                  BorderBrush="#252D3D"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  HorizontalGridLinesBrush="#252D3D"
+                                  RowBackground="#1A2232"
+                                  AlternatingRowBackground="#161B26"
+                                  Foreground="White"
+                                  FontSize="11">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="زمان اعمال" Binding="{Binding AppliedAt, StringFormat='{}{0:yyyy/MM/dd HH:mm:ss}'}" Width="140" />
+                                <DataGridTextColumn Header="آدرس آی‌پی" Binding="{Binding CameraIp}" Width="120" />
+                                <DataGridTextColumn Header="پروفایل اعمالی" Binding="{Binding ProfileApplied}" Width="160" />
+                                <DataGridTextColumn Header="کاربر مدیر" Binding="{Binding AdminUser}" Width="100" />
+                                <DataGridTextColumn Header="نتیجه و وضعیت" Binding="{Binding ResultSummary}" Width="*" />
+                                <DataGridTextColumn Header="وضعیت Rollback" Binding="{Binding WasRolledBack}" Width="110" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ========================================== -->
+        <!-- ۳. نوار وضعیت پایینی -->
+        <!-- ========================================== -->
+        <Border Grid.Row="2" Background="#11151E" BorderBrush="#252D3D" BorderThickness="0,1,0,0" Padding="14,0">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="StatusBarMessageTextBlock"
+                           Grid.Column="0"
+                           Text="سیستم آماده بهینه‌سازی تنظیمات دوربین است. لطفاً دوربین مورد نظر را انتخاب و دکمه شناسایی را کلیک نمایید."
+                           FontSize="10.5" Foreground="#94A3B8" VerticalAlignment="Center" />
+                <TextBlock x:Name="ConnectionStateTextBlock"
+                           Grid.Column="1"
+                           Text="وضعیت: آماده"
+                           FontSize="10.5" FontWeight="Bold" Foreground="#10B981" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

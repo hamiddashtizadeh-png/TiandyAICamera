@@ -870,6 +870,16 @@ namespace MehrganSurveillance
             anprWin.ShowDialog();
         }
 
+        private void OpenCameraOptimizerWindow_Click(object sender, RoutedEventArgs e)
+        {
+            HideAllCellOverlays();
+            var optimizerWin = new CameraOptimizerWindow
+            {
+                Owner = this
+            };
+            optimizerWin.ShowDialog();
+        }
+
         private void ToggleLiveFacePanelButton_Click(object sender, RoutedEventArgs e)
         {
             SwitchToLiveWorkspace();

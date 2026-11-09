@@ -9,6 +9,7 @@ import { MediaMTXConfigurator } from './components/MediaMTXConfigurator';
 import { CodecDiagnostics } from './components/CodecDiagnostics';
 import { ComparisonReportView } from './components/ComparisonReportView';
 import { ExportModal } from './components/ExportModal';
+import { CameraOptimizer } from './components/CameraOptimizer';
 import { DetectedFaceEvent, FaceDetectionSettings } from './types/faceDetection';
 
 import {
@@ -233,6 +234,8 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {activeTab === 'optimizer' && <CameraOptimizer />}
 
         {activeTab === 'scanner' && <RtspMatrixScanner />}
 

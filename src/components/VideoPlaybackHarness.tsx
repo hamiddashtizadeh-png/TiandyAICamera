@@ -548,26 +548,19 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
       ctx.arc(faceX + faceW * 0.5, faceY + faceH * 0.68, 6, 0.2, Math.PI - 0.2);
       ctx.stroke();
 
-      // پلاک‌خوان خودکار ANPR در صورت فعال بودن
+      // پایش پلاک‌خوان ANPR (فقط در صورت وجود خودرو و پلاک تاییدشده در صحنه فعال می‌شود و پلاک جعلی زیر چهره رسم نمی‌کند)
       if (faceSettings.anprEnabled) {
-        const plateW = 120;
-        const plateH = 34;
-        const plateX = targetX - plateW / 2;
-        const plateY = targetY + 70;
-
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(plateX, plateY, plateW, plateH);
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(plateX, plateY, plateW, plateH);
+        // نشانگر وضعیت پایش پلاک‌خوان در بالای کادر تصویر بدون ایجاد پلاک کاذب
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(10, 10, 190, 26);
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(10, 10, 190, 26);
 
         ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 11px "JetBrains Mono", monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('PLATE: 24 ب 791', plateX + plateW / 2, plateY + 16);
-        ctx.font = '9px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillText('ANPR CONF: 98.2%', plateX + plateW / 2, plateY + 28);
+        ctx.font = 'bold 10px Tahoma, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('پایش پلاک‌خوان هوشمند: در حال اسکن...', 190, 26);
       }
 
       ctx.restore();

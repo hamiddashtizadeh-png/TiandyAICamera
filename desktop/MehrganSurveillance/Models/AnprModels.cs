@@ -119,6 +119,9 @@ public sealed record AnprResult
     public NormalizedBoundingBox? PlateBox { get; init; }
     public byte[]? VehicleCropJpeg { get; init; }
     public byte[]? PlateCropJpeg { get; init; }
+    public byte[]? OriginalPlateCropJpeg { get; init; }
+    public string OptimizationMethod { get; init; } = "Original Baseline";
+    public float OptimizationConfidenceGain { get; init; } = 0.0f;
     public string? EncryptedVehicleCropPath { get; init; }
     public string? EncryptedPlateCropPath { get; init; }
     public double InferenceDurationMs { get; init; }

@@ -128,12 +128,20 @@
                                 Click="OpenAnprWindow_Click" />
 
                         <!-- تب ۶: بهینه‌ساز هوشمند دوربین (Camera Optimizer) -->
-                        <Button Content="⚙️ بهینه‌ساز تصویر دوربین"
-                                ToolTip="بهینه‌سازی هوشمند شاتر، نوردهی، گین و HLC جهت ارتقای دقت پلاک‌خوان در شب و روز"
+                        <Button Content="⚙️ بهینه‌ساز تنظیمات دوربین"
+                                ToolTip="بهینه‌سازی شاتر، نوردهی، گین و HLC دوربین در شب و روز"
                                 Style="{StaticResource NavTabButtonStyle}"
                                 Padding="12,0"
                                 FontSize="11"
                                 Click="OpenCameraOptimizerWindow_Click" />
+
+                        <!-- تب ۷: بهینه‌ساز هوشمند تصویر پلاک (AI Image Optimizer Engine) -->
+                        <Button Content="✨ بهینه‌ساز تصویر پلاک"
+                                ToolTip="موتور هوشمند پردازش تصویر محلی و ارتقای دقت پلاک‌خوان (CLAHE, Denoise, Sharpen) بدون تغییر تنظیمات دوربین"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Padding="12,0"
+                                FontSize="11"
+                                Click="OpenImageOptimizerWindow_Click" />
 
                         <!-- تب ۷: پنل زنده چهره‌ها -->
                         <Button x:Name="ToggleLiveFacePanelButton"
@@ -615,7 +623,17 @@
                                         <Border Width="52" Height="52" CornerRadius="12" Background="#6366F1" Margin="0,0,0,8">
                                             <TextBlock Text="⚙️" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <TextBlock Text="بهینه‌ساز دوربین" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                        <TextBlock Text="تنظیمات دوربین" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۱۲. AI Image Optimizer -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenImageOptimizerWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#0284C7" Margin="0,0,0,8">
+                                            <TextBlock Text="✨" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="بهینه‌ساز تصویر پلاک" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
                                     </StackPanel>
                                 </Button>
                             </UniformGrid>

@@ -564,5 +564,51 @@ namespace MehrganSurveillance.Services.Optimization
                 }
             }
         }
+
+        #region Convenience byte[] Overloads
+
+        public static byte[] DenoiseMedian3x3(byte[] src, int w, int h, int stride, int bpp = 3)
+        {
+            byte[] dst = new byte[src.Length];
+            DenoiseMedian3x3(src.AsSpan(), dst.AsSpan(), w, h, stride, bpp);
+            return dst;
+        }
+
+        public static byte[] Sharpen(byte[] src, int w, int h, int stride, float strength = 0.5f, int bpp = 3)
+        {
+            byte[] dst = new byte[src.Length];
+            Sharpen(src.AsSpan(), dst.AsSpan(), w, h, stride, bpp, strength);
+            return dst;
+        }
+
+        public static byte[] ApplyGamma(byte[] src, int w, int h, int stride, float gamma = 1.0f, int bpp = 3)
+        {
+            byte[] dst = new byte[src.Length];
+            ApplyGamma(src.AsSpan(), dst.AsSpan(), w, h, stride, bpp, gamma);
+            return dst;
+        }
+
+        public static byte[] AdjustContrastBrightness(byte[] src, int w, int h, int stride, float contrast = 1.2f, int brightness = 0, int bpp = 3)
+        {
+            byte[] dst = new byte[src.Length];
+            AdjustContrastBrightness(src.AsSpan(), dst.AsSpan(), w, h, stride, bpp, contrast, brightness);
+            return dst;
+        }
+
+        public static byte[] ApplyClahe(byte[] src, int w, int h, int stride, float clipLimit = 2.5f, int bpp = 3)
+        {
+            byte[] dst = new byte[src.Length];
+            ApplyClahe(src.AsSpan(), dst.AsSpan(), w, h, stride, bpp, clipLimit);
+            return dst;
+        }
+
+        public static byte[] AdaptiveThreshold(byte[] src, int w, int h, int stride, int bpp = 3)
+        {
+            byte[] dst = new byte[src.Length];
+            AdaptiveThreshold(src.AsSpan(), dst.AsSpan(), w, h, stride, bpp);
+            return dst;
+        }
+
+        #endregion
     }
 }

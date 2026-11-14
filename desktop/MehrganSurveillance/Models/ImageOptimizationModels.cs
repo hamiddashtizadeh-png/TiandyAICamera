@@ -139,6 +139,28 @@ namespace MehrganSurveillance.Models
 
         public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 
+        // خواص نام مستعار جهت هماهنگی با کدهای خط لوله و واسط کاربری
+        public bool EnablePerspectiveCorrection
+        {
+            get => PerspectiveCorrectionEnabled;
+            set => PerspectiveCorrectionEnabled = value;
+        }
+
+        public bool EnableAdaptiveThreshold
+        {
+            get => AdaptiveThresholdEnabled;
+            set => AdaptiveThresholdEnabled = value;
+        }
+
+        public DateTime LastModifiedUtc
+        {
+            get => UpdatedAtUtc;
+            set => UpdatedAtUtc = value;
+        }
+
+        public static CameraImageOptimizationProfile CreateDefaultPreset(string cameraId, ImageOptimizationPreset preset)
+            => CreatePreset(cameraId, cameraId, preset);
+
         /// <summary>
         /// ایجاد یک کپی مستقل از پروفایل
         /// </summary>
@@ -320,5 +342,17 @@ namespace MehrganSurveillance.Models
         /// مدت زمان اجرای کامل پردازش بر حسب میلی‌ثانیه
         /// </summary>
         public double ProcessingDurationMs { get; set; } = 0.0;
+
+        // خواص کمکی جهت سهولت دسترسی در واسط کاربری و خط لوله
+        public string BestMethod => WinningMethod;
+        public byte[]? EnhancedCropJpeg => BestCandidate?.JpegBytes;
+        public byte[]? EnhancedBuffer => BestCandidate?.PixelData;
+        public int EnhancedWidth => BestCandidate?.Width ?? 0;
+        public int EnhancedHeight => BestCandidate?.Height ?? 0;
+        public int EnhancedStride => BestCandidate?.Stride ?? 0;
+        public string OcrTextAfter => BestCandidate?.OcrRawText ?? string.Empty;
+        public float OcrConfidenceAfter => BestCandidate?.OcrConfidence ?? 0.0f;
+        public ImageQualityMetrics MetricsAfter => BestCandidate?.Metrics ?? new();
+        public List<ImageOptimizationCandidate> Candidates => EvaluatedCandidates;
     }
 }

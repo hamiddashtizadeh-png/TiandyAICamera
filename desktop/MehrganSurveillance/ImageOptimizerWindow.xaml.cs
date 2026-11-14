@@ -27,8 +27,9 @@ namespace MehrganSurveillance
         private int _cropWidth = 240;
         private int _cropHeight = 60;
         private int _cropStride = 240 * 3;
-        private int _cropBpp = 24;
+        private int _cropBpp = 3;
         private bool _isUpdatingControls = false;
+        private bool _isOptimizing = false;
         private string _activeCameraId = "cam_default";
 
         public ImageOptimizerWindow(
@@ -49,8 +50,23 @@ namespace MehrganSurveillance
         {
             try
             {
-                LoadRegisteredCameras();
                 GenerateRealisticPlateSample(nightGlare: true);
+                _isUpdatingControls = true;
+                try
+                {
+                    LoadRegisteredCameras();
+                    if (CameraSelectorComboBox.SelectedItem is ComboBoxItem item && item.Tag is string camId)
+                    {
+                        _activeCameraId = camId;
+                    }
+                    _currentProfile = _engine.ProfileRegistry.GetProfileForCamera(_activeCameraId);
+                    SyncSlidersToProfile(_currentProfile);
+                }
+                finally
+                {
+                    _isUpdatingControls = false;
+                }
+
                 await ExecuteOptimizationAsync();
             }
             catch (Exception ex)
@@ -100,6 +116,7 @@ namespace MehrganSurveillance
 
         private async void CameraSelectorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (!IsLoaded || _isUpdatingControls) return;
             if (CameraSelectorComboBox.SelectedItem is ComboBoxItem item && item.Tag is string camId)
             {
                 _activeCameraId = camId;
@@ -163,7 +180,7 @@ namespace MehrganSurveillance
 
         private async void PresetRadio_Checked(object sender, RoutedEventArgs e)
         {
-            if (_isUpdatingControls) return;
+            if (!IsLoaded || _isUpdatingControls) return;
 
             ImageOptimizationPreset selectedPreset = ImageOptimizationPreset.Night;
             if (PresetNightRadio.IsChecked == true) selectedPreset = ImageOptimizationPreset.Night;
@@ -183,7 +200,7 @@ namespace MehrganSurveillance
 
         private async void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (_isUpdatingControls) return;
+            if (!IsLoaded || _isUpdatingControls) return;
 
             if (DenoiseValueText != null && DenoiseSlider != null)
                 DenoiseValueText.Text = ((int)DenoiseSlider.Value).ToString();
@@ -201,17 +218,33 @@ namespace MehrganSurveillance
                 ContrastValueText.Text = ContrastSlider.Value.ToString("F2");
 
             UpdateProfileFromControls();
-            PresetCustomRadio.IsChecked = true;
+            _isUpdatingControls = true;
+            try
+            {
+                PresetCustomRadio.IsChecked = true;
+            }
+            finally
+            {
+                _isUpdatingControls = false;
+            }
 
             await ExecuteOptimizationAsync();
         }
 
         private async void FilterOption_Changed(object sender, RoutedEventArgs e)
         {
-            if (_isUpdatingControls) return;
+            if (!IsLoaded || _isUpdatingControls) return;
 
             UpdateProfileFromControls();
-            PresetCustomRadio.IsChecked = true;
+            _isUpdatingControls = true;
+            try
+            {
+                PresetCustomRadio.IsChecked = true;
+            }
+            finally
+            {
+                _isUpdatingControls = false;
+            }
 
             await ExecuteOptimizationAsync();
         }
@@ -239,6 +272,9 @@ namespace MehrganSurveillance
 
         private async Task ExecuteOptimizationAsync()
         {
+            if (_isOptimizing) return;
+            _isOptimizing = true;
+
             if (_currentPlateCropBuffer == null || _currentPlateCropBuffer.Length == 0)
             {
                 GenerateRealisticPlateSample(nightGlare: true);
@@ -261,7 +297,7 @@ namespace MehrganSurveillance
                     {
                         // شبیه‌ساز OCR تطبیقی با گرامر پلاک ملی ایران
                         // ارزیابی بر اساس شارپنس، کنتراست و سوختگی نور
-                        var metrics = ImageProcessingFilterSet.CalculateQualityMetrics(buf.AsSpan(), w, h, s, 24);
+                        var metrics = ImageProcessingFilterSet.CalculateQualityMetrics(buf.AsSpan(), w, h, s, _cropBpp);
 
                         bool highSharpness = metrics.LaplacianSharpness >= 100;
                         bool lowGlare = metrics.OverexposedPercentage < 10;
@@ -273,7 +309,7 @@ namespace MehrganSurveillance
                         if (lowGlare) conf += 0.08f;
                         conf = Math.Clamp(conf, 0.40f, 0.98f);
 
-                        var parsedPlate = IranianPlateParser.Parse(conf >= 0.78f ? "12B34567" : "12B345??");
+                        var parsedPlate = IranianPlateParser.Parse(conf >= 0.78f ? "12 ب 345 ایران 67" : "12 ب 345", conf);
                         return (parsedPlate.NormalizedText, conf, parsedPlate);
                     },
                     _currentProfile);
@@ -320,6 +356,7 @@ namespace MehrganSurveillance
             finally
             {
                 ProcessEvaluateButton.IsEnabled = true;
+                _isOptimizing = false;
             }
         }
 
@@ -392,7 +429,7 @@ namespace MehrganSurveillance
             _cropWidth = 240;
             _cropHeight = 60;
             _cropStride = _cropWidth * 3;
-            _cropBpp = 24;
+            _cropBpp = 3;
 
             _currentPlateCropBuffer = new byte[_cropStride * _cropHeight];
 

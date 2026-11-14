@@ -234,6 +234,7 @@ namespace MehrganSurveillance.Services.Optimization
             sw.Stop();
             result.ProcessingDurationMs = sw.Elapsed.TotalMilliseconds;
 
+            LogMessage?.Invoke($"[Optimization] دوربین {cameraId}: انتخاب فیلتر {bestCandidate.FilterName} با امتیاز {bestCandidate.CompositeScore:F1} (ارتقای اطمینان: {result.ConfidenceImprovementPercentage:F1}%)");
             OptimizationCompleted?.Invoke(result);
             return result;
         }

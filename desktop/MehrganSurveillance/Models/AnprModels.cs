@@ -161,3 +161,14 @@ public sealed record AnprModelStatus
     public string StatusMessage { get; init; } = "آماده‌سازی نشده";
     public bool IsReady => DetectorLoaded && OcrLoaded;
 }
+
+/// <summary>
+/// پارسر و تطبیق‌دهنده گرامر پلاک ملی ایران
+/// </summary>
+public static class IranianPlateParser
+{
+    public static IranianPlate Parse(string rawText, float confidence = 0.90f)
+    {
+        return Services.IranianPlateNormalizer.ParseAndNormalize(rawText, confidence);
+    }
+}

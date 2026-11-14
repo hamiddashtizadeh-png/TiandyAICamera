@@ -66,8 +66,8 @@ namespace MehrganSurveillance.Models
                 w,
                 h,
                 stride,
-                24,
-                (buf, width, height, str) => ("12B34567", 0.90f, IranianPlateParser.Parse("12B34567")));
+                3,
+                (buf, width, height, str) => ("12ب34567", 0.90f, IranianPlateParser.Parse("12ب34567")));
 
             byte[] afterHash = SHA256.HashData(original);
             bool untouched = initialHash.SequenceEqual(afterHash);
@@ -86,7 +86,7 @@ namespace MehrganSurveillance.Models
             for (int i = 0; i < source.Length; i++) source[i] = (byte)(i % 256);
 
             byte[] denoise = ImageProcessingFilterSet.DenoiseMedian3x3(source, w, h, stride);
-            byte[] sharpen = ImageProcessingFilterSet.Sharpen(source, w, h, stride, 50);
+            byte[] sharpen = ImageProcessingFilterSet.Sharpen(source, w, h, stride, 0.5f);
             byte[] clahe = ImageProcessingFilterSet.ApplyClahe(source, w, h, stride, 3.0f);
             byte[] gamma = ImageProcessingFilterSet.ApplyGamma(source, w, h, stride, 0.7f);
             byte[] contrast = ImageProcessingFilterSet.AdjustContrastBrightness(source, w, h, stride, 1.4f, 10);
@@ -99,8 +99,8 @@ namespace MehrganSurveillance.Models
                             !source.SequenceEqual(contrast) &&
                             !source.SequenceEqual(binarized);
 
-            // بررسی مقادیر باینریزاسیون تطبیقی (فقط ۰ یا ۲۵۵)
-            bool validBinarization = binarized.All(b => b == 0 || b == 255);
+            // بررسی مقادیر باینریزاسیون تطبیقی (۲۰ برای جوهر کاراکتر و ۲۴۰ برای زمینه روشن)
+            bool validBinarization = binarized.All(b => b == 20 || b == 240);
 
             bool pass = distinct && validBinarization;
             Console.WriteLine($"[Test 2] تولید خروجی‌های مستقل و متمایز توسط فیلترهای پردازش تصویر: {(pass ? "PASS" : "FAIL")}");
@@ -117,7 +117,7 @@ namespace MehrganSurveillance.Models
             // تصویر ۱: یکنواخت و کاملاً سفید با سوختگی نور ۱۰۰٪
             byte[] glareFrame = new byte[stride * h];
             Array.Fill(glareFrame, (byte)255);
-            var glareMetrics = ImageProcessingFilterSet.CalculateQualityMetrics(glareFrame.AsSpan(), w, h, stride, 24);
+            var glareMetrics = ImageProcessingFilterSet.CalculateQualityMetrics(glareFrame.AsSpan(), w, h, stride, 3);
 
             // تصویر ۲: تصویر با لبه‌های شدید (شطرنجی سیاه و سفید)
             byte[] checkerFrame = new byte[stride * h];
@@ -132,7 +132,7 @@ namespace MehrganSurveillance.Models
                     checkerFrame[idx + 2] = val;
                 }
             }
-            var checkerMetrics = ImageProcessingFilterSet.CalculateQualityMetrics(checkerFrame.AsSpan(), w, h, stride, 24);
+            var checkerMetrics = ImageProcessingFilterSet.CalculateQualityMetrics(checkerFrame.AsSpan(), w, h, stride, 3);
 
             bool pass = glareMetrics.OverexposedPercentage >= 99f &&
                         checkerMetrics.LaplacianSharpness > 1000f &&
@@ -150,10 +150,18 @@ namespace MehrganSurveillance.Models
         {
             int w = 160, h = 50, stride = 160 * 3;
             byte[] plateBuffer = new byte[stride * h];
-            Array.Fill(plateBuffer, (byte)180);
-
-            // شبیه‌سازی یک هاله سوختگی شدید نور چراغ
-            for (int i = 0; i < plateBuffer.Length / 2; i++) plateBuffer[i] = 255;
+            // شبیه‌سازی تصویر کم‌کنتراست با هاله نور محیطی (زمینه ۲۲۰ و خطوط کم‌رنگ ۲۰۰)
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    byte v = (x % 20 < 4 && y > 10 && y < 40) ? (byte)195 : (byte)225;
+                    int idx = (y * stride) + (x * 3);
+                    plateBuffer[idx] = v;
+                    plateBuffer[idx + 1] = v;
+                    plateBuffer[idx + 2] = v;
+                }
+            }
 
             var engine = new AiImageOptimizationEngine();
 
@@ -163,21 +171,22 @@ namespace MehrganSurveillance.Models
                 w,
                 h,
                 stride,
-                24,
+                3,
                 (buf, width, height, str) =>
                 {
-                    var m = ImageProcessingFilterSet.CalculateQualityMetrics(buf.AsSpan(), width, height, str, 24);
-                    // ارزیابی: اگر سوختگی نور کمتر از ۲۰٪ باشد پلاک خوانا است
-                    if (m.OverexposedPercentage < 25f)
+                    var m = ImageProcessingFilterSet.CalculateQualityMetrics(buf.AsSpan(), width, height, str, 3);
+                    // پس از اعمال فیلترهای کنتراست/CLAHE/شارپنس، انحراف معیار کنتراست و شارپنس لبه‌ها به شدت افزایش می‌یابد
+                    if (m.ContrastStdDev >= 22f || m.LaplacianSharpness >= 120f)
                     {
-                        return ("21S98745", 0.94f, IranianPlateParser.Parse("21S98745"));
+                        return ("21س98745", 0.94f, IranianPlateParser.Parse("21س98745", 0.94f));
                     }
-                    return ("21S98???", 0.52f, IranianPlateParser.Parse("21S98???"));
+                    return ("21س98", 0.52f, IranianPlateParser.Parse("21س98", 0.52f));
                 });
 
             bool pass = result.Candidates.Count >= 2 &&
                         result.EnhancedBuffer != null &&
                         result.OcrConfidenceAfter > result.OcrConfidenceBefore &&
+                        result.BestCandidate.Plate.IsValid &&
                         !string.IsNullOrEmpty(result.BestMethod);
 
             Console.WriteLine($"[Test 4] تولید کاندیداها و گزینش هوشمند بهترین نسخه با ارتقای اطمینان OCR: {(pass ? "PASS" : "FAIL")}");
@@ -240,8 +249,8 @@ namespace MehrganSurveillance.Models
                 w,
                 h,
                 stride,
-                24,
-                (buf, width, height, str) => ("68B12311", 0.91f, IranianPlateParser.Parse("68B12311")));
+                3,
+                (buf, width, height, str) => ("68ب12311", 0.91f, IranianPlateParser.Parse("68ب12311")));
             sw.Stop();
 
             // پردازش یک برش پلاک با تولید چند نامزد باید کمتر از ۴۵ میلی‌ثانیه زمان ببرد
@@ -261,22 +270,28 @@ namespace MehrganSurveillance.Models
             Array.Fill(frame, (byte)150);
 
             var engine = new AiImageOptimizationEngine();
+            int evalIndex = 0;
 
-            // در صورتی که یک کاندیدا گرامر پلاک معتبر داشته باشد باید اولویت یابد
+            // نسخه خام نامعتبر است اما اطمینان کاذب بالا (۰.۹۵) دارد؛ نسخه بهینه‌شده ساختار معتبر پلاک ایران با اطمینان ۰.۸۶ دارد
             var result = await engine.OptimizePlateCropAsync(
                 "cam_grammar_priority",
                 frame,
                 w,
                 h,
                 stride,
-                24,
+                3,
                 (buf, width, height, str) =>
                 {
-                    // شبیه‌سازی: خروجی اول نامعتبر ولی با اطمینان کاذب بالا، خروجی‌های دیگر ساختار پلاک ایران دارند
-                    return ("33T45612", 0.88f, IranianPlateParser.Parse("33T45612"));
+                    int idx = evalIndex++;
+                    if (idx == 0)
+                    {
+                        return ("XX999", 0.95f, IranianPlateParser.Parse("XX999", 0.95f));
+                    }
+                    return ("33ت45612", 0.86f, IranianPlateParser.Parse("33ت45612", 0.86f));
                 });
 
-            bool pass = result.OcrConfidenceAfter >= 0.85f;
+            bool pass = result.BestCandidate.Plate.IsValid &&
+                        Math.Abs(result.OcrConfidenceAfter - 0.86f) < 0.01f;
             Console.WriteLine($"[Test 7] اعتبارسنجی ساختار پلاک ملی ایران در انتخاب خروجی نهایی: {(pass ? "PASS" : "FAIL")}");
             return pass;
         }

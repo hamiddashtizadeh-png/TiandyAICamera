@@ -66,6 +66,16 @@ namespace MehrganSurveillance.Services.Optimization
         }
 
         /// <summary>
+        /// ذخیره پروفایل با تعیین صریح شناسه دوربین
+        /// </summary>
+        public bool SaveProfile(string cameraId, CameraImageOptimizationProfile profile)
+        {
+            if (profile == null) return false;
+            profile.CameraId = cameraId;
+            return SaveProfileForCamera(profile);
+        }
+
+        /// <summary>
         /// بازگردانی تنظیمات دوربین به پریست پیش‌فرض کارخانه‌ای
         /// </summary>
         public CameraImageOptimizationProfile ResetProfile(string cameraId, string cameraName, ImageOptimizationPreset preset)

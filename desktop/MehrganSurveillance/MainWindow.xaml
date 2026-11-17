@@ -316,6 +316,18 @@
                                 FontSize="11"
                                 Click="OpenNotificationSettingsWindow_Click" />
 
+                        <!-- تب ۸-ب: شفاف‌سازی و رفع تاری عکس با هوش مصنوعی -->
+                        <Button x:Name="PhotoEnhancerNavTabButton"
+                                Content="🪄 رفع تاری عکس (AI)"
+                                ToolTip="استودیو هوش مصنوعی برای شفاف‌سازی و رفع تاری عکس‌های پلاک و چهره (Deblur &amp; Super-Res)"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Foreground="#38BDF8"
+                                Height="34"
+                                Padding="11,0"
+                                Margin="0,1,2,1"
+                                FontSize="11"
+                                Click="OpenPhotoEnhancerWindow_Click" />
+
                         <!-- تب ۹: پنل زنده چهره‌ها -->
                         <Button x:Name="ToggleLiveFacePanelButton"
                                 Content="🪪 پنل چهره زنده"
@@ -583,7 +595,7 @@
                                 BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="20,22">
-                            <UniformGrid Columns="11" Rows="1">
+                            <UniformGrid Columns="13" Rows="1">
                                 <!-- ۱. System configuration -->
                                 <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenDiscoveryWindow_Click">
                                     <StackPanel HorizontalAlignment="Center">
@@ -701,6 +713,16 @@
                                             <TextBlock Text="✨" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <TextBlock Text="بهینه‌ساز تصویر پلاک" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- ۱۳. AI Photo Deblur & Restoration -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenPhotoEnhancerWindow_Click">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52" CornerRadius="12" Background="#0EA5E9" Margin="0,0,0,8">
+                                            <TextBlock Text="🪄" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="رفع تاری پلاک/چهره" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
                                     </StackPanel>
                                 </Button>
                             </UniformGrid>

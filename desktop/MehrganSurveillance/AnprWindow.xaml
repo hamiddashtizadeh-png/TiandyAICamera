@@ -286,12 +286,32 @@
                         </Border>
 
                         <!-- تصویر خودرو -->
-                        <Border Background="#131722" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Height="130" Margin="0,0,0,10">
+                        <Border Background="#131722" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Height="130" Margin="0,0,0,8">
                             <Grid>
                                 <TextBlock Text="تصویر کامل خودرو" FontSize="9.5" Foreground="#64748B" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 <Image x:Name="VehicleCropImage" Stretch="Uniform" />
                             </Grid>
                         </Border>
+
+                        <!-- دکمه‌های شفاف‌سازی و رفع تاری هوشمند تصویر انتخاب‌شده -->
+                        <UniformGrid Columns="2" Margin="0,0,0,10">
+                            <Button x:Name="EnhanceSelectedPlateButton"
+                                    Content="🪄 رفع تاری پلاک با AI"
+                                    ToolTip="باز کردن برش پلاک در استودیو رفع تاری و افزایش وضوح هوشمند"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Height="28"
+                                    FontSize="10"
+                                    Margin="0,0,4,0"
+                                    Click="EnhanceSelectedPlate_Click" />
+                            <Button x:Name="EnhanceSelectedVehicleButton"
+                                    Content="🪄 رفع تاری کل خودرو"
+                                    ToolTip="باز کردن تصویر خودرو در استودیو رفع تاری و افزایش وضوح هوشمند"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Height="28"
+                                    FontSize="10"
+                                    Margin="4,0,0,0"
+                                    Click="EnhanceSelectedVehicle_Click" />
+                        </UniformGrid>
 
                         <!-- مشخصات تفکیک‌شده رویداد -->
                         <Border Background="#151924" BorderBrush="#2C3548" BorderThickness="1" CornerRadius="6" Padding="8">

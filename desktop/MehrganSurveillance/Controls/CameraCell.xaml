@@ -44,6 +44,7 @@
                 </MenuItem>
                 <MenuItem x:Name="MenuDigitalZoom" Header="🔍 بزرگ‌نمایی دیجیتال (Digital Zoom)" Click="MenuDigitalZoom_Click" />
                 <MenuItem x:Name="MenuSnapshot" Header="📸 تصویربرداری لحظه‌ای (Snapshot)" Click="MenuSnapshot_Click" />
+                <MenuItem x:Name="MenuEnhanceSnapshot" Header="🪄 شفاف‌سازی و رفع تاری تصویر لحظه‌ای (AI)" Click="MenuEnhanceSnapshot_Click" />
                 <Separator />
                 
                 <!-- اتصال و تخصیص -->

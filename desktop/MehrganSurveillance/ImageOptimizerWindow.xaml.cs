@@ -416,6 +416,39 @@ namespace MehrganSurveillance
             }
         }
 
+        private void OpenPhotoEnhancerStudioButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentPlateCropBuffer != null && _currentPlateCropBuffer.Length > 0)
+            {
+                try
+                {
+                    var pixelFormat = _cropBpp == 4
+                        ? System.Windows.Media.PixelFormats.Bgra32
+                        : System.Windows.Media.PixelFormats.Bgr24;
+                    var bmp = BitmapSource.Create(_cropWidth, _cropHeight, 96, 96, pixelFormat, null, _currentPlateCropBuffer, _cropStride);
+                    var enc = new PngBitmapEncoder();
+                    enc.Frames.Add(BitmapFrame.Create(bmp));
+                    using var ms = new MemoryStream();
+                    enc.Save(ms);
+
+                    var win = new PhotoEnhancerWindow(
+                        ms.ToArray(),
+                        PhotoEnhancementTarget.LicensePlate,
+                        "نمونه پلاک بهینه‌ساز",
+                        _anprPipeline)
+                    {
+                        Owner = this
+                    };
+                    win.ShowDialog();
+                    return;
+                }
+                catch { }
+            }
+
+            var emptyWin = new PhotoEnhancerWindow(_anprPipeline) { Owner = this };
+            emptyWin.ShowDialog();
+        }
+
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             Close();

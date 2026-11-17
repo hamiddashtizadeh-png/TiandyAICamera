@@ -691,4 +691,58 @@ public partial class AnprWindow : Window
             }
         }
     }
+
+    private void EnhanceSelectedPlate_Click(object sender, RoutedEventArgs e)
+    {
+        OpenEnhancerForSelection(isPlateCrop: true);
+    }
+
+    private void EnhanceSelectedVehicle_Click(object sender, RoutedEventArgs e)
+    {
+        OpenEnhancerForSelection(isPlateCrop: false);
+    }
+
+    private void OpenEnhancerForSelection(bool isPlateCrop)
+    {
+        if (AnprEventsGrid.SelectedItem is not AnprResult item)
+        {
+            var emptyWin = new PhotoEnhancerWindow(_pipeline) { Owner = this };
+            emptyWin.ShowDialog();
+            return;
+        }
+
+        byte[]? bytes = isPlateCrop ? item.PlateCropJpeg : item.VehicleCropJpeg;
+        string? filePath = isPlateCrop ? item.EncryptedPlateCropPath : item.EncryptedVehicleCropPath;
+
+        if ((bytes == null || bytes.Length == 0) && !string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+        {
+            try
+            {
+                bytes = File.ReadAllBytes(filePath);
+            }
+            catch { }
+        }
+
+        if (bytes == null || bytes.Length == 0)
+        {
+            MessageBox.Show("برای این ردیف تصویر ذخیره‌شده‌ای موجود نیست؛ پنجره به‌صورت آزاد باز می‌شود تا هر عکسی را انتخاب کنید.", "تصویر موجود نیست", MessageBoxButton.OK, MessageBoxImage.Information);
+            var emptyWin = new PhotoEnhancerWindow(_pipeline) { Owner = this };
+            emptyWin.ShowDialog();
+            return;
+        }
+
+        string title = isPlateCrop
+            ? $"برش پلاک {item.Plate.NormalizedText}"
+            : $"تصویر خودرو ({item.Plate.NormalizedText})";
+
+        var target = isPlateCrop
+            ? PhotoEnhancementTarget.LicensePlate
+            : PhotoEnhancementTarget.GeneralScene;
+
+        var win = new PhotoEnhancerWindow(bytes, target, title, _pipeline)
+        {
+            Owner = this
+        };
+        win.ShowDialog();
+    }
 }

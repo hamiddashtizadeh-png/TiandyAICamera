@@ -43,6 +43,7 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <CheckBox x:Name="FaceDetectionToggle" Content="آشکارساز چهره" IsChecked="true" Foreground="#F1F5F9" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="FaceDetectionToggle_Click" />
                     <CheckBox x:Name="FaceArchiveToggle" Content="آرشیو و ذخیره محلی" IsChecked="true" Foreground="#F1F5F9" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="FaceArchiveToggle_Click" />
+                    <Button Content="🪄 رفع تاری عکس..." Style="{StaticResource PrimaryButtonStyle}" Height="26" Padding="10,0" FontSize="10.5" Margin="0,0,8,0" Click="OpenPhotoEnhancer_Click" />
                     <Button Content="🔄 بروزرسانی" Style="{StaticResource SecondaryButtonStyle}" Height="26" Padding="10,0" FontSize="10.5" Click="RefreshButton_Click" />
                 </StackPanel>
             </Grid>
@@ -157,8 +158,11 @@
                                                 <TextBlock Text="رمزگذاری شده (AES-256-GCM)" FontSize="8.5" Foreground="#38BDF8" Margin="0,4,0,0" />
                                             </StackPanel>
 
-                                            <!-- دکمه حذف تکی -->
-                                            <Button Grid.Column="2" Content="حذف 🗑" Style="{StaticResource DangerButtonStyle}" Height="26" Padding="8,0" FontSize="9.5" VerticalAlignment="Center" Tag="{Binding}" Click="SingleCropDelete_Click" />
+                                            <!-- دکمه‌های وضوح AI و حذف تکی -->
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="6,0,0,0">
+                                                <Button Content="🪄 وضوح AI" Style="{StaticResource PrimaryButtonStyle}" Height="26" Padding="8,0" FontSize="9.5" Margin="0,0,0,6" Tag="{Binding}" Click="SingleCropEnhance_Click" />
+                                                <Button Content="حذف 🗑" Style="{StaticResource DangerButtonStyle}" Height="26" Padding="8,0" FontSize="9.5" Tag="{Binding}" Click="SingleCropDelete_Click" />
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

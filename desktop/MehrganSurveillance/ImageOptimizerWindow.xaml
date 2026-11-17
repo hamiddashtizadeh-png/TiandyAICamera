@@ -152,11 +152,18 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- دکمه بستن پنجره -->
-                <Button Grid.Column="2" Content="✕ بستن"
-                        Style="{StaticResource NetVideoSecondaryButton}"
-                        VerticalAlignment="Center"
-                        Click="CloseButton_Click" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="OpenPhotoEnhancerStudioButton"
+                            Content="🪄 استودیو رفع تاری (چهره و پلاک)"
+                            ToolTip="باز کردن تصویر در استودیو رفع تاری Richardson-Lucy و بزرگ‌نمایی فوق‌وضوح 2x/4x"
+                            Style="{StaticResource NetVideoActionButton}"
+                            Margin="0,0,8,0"
+                            Click="OpenPhotoEnhancerStudioButton_Click" />
+                    <Button Content="✕ بستن"
+                            Style="{StaticResource NetVideoSecondaryButton}"
+                            VerticalAlignment="Center"
+                            Click="CloseButton_Click" />
+                </StackPanel>
             </Grid>
         </Border>
 

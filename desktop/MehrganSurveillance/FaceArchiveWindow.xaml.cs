@@ -4,8 +4,10 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using MehrganSurveillance.Models;
 using MehrganSurveillance.Services;
+using MehrganSurveillance.Services.Optimization;
 
 namespace MehrganSurveillance;
 
@@ -242,6 +244,57 @@ public partial class FaceArchiveWindow : Window
             StatusMessageText.Text = $"{deletedCount} برش چهره به طور کامل حذف شدند.";
             await LoadEventsAsync();
             UpdateDiskUsageDisplay();
+        }
+    }
+
+    private void OpenPhotoEnhancer_Click(object sender, RoutedEventArgs e)
+    {
+        var win = new PhotoEnhancerWindow
+        {
+            Owner = this
+        };
+        win.ShowDialog();
+    }
+
+    private async void SingleCropEnhance_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not FaceCropRecord crop) return;
+
+        try
+        {
+            byte[]? imageBytes = null;
+            if (_archiveService != null && !string.IsNullOrEmpty(crop.EncryptedFilePath))
+            {
+                imageBytes = await _archiveService.DecryptCropImageAsync(crop.EncryptedFilePath);
+            }
+
+            if ((imageBytes == null || imageBytes.Length == 0) && crop.PreviewImage is BitmapSource bmpSource)
+            {
+                var enc = new PngBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bmpSource));
+                using var ms = new MemoryStream();
+                enc.Save(ms);
+                imageBytes = ms.ToArray();
+            }
+
+            if (imageBytes == null || imageBytes.Length == 0)
+            {
+                MessageBox.Show("امکان رمزگشایی یا استخراج تصویر این برش چهره وجود ندارد.", "خطا", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var win = new PhotoEnhancerWindow(
+                imageBytes,
+                PhotoEnhancementTarget.FacePortrait,
+                $"پرتره چهره شماره {crop.CropIndex}")
+            {
+                Owner = this
+            };
+            win.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"خطا در ارسال پرتره به استودیو شفاف‌سازی: {ex.Message}", "خطا", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

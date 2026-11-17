@@ -14,6 +14,7 @@ using LibVLCSharp.Shared;
 using MehrganSurveillance.Controls;
 using MehrganSurveillance.Models;
 using MehrganSurveillance.Services;
+using MehrganSurveillance.Services.Optimization;
 
 namespace MehrganSurveillance
 {
@@ -324,6 +325,7 @@ namespace MehrganSurveillance
                 cell.FaceArchiveToggled += Cell_FaceArchiveToggled;
                 cell.AnprToggled += Cell_AnprToggled;
                 cell.AutoImageTuneToggled += Cell_AutoImageTuneToggled;
+                cell.RequestEnhanceSnapshot += Cell_RequestEnhanceSnapshot;
             }
         }
 
@@ -1022,6 +1024,31 @@ namespace MehrganSurveillance
                 Owner = this
             };
             imgOptimizerWin.ShowDialog();
+        }
+
+        private void OpenPhotoEnhancerWindow_Click(object sender, RoutedEventArgs e)
+        {
+            HideAllCellOverlays();
+            var enhancerWin = new PhotoEnhancerWindow(_anprPipeline)
+            {
+                Owner = this
+            };
+            enhancerWin.ShowDialog();
+        }
+
+        private void Cell_RequestEnhanceSnapshot(object? sender, (CameraCell Cell, byte[] ImageBytes) args)
+        {
+            HideAllCellOverlays();
+            string title = $"اسنپ‌شات زنده {args.Cell.Channel.DisplayName} (کانال {args.Cell.Channel.SlotIndex + 1})";
+            var enhancerWin = new PhotoEnhancerWindow(
+                args.ImageBytes,
+                PhotoEnhancementTarget.LicensePlate,
+                title,
+                _anprPipeline)
+            {
+                Owner = this
+            };
+            enhancerWin.ShowDialog();
         }
 
         private void ToggleLiveFacePanelButton_Click(object sender, RoutedEventArgs e)

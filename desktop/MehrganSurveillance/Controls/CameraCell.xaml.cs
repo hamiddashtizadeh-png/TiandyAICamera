@@ -37,6 +37,7 @@ namespace MehrganSurveillance.Controls
         public event EventHandler<(CameraCell Cell, bool Enabled)>? AutoImageTuneToggled;
         public event EventHandler<CameraCell>? PlaybackStarted;
         public event EventHandler<CameraCell>? PlaybackStopped;
+        public event EventHandler<(CameraCell Cell, byte[] ImageBytes)>? RequestEnhanceSnapshot;
 
         // کنترل فرکانس بافرینگ جهت حذف لگ و ترافیک دیسپچر
         private float _lastLoggedBuffering = -1;
@@ -700,6 +701,55 @@ namespace MehrganSurveillance.Controls
             catch (Exception ex)
             {
                 OnLog($"[کانال {Channel.SlotIndex + 1}] خطا در ثبت عکس: {ex.Message}");
+            }
+        }
+
+        private async void MenuEnhanceSnapshot_Click(object sender, RoutedEventArgs e)
+        {
+            if (_mediaPlayer == null || !_mediaPlayer.IsPlaying)
+            {
+                MessageBox.Show("برای رفع تاری لحظه‌ای دوربین، ابتدا باید استریم این کانال در حال پخش باشد.\nهمچنین می‌توانید از منوی «🪄 رفع تاری عکس (AI)» فایل عکس را مستقیماً باز کنید.", "استریم غیرفعال", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                string snapshotsDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Snapshots");
+                if (!System.IO.Directory.Exists(snapshotsDir))
+                {
+                    System.IO.Directory.CreateDirectory(snapshotsDir);
+                }
+
+                string fullPath = System.IO.Path.Combine(snapshotsDir, $"Enhance_CH{Channel.SlotIndex + 1}_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
+                bool ok = _mediaPlayer.TakeSnapshot(0, fullPath, 0, 0);
+                if (!ok)
+                {
+                    OnLog($"[کانال {Channel.SlotIndex + 1}] امکان گرفتن فریم لحظه‌ای برای پردازش AI فراهم نشد.");
+                    return;
+                }
+
+                for (int i = 0; i < 12; i++)
+                {
+                    if (System.IO.File.Exists(fullPath) && new System.IO.FileInfo(fullPath).Length > 0)
+                    {
+                        break;
+                    }
+                    await System.Threading.Tasks.Task.Delay(60);
+                }
+
+                if (System.IO.File.Exists(fullPath))
+                {
+                    byte[] bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+                    if (bytes.Length > 0)
+                    {
+                        OnLog($"[کانال {Channel.SlotIndex + 1}] فریم لحظه‌ای برای شفاف‌سازی و رفع تاری هوشمند ارسال شد.");
+                        RequestEnhanceSnapshot?.Invoke(this, (this, bytes));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                OnLog($"[کانال {Channel.SlotIndex + 1}] خطا در ارسال عکس به استودیو AI: {ex.Message}");
             }
         }
 

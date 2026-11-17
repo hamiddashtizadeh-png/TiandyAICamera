@@ -161,6 +161,19 @@ namespace MehrganSurveillance
                     }));
                 };
 
+                // اعمال خودکار تنظیمات تصویر متناسب با نور صحنه (آفتاب، سایه شدید، شب) روی نمایش زنده هر سلول
+                _anprPipeline.AutoSceneTuningUpdated += rec =>
+                {
+                    if (rec == null) return;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (rec.ChannelIndex >= 0 && rec.ChannelIndex < _cells.Count)
+                        {
+                            _cells[rec.ChannelIndex].ApplyAutoSceneTuning(rec);
+                        }
+                    }));
+                };
+
                 // ثبت واقعی پلاک تاییدشده در SQLite + ارسال پیامک/واتس‌اپ/تلگرام همراه با تصویر
                 _anprPipeline.FramePlateRecognized += (anprResult, frame) =>
                 {
@@ -310,6 +323,7 @@ namespace MehrganSurveillance
                 cell.FaceDetectionToggled += Cell_FaceDetectionToggled;
                 cell.FaceArchiveToggled += Cell_FaceArchiveToggled;
                 cell.AnprToggled += Cell_AnprToggled;
+                cell.AutoImageTuneToggled += Cell_AutoImageTuneToggled;
             }
         }
 
@@ -917,6 +931,10 @@ namespace MehrganSurveillance
             {
                 MasterAnprToggle.IsChecked = _anprPipeline.Config.IsEnabled;
             }
+            if (AutoImageTuneToggle != null)
+            {
+                AutoImageTuneToggle.IsChecked = _anprPipeline.IsAutoImageOptimizationEnabled;
+            }
         }
 
         private void OpenNotificationSettingsWindow_Click(object sender, RoutedEventArgs e)
@@ -954,6 +972,33 @@ namespace MehrganSurveillance
                     cell.UpdatePlateObservation(null);
                 }
             }
+        }
+
+        private void AutoImageTuneToggle_Click(object sender, RoutedEventArgs e)
+        {
+            bool enabled = AutoImageTuneToggle.IsChecked == true;
+            _anprPipeline.IsAutoImageOptimizationEnabled = enabled;
+
+            for (int i = 0; i < _channels.Count && i < _cells.Count; i++)
+            {
+                _channels[i].IsAutoImageOptimizationEnabled = enabled;
+                if (!enabled)
+                {
+                    _cells[i].ResetAutoSceneTuning();
+                }
+                else
+                {
+                    var latest = _anprPipeline.AutoTuner.GetLatestRecommendation(_channels[i].Id);
+                    if (latest != null)
+                    {
+                        _cells[i].ApplyAutoSceneTuning(latest);
+                    }
+                }
+            }
+
+            LogEvent(enabled
+                ? "✨ بهینه‌سازی خودکار تصویر (Auto WDR/CLAHE/Gamma) برای تمام دوربین‌ها فعال شد."
+                : "بهینه‌سازی خودکار تصویر غیرفعال و فیلترهای زنده بازنشانی شدند.");
         }
 
         private void OpenCameraOptimizerWindow_Click(object sender, RoutedEventArgs e)
@@ -1129,6 +1174,24 @@ namespace MehrganSurveillance
                 {
                     StopAiAcquisitionForChannel(args.Cell.Channel.SlotIndex);
                 }
+            }
+        }
+
+        private void Cell_AutoImageTuneToggled(object? sender, (CameraCell Cell, bool Enabled) args)
+        {
+            if (args.Enabled)
+            {
+                _anprPipeline.IsAutoImageOptimizationEnabled = true;
+                if (AutoImageTuneToggle != null) AutoImageTuneToggle.IsChecked = true;
+                var latest = _anprPipeline.AutoTuner.GetLatestRecommendation(args.Cell.Channel.Id);
+                if (latest != null)
+                {
+                    args.Cell.ApplyAutoSceneTuning(latest);
+                }
+            }
+            else
+            {
+                args.Cell.ResetAutoSceneTuning();
             }
         }
 

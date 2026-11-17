@@ -40,11 +40,12 @@
                 </StackPanel>
 
                 <!-- سوئیچ‌های مدیریتی -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <CheckBox x:Name="AnprEnableToggle" Content="فعال‌سازی موتور پلاک‌خوان" IsChecked="true" Foreground="#F1F5F9" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="AnprEnableToggle_Click" />
-                    <CheckBox x:Name="AutoArchiveToggle" Content="ثبت خودکار در آرشیو محلی" IsChecked="true" Foreground="#F1F5F9" FontWeight="SemiBold" FontSize="11" Margin="0,0,14,0" VerticalAlignment="Center" Click="AutoArchiveToggle_Click" />
+                <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox x:Name="AnprEnableToggle" Content="فعال‌سازی موتور پلاک‌خوان" IsChecked="true" Foreground="#F1F5F9" FontWeight="SemiBold" FontSize="11" Margin="0,0,12,0" VerticalAlignment="Center" Click="AnprEnableToggle_Click" />
+                    <CheckBox x:Name="AutoImageTuneToggle" Content="✨ تنظیم خودکار تصویر" IsChecked="true" Foreground="#38BDF8" FontWeight="Bold" FontSize="11" Margin="0,0,12,0" VerticalAlignment="Center" Click="AutoImageTuneToggle_Click" />
+                    <CheckBox x:Name="AutoArchiveToggle" Content="ثبت خودکار در آرشیو" IsChecked="true" Foreground="#F1F5F9" FontWeight="SemiBold" FontSize="11" Margin="0,0,12,0" VerticalAlignment="Center" Click="AutoArchiveToggle_Click" />
                     <Button Content="🔄 بروزرسانی" Style="{StaticResource SecondaryButtonStyle}" Height="26" Padding="10,0" FontSize="10.5" Click="RefreshButton_Click" />
-                </StackPanel>
+                </WrapPanel>
             </Grid>
         </Border>
 
@@ -193,12 +194,38 @@
                                     </Grid>
                                 </Border>
 
+                                <Border Background="#0F172A" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="4" Padding="6,4" Margin="0,6,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   x:Name="AutoTuningStatusText"
+                                                   Text="✨ بهینه‌ساز خودکار نور صحنه فعال است (در انتظار تحلیل فریم زنده...)"
+                                                   FontSize="8.8"
+                                                   Foreground="#38BDF8"
+                                                   TextWrapping="Wrap"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0" />
+                                        <Button Grid.Column="1"
+                                                x:Name="SyncHardwareSettingsButton"
+                                                Content="⚙️ اعمال به دوربین"
+                                                ToolTip="ارسال خودکار تنظیمات WDR / شاتر / HLC متناسب با همین صحنه به سخت‌افزار دوربین (Tiandy / ONVIF)"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                Height="22"
+                                                Padding="7,0"
+                                                FontSize="8.5"
+                                                Click="SyncHardwareSettingsButton_Click" />
+                                    </Grid>
+                                </Border>
+
                                 <TextBlock x:Name="OcrModelNoticeText"
                                            Text="در حال بررسی وضعیت مدل‌های ANPR..."
                                            FontSize="9"
                                            Foreground="#FBBF24"
                                            TextWrapping="Wrap"
-                                           Margin="0,6,0,0" />
+                                           Margin="0,5,0,0" />
                             </StackPanel>
                         </Border>
 

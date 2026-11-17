@@ -44,12 +44,31 @@ namespace MehrganSurveillance.Services.Optimization
             var defaultProfile = CameraImageOptimizationProfile.CreatePreset(
                 cameraId,
                 !string.IsNullOrWhiteSpace(cameraName) ? cameraName : $"دوربین {cameraId}",
-                ImageOptimizationPreset.Night);
+                ImageOptimizationPreset.GeneralAnpr);
 
             _cache[cameraId] = defaultProfile;
             SaveAll();
 
             return defaultProfile.Clone();
+        }
+
+        /// <summary>
+        /// به‌روزرسانی خودکار پروفایل دوربین در حافظه بر اساس تحلیل شرایط نوری صحنه (بدون بازنویسی تنظیمات دستی Custom)
+        /// </summary>
+        public bool ApplyAutoSceneProfile(CameraImageOptimizationProfile adaptiveProfile, bool persistToDisk = false)
+        {
+            if (adaptiveProfile == null || string.IsNullOrWhiteSpace(adaptiveProfile.CameraId)) return false;
+
+            if (_cache.TryGetValue(adaptiveProfile.CameraId, out var existing) &&
+                existing.Preset == ImageOptimizationPreset.Custom)
+            {
+                return false;
+            }
+
+            adaptiveProfile.UpdatedAtUtc = DateTime.UtcNow;
+            _cache[adaptiveProfile.CameraId] = adaptiveProfile.Clone();
+
+            return persistToDisk ? SaveAll() : true;
         }
 
         /// <summary>

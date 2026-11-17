@@ -36,8 +36,13 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
     private readonly object _inferenceLock = new();
     private readonly AnprConfig _config;
     private readonly AiImageOptimizationEngine _imageOptimizer = new();
+    private readonly AutoSceneImageTuner _autoTuner = new();
+    private byte[]? _tuningScratchBuffer;
 
     public AiImageOptimizationEngine ImageOptimizer => _imageOptimizer;
+    public AutoSceneImageTuner AutoTuner => _autoTuner;
+    public bool IsAutoImageOptimizationEnabled { get; set; } = true;
+
     private readonly ExecutionProviderVerifier? _epVerifier;
     private readonly Channel<AcquiredFrame> _queue;
     private readonly CancellationTokenSource _cts = new();
@@ -72,6 +77,7 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
     public event Action<AnprResult>? PlateRecognized;
     public event Action<AnprResult, AcquiredFrame>? FramePlateRecognized;
     public event Action<AnprLiveObservation>? LiveObservationAvailable;
+    public event Action<AutoImageTuningRecommendation>? AutoSceneTuningUpdated;
     public event Action<string>? LogMessage;
 
     public AnprPipeline(AnprConfig? config = null, ExecutionProviderVerifier? epVerifier = null)
@@ -344,17 +350,53 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
         if (frame == null || frame.IsDisposed) return (null, null);
 
         var sw = Stopwatch.StartNew();
-        bool needPreviewJpeg = Volatile.Read(ref _previewSubscriberCount) > 0 && ShouldEncodePreview(frame.ChannelIndex);
-        byte[]? previewJpeg = needPreviewJpeg ? EncodeFramePreviewJpeg(frame) : null;
+
+        AutoImageTuningRecommendation? activeTuning = null;
+        if (IsAutoImageOptimizationEnabled)
+        {
+            var (tuningChanged, rec) = _autoTuner.EvaluateFrameIfDue(frame);
+            activeTuning = rec;
+            if (rec != null)
+            {
+                _imageOptimizer.ProfileRegistry.ApplyAutoSceneProfile(rec.OptimizedProfile, persistToDisk: false);
+                if (tuningChanged)
+                {
+                    AutoSceneTuningUpdated?.Invoke(rec);
+                    Log($"تنظیم خودکار تصویر ({rec.SceneLabelFa}) روی دوربین {frame.CameraId} اعمال شد.");
+                }
+            }
+        }
 
         NormalizedBoundingBox? plateBox;
         NormalizedBoundingBox? vehicleBox = null;
         float detConf;
         bool plateDetected;
+        byte[]? previewJpeg = null;
+        bool needPreviewJpeg = Volatile.Read(ref _previewSubscriberCount) > 0 && ShouldEncodePreview(frame.ChannelIndex);
 
         lock (_inferenceLock)
         {
-            (plateDetected, plateBox, detConf) = DetectPlateInFrame(frame);
+            ReadOnlySpan<byte> detectionSpan = frame.PixelData.Span;
+            byte[]? tunedWorkingBuffer = null;
+
+            if (IsAutoImageOptimizationEnabled && activeTuning != null && activeTuning.RequiresWorkingBufferEnhancement)
+            {
+                tunedWorkingBuffer = AutoSceneImageTuner.CreateIsolatedBalancedBuffer(
+                    frame.PixelData.Span,
+                    frame.Width,
+                    frame.Height,
+                    frame.Stride,
+                    activeTuning,
+                    ref _tuningScratchBuffer);
+                detectionSpan = tunedWorkingBuffer.AsSpan(0, frame.Stride * frame.Height);
+            }
+
+            if (needPreviewJpeg)
+            {
+                previewJpeg = EncodeFramePreviewJpeg(detectionSpan, frame.Width, frame.Height, frame.Stride);
+            }
+
+            (plateDetected, plateBox, detConf) = DetectPlateInFrame(detectionSpan, frame.Width, frame.Height, frame.Stride);
 
             if (!plateDetected || plateBox == null || detConf < _config.MinDetectionConfidence)
             {
@@ -493,17 +535,18 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
     }
 
     /// <summary>
-    /// تشخیص کادر پلاک در فریم (استنتاج واقعی YOLOv8 ONNX یا کادریاب هندسی-نوری پلاک ملی ایران)
+    /// تشخیص کادر پلاک در فریم (استنتاج واقعی YOLOv8 ONNX یا کادریاب هندسی-نوری چندمقیاسه با حذف سطح آسفالت/سایه)
     /// </summary>
-    private (bool Detected, NormalizedBoundingBox? Box, float Confidence) DetectPlateInFrame(AcquiredFrame frame)
+    private (bool Detected, NormalizedBoundingBox? Box, float Confidence) DetectPlateInFrame(
+        ReadOnlySpan<byte> span, int w, int h, int stride)
     {
-        if (frame == null || frame.Width < 180 || frame.Height < 120) return (false, null, 0.0f);
+        if (w < 180 || h < 120 || span.IsEmpty) return (false, null, 0.0f);
 
         if (_detectorSession != null)
         {
             try
             {
-                return RunOnnxPlateDetector(frame);
+                return RunOnnxPlateDetector(span, w, h, stride);
             }
             catch (Exception ex)
             {
@@ -511,96 +554,163 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
             }
         }
 
-        // کادریاب نوری و هندسی پلاک ایران (فقط برای رسم کادر زنده — هرگز پلاک جعلی تولید نمی‌کند)
+        // کادریاب هندسی-نوری چندمقیاسه پلاک ملی ایران با فیلتر حذف بافت زمین/آسفالت/سایه
         try
         {
-            var span = frame.PixelData.Span;
-            int w = frame.Width;
-            int h = frame.Height;
-            int stride = frame.Stride;
+            float bestScore = 0f;
+            NormalizedBoundingBox? bestBox = null;
 
-            const int cols = 12;
-            const int rows = 8;
-            int cellW = w / cols;
-            int cellH = h / rows;
+            // دو مقیاس واقعی پلاک خودرو: نمای نزدیک/متوسط (14%) و نمای خیابان (9%) با نسبت ابعاد 4.3:1
+            ReadOnlySpan<float> widthFractions = stackalloc float[] { 0.145f, 0.095f };
 
-            int bestScore = 0;
-            int bestR = -1, bestC = -1;
-            bool blueBandConfirmed = false;
-
-            for (int r = 2; r < rows - 1; r++)
+            foreach (float wf in widthFractions)
             {
-                int yStart = r * cellH;
-                int yEnd = Math.Min(h - 1, yStart + cellH);
+                int boxW = Math.Clamp((int)(w * wf), 48, w / 2);
+                int boxH = Math.Clamp((int)(boxW / 4.25f), 14, h / 5);
+                int blueBandW = Math.Max(6, (int)(boxW * 0.14f));
+                int stepX = Math.Max(6, boxW / 3);
+                int stepY = Math.Max(4, boxH / 2);
+                int marginH = Math.Max(6, boxH / 2);
 
-                for (int c = 1; c < cols - 2; c++)
+                int yMin = Math.Max(marginH + 2, (int)(h * 0.18f));
+                int yMax = Math.Min(h - boxH - marginH - 2, (int)(h * 0.88f) - boxH);
+                int xMin = (int)(w * 0.03f);
+                int xMax = Math.Min(w - boxW - 2, (int)(w * 0.96f) - boxW);
+
+                for (int y = yMin; y <= yMax; y += stepY)
                 {
-                    int xStart = c * cellW;
-                    int xEnd = Math.Min(w - 2, xStart + (cellW * 2));
-
-                    int edgeTransitions = 0;
-                    int brightPlatePixels = 0;
-                    int darkCharPixels = 0;
-                    int blueBandPixels = 0;
-
-                    for (int y = yStart; y < yEnd; y += 3)
+                    for (int x = xMin; x <= xMax; x += stepX)
                     {
-                        int rowOff = y * stride;
-                        int prevLum = -1;
-
-                        for (int x = xStart; x < xEnd; x += 3)
+                        // حذف ناحیه نمایشگر تاریخ/ساعت دوربین در گوشه‌های بالا
+                        if (y < (int)(h * 0.18f) && (x < (int)(w * 0.42f) || x > (int)(w * 0.78f)))
                         {
-                            int idx = rowOff + (x * 4);
-                            if (idx + 2 < span.Length)
+                            continue;
+                        }
+
+                        // ۱. بررسی نوار آبی واقعی سمت چپ پلاک ایران
+                        int bluePixels = 0;
+                        int blueSamples = 0;
+                        int xBlueEnd = x + blueBandW;
+                        int stepP = Math.Max(2, boxH / 7);
+
+                        for (int py = y + 1; py < y + boxH - 1; py += stepP)
+                        {
+                            int rOff = py * stride;
+                            for (int px = x; px < xBlueEnd; px += 2)
                             {
+                                int idx = rOff + (px * 4);
+                                if (idx + 2 >= span.Length) continue;
                                 byte b = span[idx];
                                 byte g = span[idx + 1];
-                                byte rCol = span[idx + 2];
+                                byte r = span[idx + 2];
+                                blueSamples++;
 
-                                int lum = (rCol * 299 + g * 587 + b * 114) / 1000;
-
-                                if (x < xStart + (cellW / 3) && b > 105 && b > rCol + 30 && b > g + 16)
+                                if (b >= 115 && r <= 105 && (b - r) >= 48 && (b - g) >= 22)
                                 {
-                                    blueBandPixels++;
+                                    bluePixels++;
                                 }
+                            }
+                        }
 
-                                if (lum > 165) brightPlatePixels++;
-                                else if (lum < 65) darkCharPixels++;
+                        float blueRatio = blueSamples > 0 ? (float)bluePixels / blueSamples : 0f;
+                        if (bluePixels < 4 || blueRatio < 0.28f)
+                        {
+                            continue;
+                        }
 
-                                if (prevLum >= 0 && Math.Abs(lum - prevLum) > 60)
+                        // ۲. بررسی کنتراست ارقام و زمینه روشن در بدنه پلاک
+                        int innerSamples = 0;
+                        int edgeTransitions = 0;
+                        long lumSum = 0;
+                        int brightCount = 0;
+                        int darkCount = 0;
+                        int xInnerStart = xBlueEnd;
+                        int xInnerEnd = x + boxW - 2;
+
+                        for (int py = y + 2; py < y + boxH - 2; py += stepP)
+                        {
+                            int rOff = py * stride;
+                            int prevLum = -1;
+                            for (int px = xInnerStart; px < xInnerEnd; px += 2)
+                            {
+                                int idx = rOff + (px * 4);
+                                if (idx + 2 >= span.Length) continue;
+                                int lum = (span[idx + 2] * 299 + span[idx + 1] * 587 + span[idx] * 114) / 1000;
+                                lumSum += lum;
+                                innerSamples++;
+
+                                if (lum >= 145) brightCount++;
+                                else if (lum <= 88) darkCount++;
+
+                                if (prevLum >= 0 && Math.Abs(lum - prevLum) >= 44)
                                 {
                                     edgeTransitions++;
                                 }
                                 prevLum = lum;
                             }
                         }
-                    }
 
-                    if (brightPlatePixels > 65 && darkCharPixels > 22 && edgeTransitions >= 85 && blueBandPixels >= 4)
-                    {
-                        if (edgeTransitions > bestScore)
+                        if (innerSamples < 24) continue;
+                        float brightRatio = (float)brightCount / innerSamples;
+                        float darkRatio = (float)darkCount / innerSamples;
+                        float innerEdgeDensity = (float)edgeTransitions / innerSamples;
+
+                        if (brightRatio < 0.28f || darkRatio < 0.12f || innerEdgeDensity < 0.13f)
                         {
-                            bestScore = edgeTransitions;
-                            bestR = r;
-                            bestC = c;
-                            blueBandConfirmed = true;
+                            continue;
+                        }
+
+                        // ۳. فیلتر حیاتی حذف آسفالت و پیاده‌رو (مقایسه لبه‌های داخل پلاک با حاشیه بالا و پایین)
+                        int surroundSamples = 0;
+                        int surroundEdges = 0;
+                        for (int band = 0; band < 2; band++)
+                        {
+                            int sy0 = band == 0 ? y - marginH : y + boxH + 1;
+                            int sy1 = band == 0 ? y - 1 : y + boxH + marginH;
+                            for (int py = sy0; py < sy1; py += stepP)
+                            {
+                                int rOff = py * stride;
+                                int prevLum = -1;
+                                for (int px = xInnerStart; px < xInnerEnd; px += 2)
+                                {
+                                    int idx = rOff + (px * 4);
+                                    if (idx + 2 >= span.Length) continue;
+                                    int lum = (span[idx + 2] * 299 + span[idx + 1] * 587 + span[idx] * 114) / 1000;
+                                    surroundSamples++;
+                                    if (prevLum >= 0 && Math.Abs(lum - prevLum) >= 44)
+                                    {
+                                        surroundEdges++;
+                                    }
+                                    prevLum = lum;
+                                }
+                            }
+                        }
+
+                        float surroundDensity = surroundSamples > 0 ? (float)surroundEdges / surroundSamples : 0f;
+                        // روی پیاده‌رو/سنگفرش یا شاخ‌وبرگ، لبه داخل کادر با اطراف تقریباً یکسان است (< 1.55x)
+                        if (surroundDensity > 0.02f && innerEdgeDensity < surroundDensity * 1.55f)
+                        {
+                            continue;
+                        }
+
+                        float score = (blueRatio * 35f) + (innerEdgeDensity * 90f) + (brightRatio * 20f);
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestBox = new NormalizedBoundingBox(
+                                (float)x / w,
+                                (float)y / h,
+                                (float)boxW / w,
+                                (float)boxH / h);
                         }
                     }
                 }
             }
 
-            if (bestScore >= 85 && blueBandConfirmed && bestR >= 0 && bestC >= 0)
+            if (bestBox != null && bestScore >= 26f)
             {
-                float normW = 0.22f;
-                float normH = 0.058f;
-                float centerX = (bestC + 1.0f) / cols;
-                float centerY = (bestR + 0.5f) / rows;
-
-                float bx = Math.Clamp(centerX - (normW / 2f), 0.04f, 0.74f);
-                float by = Math.Clamp(centerY - (normH / 2f), 0.15f, 0.88f);
-                float conf = Math.Min(0.95f, 0.78f + (bestScore / 350f));
-
-                return (true, new NormalizedBoundingBox(bx, by, normW, normH), conf);
+                float conf = Math.Clamp(0.68f + (bestScore / 140f), 0.68f, 0.94f);
+                return (true, bestBox, conf);
             }
         }
         catch
@@ -613,7 +723,8 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
     /// <summary>
     /// استنتاج واقعی YOLOv8 ONNX دتکتور پلاک خودرو
     /// </summary>
-    private (bool Detected, NormalizedBoundingBox? Box, float Confidence) RunOnnxPlateDetector(AcquiredFrame frame)
+    private (bool Detected, NormalizedBoundingBox? Box, float Confidence) RunOnnxPlateDetector(
+        ReadOnlySpan<byte> src, int frameWidth, int frameHeight, int frameStride)
     {
         if (_detectorSession == null) return (false, null, 0.0f);
 
@@ -623,17 +734,16 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
         int targetW = (dims.Length >= 4 && dims[3] > 0) ? dims[3] : 640;
 
         var tensor = new DenseTensor<float>(new[] { 1, 3, targetH, targetW });
-        var src = frame.PixelData.Span;
-        float scaleX = (float)frame.Width / targetW;
-        float scaleY = (float)frame.Height / targetH;
+        float scaleX = (float)frameWidth / targetW;
+        float scaleY = (float)frameHeight / targetH;
 
         for (int y = 0; y < targetH; y++)
         {
-            int sy = Math.Min(frame.Height - 1, (int)(y * scaleY));
-            int rOff = sy * frame.Stride;
+            int sy = Math.Min(frameHeight - 1, (int)(y * scaleY));
+            int rOff = sy * frameStride;
             for (int x = 0; x < targetW; x++)
             {
-                int sx = Math.Min(frame.Width - 1, (int)(x * scaleX));
+                int sx = Math.Min(frameWidth - 1, (int)(x * scaleX));
                 int idx = rOff + (sx * 4);
                 if (idx + 2 < src.Length)
                 {
@@ -842,16 +952,14 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
         }
     }
 
-    private static byte[]? EncodeFramePreviewJpeg(AcquiredFrame frame)
+    private static byte[]? EncodeFramePreviewJpeg(ReadOnlySpan<byte> span, int w, int h, int stride)
     {
         try
         {
-            int w = frame.Width;
-            int h = frame.Height;
-            if (w <= 0 || h <= 0) return null;
+            if (w <= 0 || h <= 0 || span.IsEmpty) return null;
 
-            byte[] copy = frame.PixelData.ToArray();
-            var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, copy, frame.Stride);
+            byte[] copy = span.ToArray();
+            var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, copy, stride);
             var enc = new JpegBitmapEncoder { QualityLevel = 72 };
             enc.Frames.Add(BitmapFrame.Create(bmp));
             using var ms = new MemoryStream();

@@ -7,6 +7,7 @@ using System.Windows.Media;
 using LibVLCSharp.Shared;
 using MehrganSurveillance.Models;
 using MehrganSurveillance.Services;
+using MehrganSurveillance.Services.Optimization;
 using VlcMediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace MehrganSurveillance.Controls
@@ -33,11 +34,18 @@ namespace MehrganSurveillance.Controls
         public event EventHandler<(CameraCell Cell, bool Enabled)>? FaceDetectionToggled;
         public event EventHandler<(CameraCell Cell, bool Enabled)>? FaceArchiveToggled;
         public event EventHandler<(CameraCell Cell, bool Enabled)>? AnprToggled;
+        public event EventHandler<(CameraCell Cell, bool Enabled)>? AutoImageTuneToggled;
         public event EventHandler<CameraCell>? PlaybackStarted;
         public event EventHandler<CameraCell>? PlaybackStopped;
 
         // کنترل فرکانس بافرینگ جهت حذف لگ و ترافیک دیسپچر
         private float _lastLoggedBuffering = -1;
+        private bool _hasAutoVlcAdjust;
+        private AutoSceneCondition? _lastAutoCondition;
+        private float _lastAutoContrast = 1.0f;
+        private float _lastAutoBrightness = 1.0f;
+        private float _lastAutoGamma = 1.0f;
+        private float _lastAutoSaturation = 1.0f;
 
         public CameraCell()
         {
@@ -273,6 +281,94 @@ namespace MehrganSurveillance.Controls
             }
         }
 
+        /// <summary>
+        /// اعمال خودکار و هوشمند تنظیمات نوری (WDR، گاما، کنتراست، روشنایی) متناسب با شرایط لحظه‌ای تصویر بدون نیاز به دستکاری دستی
+        /// </summary>
+        public void ApplyAutoSceneTuning(AutoImageTuningRecommendation rec)
+        {
+            if (rec == null) return;
+
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => ApplyAutoSceneTuning(rec)));
+                return;
+            }
+
+            if (!Channel.IsAutoImageOptimizationEnabled)
+            {
+                return;
+            }
+
+            AutoToneBadge.Visibility = Visibility.Visible;
+            AutoToneBadgeText.Text = rec.ShortBadgeFa;
+            AutoToneBadge.ToolTip = $"{rec.SceneLabelFa}\n{rec.SummaryFa}";
+
+            if (_mediaPlayer == null || !Channel.IsConnected)
+            {
+                return;
+            }
+
+            bool significantChange =
+                !_hasAutoVlcAdjust ||
+                _lastAutoCondition != rec.Condition ||
+                Math.Abs(_lastAutoContrast - rec.VlcContrast) > 0.03f ||
+                Math.Abs(_lastAutoBrightness - rec.VlcBrightness) > 0.03f ||
+                Math.Abs(_lastAutoGamma - rec.VlcGamma) > 0.03f ||
+                Math.Abs(_lastAutoSaturation - rec.VlcSaturation) > 0.03f;
+
+            if (!significantChange) return;
+
+            try
+            {
+                _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Enable, 1.0f);
+                _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Contrast, rec.VlcContrast);
+                _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Brightness, rec.VlcBrightness);
+                _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Gamma, rec.VlcGamma);
+                _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Saturation, rec.VlcSaturation);
+
+                bool conditionSwitched = _lastAutoCondition != rec.Condition;
+                _hasAutoVlcAdjust = true;
+                _lastAutoCondition = rec.Condition;
+                _lastAutoContrast = rec.VlcContrast;
+                _lastAutoBrightness = rec.VlcBrightness;
+                _lastAutoGamma = rec.VlcGamma;
+                _lastAutoSaturation = rec.VlcSaturation;
+
+                if (conditionSwitched)
+                {
+                    OnLog($"[اسلات {Channel.SlotIndex + 1}] ✨ تنظیم خودکار تصویر: {rec.SceneLabelFa} (کنتراست {rec.VlcContrast:F2} | گاما {rec.VlcGamma:F2} | روشنایی {rec.VlcBrightness:F2})");
+                }
+            }
+            catch (Exception ex)
+            {
+                OnLog($"[اسلات {Channel.SlotIndex + 1}] خطا در اعمال تنظیم خودکار VLC: {ex.Message}");
+            }
+        }
+
+        public void ResetAutoSceneTuning()
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(ResetAutoSceneTuning));
+                return;
+            }
+
+            _hasAutoVlcAdjust = false;
+            _lastAutoCondition = null;
+            AutoToneBadge.Visibility = Visibility.Collapsed;
+
+            try
+            {
+                if (_mediaPlayer != null)
+                {
+                    _mediaPlayer.SetAdjustFloat(VideoAdjustOption.Enable, 0.0f);
+                }
+            }
+            catch
+            {
+            }
+        }
+
         private void UpdateStreamQualityBadge()
         {
             if (IsUsingSubStream)
@@ -337,6 +433,8 @@ namespace MehrganSurveillance.Controls
         {
             Dispatcher.InvokeAsync(() =>
             {
+                _hasAutoVlcAdjust = false;
+                _lastAutoCondition = null;
                 UpdateStatusUI("پخش زنده", "#16A34A");
                 PlaceholderOverlay.Visibility = Visibility.Collapsed;
                 PlayPauseButtonText.Text = "⏹";
@@ -492,6 +590,7 @@ namespace MehrganSurveillance.Controls
             MenuFaceOverlayToggle.IsChecked = IsFaceOverlayEnabled;
             MenuAnprToggle.IsChecked = Channel.IsAnprEnabled;
             MenuAnprOverlayToggle.IsChecked = IsAnprOverlayEnabled;
+            MenuAutoImageTuneToggle.IsChecked = Channel.IsAutoImageOptimizationEnabled;
 
             CellContextMenu.PlacementTarget = target;
             CellContextMenu.IsOpen = true;
@@ -533,6 +632,17 @@ namespace MehrganSurveillance.Controls
         private void MenuAnprOverlayToggle_Click(object sender, RoutedEventArgs e)
         {
             SetAnprOverlayVisible(MenuAnprOverlayToggle.IsChecked);
+        }
+
+        private void MenuAutoImageTuneToggle_Click(object sender, RoutedEventArgs e)
+        {
+            Channel.IsAutoImageOptimizationEnabled = MenuAutoImageTuneToggle.IsChecked;
+            if (!Channel.IsAutoImageOptimizationEnabled)
+            {
+                ResetAutoSceneTuning();
+            }
+            AutoImageTuneToggled?.Invoke(this, (this, Channel.IsAutoImageOptimizationEnabled));
+            OnLog($"[کانال {Channel.SlotIndex + 1}] بهینه‌سازی خودکار تصویر (Auto WDR/CLAHE): {(Channel.IsAutoImageOptimizationEnabled ? "فعال" : "غیرفعال")}");
         }
 
         private void MenuMainStream_Click(object sender, RoutedEventArgs e)

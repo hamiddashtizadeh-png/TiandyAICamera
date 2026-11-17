@@ -33,6 +33,7 @@
                     <Separator />
                     <MenuItem x:Name="MenuAnprToggle" Header="🚗 پلاک‌خوان هوشمند (ANPR)" IsCheckable="True" IsChecked="False" Click="MenuAnprToggle_Click" />
                     <MenuItem x:Name="MenuAnprOverlayToggle" Header="🟧 کادر زنده پلاک (ANPR Box)" IsCheckable="True" IsChecked="True" Click="MenuAnprOverlayToggle_Click" />
+                    <MenuItem x:Name="MenuAutoImageTuneToggle" Header="✨ بهینه‌سازی خودکار تصویر (Auto WDR/CLAHE)" IsCheckable="True" IsChecked="True" Click="MenuAutoImageTuneToggle_Click" />
                 </MenuItem>
                 <Separator />
 
@@ -104,6 +105,23 @@
 
                     <!-- وضعیت اتصال زنده و پروفایل استریم -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                        <!-- بج تنظیم خودکار تصویر (Auto-WDR / HLC) -->
+                        <Border x:Name="AutoToneBadge"
+                                Background="#0F293A"
+                                BorderBrush="#0284C7"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="4,1"
+                                Margin="0,0,5,0"
+                                Visibility="Collapsed"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="AutoToneBadgeText"
+                                       Text="✨ خودکار"
+                                       FontSize="8"
+                                       FontWeight="Bold"
+                                       Foreground="#38BDF8" />
+                        </Border>
+
                         <!-- بج کیفیت استریم (Main یا Sub) -->
                         <Border x:Name="StreamProfileBadge"
                                 Background="#FEF3C7"

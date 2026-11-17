@@ -12,6 +12,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using MehrganSurveillance.Models;
 using MehrganSurveillance.Services;
+using MehrganSurveillance.Services.Optimization;
 
 namespace MehrganSurveillance;
 
@@ -54,8 +55,10 @@ public partial class AnprWindow : Window
             _pipeline.RegisterPreviewSubscriber();
             _pipeline.PlateRecognized += OnLivePlateRecognized;
             _pipeline.LiveObservationAvailable += OnLiveObservationAvailable;
+            _pipeline.AutoSceneTuningUpdated += OnAutoSceneTuningUpdated;
 
             AnprEnableToggle.IsChecked = _pipeline.Config.IsEnabled;
+            AutoImageTuneToggle.IsChecked = _pipeline.IsAutoImageOptimizationEnabled;
             UpdateEngineBadge();
             UpdateOcrNoticeBanner();
 
@@ -71,6 +74,7 @@ public partial class AnprWindow : Window
             _overlayExpireTimer.Start();
 
             PopulateCameraSelectors();
+            RefreshAutoTuningStatusBanner();
 
             // اگر موتور فعال است و دوربین تخصیص‌یافته داریم، فریم‌گیری کانال منتخب را تضمین می‌کنیم
             if (_pipeline.Config.IsEnabled && _framePipeline != null)
@@ -90,6 +94,7 @@ public partial class AnprWindow : Window
     private void AnprWindow_Closed(object? sender, EventArgs e)
     {
         _overlayExpireTimer?.Stop();
+        _pipeline.AutoSceneTuningUpdated -= OnAutoSceneTuningUpdated;
         _pipeline.LiveObservationAvailable -= OnLiveObservationAvailable;
         _pipeline.PlateRecognized -= OnLivePlateRecognized;
         _pipeline.UnregisterPreviewSubscriber();
@@ -166,7 +171,56 @@ public partial class AnprWindow : Window
             }
 
             DrawLiveAnprBoxes(obs);
+            RefreshAutoTuningStatusBanner(obs.CameraId);
         }));
+    }
+
+    private void OnAutoSceneTuningUpdated(AutoImageTuningRecommendation rec)
+    {
+        if (rec == null) return;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_selectedPreviewSlot >= 0 && rec.ChannelIndex != _selectedPreviewSlot) return;
+            ApplyAutoTuningStatusText(rec);
+        }));
+    }
+
+    private void RefreshAutoTuningStatusBanner(string? cameraId = null)
+    {
+        if (!_pipeline.IsAutoImageOptimizationEnabled)
+        {
+            AutoTuningStatusText.Text = "تنظیم خودکار تصویر غیرفعال است (پخش با مقادیر خام دوربین).";
+            AutoTuningStatusText.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+            return;
+        }
+
+        string targetCam = cameraId ?? string.Empty;
+        if (string.IsNullOrEmpty(targetCam))
+        {
+            var ch = _selectedPreviewSlot >= 0
+                ? _channels.FirstOrDefault(c => c.SlotIndex == _selectedPreviewSlot && c.IsAssigned)
+                : _channels.FirstOrDefault(c => c.IsAssigned);
+            targetCam = ch?.Id ?? string.Empty;
+        }
+
+        var latest = !string.IsNullOrEmpty(targetCam) ? _pipeline.AutoTuner.GetLatestRecommendation(targetCam) : null;
+        if (latest != null)
+        {
+            ApplyAutoTuningStatusText(latest);
+        }
+        else
+        {
+            AutoTuningStatusText.Text = "✨ بهینه‌ساز خودکار نور صحنه فعال است (در انتظار دریافت اولین فریم...)";
+            AutoTuningStatusText.Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248));
+        }
+    }
+
+    private void ApplyAutoTuningStatusText(AutoImageTuningRecommendation rec)
+    {
+        var p = rec.OptimizedProfile;
+        AutoTuningStatusText.Text =
+            $"✨ {rec.SceneLabelFa} | گاما {p.Gamma:F2} • کنتراست {p.Contrast:F2} • CLAHE {p.ClaheClipLimit:F1} (اعمال خودکار فعال)";
+        AutoTuningStatusText.Foreground = new SolidColorBrush(Color.FromRgb(52, 211, 153));
     }
 
     private void DrawLiveAnprBoxes(AnprLiveObservation obs)
@@ -388,6 +442,98 @@ public partial class AnprWindow : Window
 
         LivePreviewPlaceholderText.Text = "در حال دریافت تصویر زنده از دوربین...";
         await EnsureLivePreviewAcquisitionStartedAsync();
+    }
+
+    private void AutoImageTuneToggle_Click(object sender, RoutedEventArgs e)
+    {
+        bool enabled = AutoImageTuneToggle.IsChecked == true;
+        _pipeline.IsAutoImageOptimizationEnabled = enabled;
+        foreach (var ch in _channels)
+        {
+            ch.IsAutoImageOptimizationEnabled = enabled;
+        }
+        RefreshAutoTuningStatusBanner();
+    }
+
+    private async void SyncHardwareSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var targetChannel = _selectedPreviewSlot >= 0
+            ? _channels.FirstOrDefault(c => c.SlotIndex == _selectedPreviewSlot && c.IsAssigned)
+            : _channels.FirstOrDefault(c => c.IsAssigned);
+
+        if (targetChannel == null || string.IsNullOrWhiteSpace(targetChannel.IpAddress))
+        {
+            MessageBox.Show("ابتدا یک دوربین متصل را از لیست انتخاب کنید.", "توجه", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        SyncHardwareSettingsButton.IsEnabled = false;
+        AutoTuningStatusText.Text = $"⏳ در حال همگام‌سازی خودکار تنظیمات سخت‌افزاری دوربین {targetChannel.IpAddress}...";
+        AutoTuningStatusText.Foreground = new SolidColorBrush(Color.FromRgb(251, 191, 36));
+
+        try
+        {
+            var regService = new CameraRegistryService();
+            var regCam = regService.GetAllCameras().FirstOrDefault(c => c.IpAddress == targetChannel.IpAddress);
+            string user = regCam?.Username ?? "admin";
+            string pass = !string.IsNullOrEmpty(regCam?.EncryptedPassword)
+                ? CredentialProtectionService.DecryptSecret(regCam.EncryptedPassword)
+                : string.Empty;
+
+            int[] candidatePorts = new[] { 3000, 80, 8899, 8080, 8000, 34567 };
+            int? controlPort = await OnvifImagingProvider.FindOpenPortAsync(targetChannel.IpAddress, 3000, candidatePorts, 300);
+            if (!controlPort.HasValue)
+            {
+                RefreshAutoTuningStatusBanner(targetChannel.Id);
+                MessageBox.Show(
+                    $"هیچ پورت کنترل HTTP/ONVIF/Tiandy روی {targetChannel.IpAddress} پاسخ نداد، اما تنظیمات بهینه‌سازی نرم‌افزاری (WDR/گاما/CLAHE) همچنان به‌صورت خودکار روی تصویر و پلاک‌خوان فعال است.",
+                    "همگام‌سازی سخت‌افزاری در دسترس نیست",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var latest = _pipeline.AutoTuner.GetLatestRecommendation(targetChannel.Id);
+            var hwProfile = latest?.HardwareProfileType ?? CameraOptimizationProfileType.DaytimeLicensePlate;
+
+            var optimizer = new CameraSettingsOptimizerService();
+            var hwRec = await optimizer.GenerateRecommendationAsync(
+                targetChannel.Id,
+                targetChannel.IpAddress,
+                controlPort.Value,
+                user,
+                pass,
+                hwProfile,
+                targetChannel.Brand);
+
+            var (ok, msg, _) = await optimizer.ApplySettingsWithSafetyAsync(
+                targetChannel.Id,
+                targetChannel.IpAddress,
+                controlPort.Value,
+                user,
+                pass,
+                hwRec.ProposedSettings,
+                $"AutoScene-{hwProfile}",
+                adminConfirmed: true,
+                adminUsername: "مدیر سیستم",
+                manufacturer: targetChannel.Brand);
+
+            RefreshAutoTuningStatusBanner(targetChannel.Id);
+            MessageBox.Show(
+                ok ? $"تنظیمات سخت‌افزاری متناسب با صحنه ({latest?.SceneLabelFa ?? hwProfile.ToString()}) روی دوربین {targetChannel.IpAddress}:{controlPort.Value} اعمال شد.\n{msg}"
+                   : $"دوربین تغییر سخت‌افزاری را نپذیرفت ({msg})؛ بهینه‌ساز نرم‌افزاری خودکار همچنان فعال است.",
+                ok ? "اعمال موفق" : "نتیجه همگام‌سازی",
+                MessageBoxButton.OK,
+                ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"خطا در همگام‌سازی سخت‌افزار دوربین: {ex.Message}", "خطا", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            SyncHardwareSettingsButton.IsEnabled = true;
+        }
     }
 
     private void AutoArchiveToggle_Click(object sender, RoutedEventArgs e)

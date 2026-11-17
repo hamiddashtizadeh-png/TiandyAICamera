@@ -36,6 +36,7 @@ namespace MehrganSurveillance.Models
         public bool IsFaceDetectionEnabled { get; set; } = true;
         public bool IsFaceArchiveEnabled { get; set; } = true;
         public bool IsAnprEnabled { get; set; } = true;
+        public bool IsAutoImageOptimizationEnabled { get; set; } = true;
 
         /// <summary>
         /// دریافت آدرس موثر استریم با در نظر گرفتن نوع تقاضا (فرعی یا اصلی) و منطق تبدیل خودکار تیاندی

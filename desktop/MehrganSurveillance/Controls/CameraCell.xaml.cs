@@ -491,6 +491,7 @@ namespace MehrganSurveillance.Controls
             MenuFaceArchiveToggle.IsChecked = Channel.IsFaceArchiveEnabled;
             MenuFaceOverlayToggle.IsChecked = IsFaceOverlayEnabled;
             MenuAnprToggle.IsChecked = Channel.IsAnprEnabled;
+            MenuAnprOverlayToggle.IsChecked = IsAnprOverlayEnabled;
 
             CellContextMenu.PlacementTarget = target;
             CellContextMenu.IsOpen = true;
@@ -520,8 +521,18 @@ namespace MehrganSurveillance.Controls
         private void MenuAnprToggle_Click(object sender, RoutedEventArgs e)
         {
             Channel.IsAnprEnabled = MenuAnprToggle.IsChecked;
+            if (!Channel.IsAnprEnabled)
+            {
+                _activePlateObs = null;
+                RedrawOverlayCanvas();
+            }
             AnprToggled?.Invoke(this, (this, Channel.IsAnprEnabled));
             OnLog($"[کانال {Channel.SlotIndex + 1}] پلاک‌خوان هوشمند (ANPR): {(Channel.IsAnprEnabled ? "فعال" : "غیرفعال")}");
+        }
+
+        private void MenuAnprOverlayToggle_Click(object sender, RoutedEventArgs e)
+        {
+            SetAnprOverlayVisible(MenuAnprOverlayToggle.IsChecked);
         }
 
         private void MenuMainStream_Click(object sender, RoutedEventArgs e)
@@ -630,10 +641,16 @@ namespace MehrganSurveillance.Controls
 
         #endregion
 
-        #region لایه نمایش رویداد تشخیص چهره (Face Detection Overlay)
+        #region لایه نمایش زنده چهره و پلاک خودرو (Face + ANPR Unified Overlay)
 
         public bool IsFaceOverlayEnabled { get; set; } = true;
+        public bool IsAnprOverlayEnabled { get; set; } = true;
+
         private System.Windows.Threading.DispatcherTimer? _overlayExpireTimer;
+        private readonly System.Collections.Generic.List<FaceBoundingBox> _activeFaces = new();
+        private DateTime _facesExpiresUtc = DateTime.MinValue;
+        private AnprLiveObservation? _activePlateObs;
+        private DateTime _platesExpiresUtc = DateTime.MinValue;
 
         private void CameraCell_Loaded(object sender, RoutedEventArgs e)
         {
@@ -651,15 +668,33 @@ namespace MehrganSurveillance.Controls
             {
                 _overlayExpireTimer = new System.Windows.Threading.DispatcherTimer
                 {
-                    Interval = TimeSpan.FromMilliseconds(1400)
+                    Interval = TimeSpan.FromMilliseconds(400)
                 };
                 _overlayExpireTimer.Tick += (s, ev) =>
                 {
-                    _overlayExpireTimer.Stop();
-                    FaceOverlayCanvas.Children.Clear();
-                    if (FaceOverlayPopup != null)
+                    DateTime now = DateTime.UtcNow;
+                    bool changed = false;
+
+                    if (_activeFaces.Count > 0 && now >= _facesExpiresUtc)
                     {
-                        FaceOverlayPopup.IsOpen = false;
+                        _activeFaces.Clear();
+                        changed = true;
+                    }
+
+                    if (_activePlateObs != null && now >= _platesExpiresUtc)
+                    {
+                        _activePlateObs = null;
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        RedrawOverlayCanvas();
+                    }
+
+                    if (_activeFaces.Count == 0 && _activePlateObs == null)
+                    {
+                        _overlayExpireTimer.Stop();
                     }
                 };
             }
@@ -695,7 +730,7 @@ namespace MehrganSurveillance.Controls
                 win.Deactivated += (s, e) => { if (FaceOverlayPopup != null) FaceOverlayPopup.IsOpen = false; };
                 win.Activated += (s, e) =>
                 {
-                    if (FaceOverlayPopup != null && IsFaceOverlayEnabled && Channel.IsConnected && FaceOverlayCanvas.Children.Count > 0 && IsVisible)
+                    if (FaceOverlayPopup != null && Channel.IsConnected && FaceOverlayCanvas.Children.Count > 0 && IsVisible)
                     {
                         FaceOverlayPopup.IsOpen = true;
                         RepositionOverlay();
@@ -708,6 +743,8 @@ namespace MehrganSurveillance.Controls
         public void HideFaceOverlayImmediate()
         {
             _overlayExpireTimer?.Stop();
+            _activeFaces.Clear();
+            _activePlateObs = null;
             FaceOverlayCanvas.Children.Clear();
             if (FaceOverlayPopup != null)
             {
@@ -782,8 +819,19 @@ namespace MehrganSurveillance.Controls
             IsFaceOverlayEnabled = isVisible;
             if (!isVisible)
             {
-                HideFaceOverlayImmediate();
+                _activeFaces.Clear();
             }
+            RedrawOverlayCanvas();
+        }
+
+        public void SetAnprOverlayVisible(bool isVisible)
+        {
+            IsAnprOverlayEnabled = isVisible;
+            if (!isVisible)
+            {
+                _activePlateObs = null;
+            }
+            RedrawOverlayCanvas();
         }
 
         public void UpdateFaceDetections(System.Collections.Generic.List<FaceBoundingBox> faces)
@@ -794,12 +842,47 @@ namespace MehrganSurveillance.Controls
                 return;
             }
 
+            _activeFaces.Clear();
+            if (IsFaceOverlayEnabled && faces != null && faces.Count > 0)
+            {
+                _activeFaces.AddRange(faces);
+                _facesExpiresUtc = DateTime.UtcNow.AddMilliseconds(1500);
+            }
+
+            RedrawOverlayCanvas();
+        }
+
+        public void UpdatePlateObservation(AnprLiveObservation? observation)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => UpdatePlateObservation(observation)));
+                return;
+            }
+
+            if (IsAnprOverlayEnabled && Channel.IsAnprEnabled && observation?.PlateBox != null)
+            {
+                _activePlateObs = observation;
+                _platesExpiresUtc = DateTime.UtcNow.AddMilliseconds(1800);
+            }
+            else
+            {
+                _activePlateObs = null;
+            }
+
+            RedrawOverlayCanvas();
+        }
+
+        private void RedrawOverlayCanvas()
+        {
             var win = Window.GetWindow(this);
             bool isWinActive = win != null && win.IsVisible && win.WindowState != WindowState.Minimized && win.IsActive && IsVisible;
 
-            if (!IsFaceOverlayEnabled || faces == null || faces.Count == 0 || !Channel.IsConnected || !isWinActive)
+            bool hasFaces = IsFaceOverlayEnabled && _activeFaces.Count > 0;
+            bool hasPlate = IsAnprOverlayEnabled && Channel.IsAnprEnabled && _activePlateObs?.PlateBox != null;
+
+            if (!Channel.IsConnected || !isWinActive || (!hasFaces && !hasPlate))
             {
-                _overlayExpireTimer?.Stop();
                 FaceOverlayCanvas.Children.Clear();
                 if (FaceOverlayPopup != null)
                 {
@@ -821,68 +904,148 @@ namespace MehrganSurveillance.Controls
 
             FaceOverlayCanvas.Children.Clear();
 
-            foreach (var face in faces)
+            // ۱. رسم کادرهای سبز چهره
+            if (hasFaces)
             {
-                // گسترش استاندارد کادر سبز روی تصویر زنده تا تمام سر، صورت و بخشی از سرشانه را دربرگیرد و خیلی کوچک نیفتد
-                double rawW = face.NormalizedWidth * canvasWidth;
-                double rawH = face.NormalizedHeight * canvasHeight;
-                double rawX = face.NormalizedX * canvasWidth;
-                double rawY = face.NormalizedY * canvasHeight;
-
-                double padX = Math.Max(rawW * 0.35, 16);
-                double padTop = Math.Max(rawH * 0.32, 14);
-                double padBottom = Math.Max(rawH * 0.45, 20);
-
-                double minBoxW = Math.Max(78, canvasWidth * 0.18);
-                double minBoxH = Math.Max(92, canvasHeight * 0.24);
-
-                double boxWidth = Math.Max(minBoxW, rawW + (padX * 2));
-                double boxHeight = Math.Max(minBoxH, rawH + padTop + padBottom);
-
-                double centerX = rawX + (rawW / 2.0);
-                double centerY = rawY + (rawH / 2.0) + (padBottom - padTop) * 0.25;
-
-                double left = Math.Clamp(centerX - (boxWidth / 2.0), 2, Math.Max(2, canvasWidth - boxWidth - 2));
-                double top = Math.Clamp(centerY - (boxHeight / 2.0), 2, Math.Max(2, canvasHeight - boxHeight - 2));
-
-                var rect = new System.Windows.Shapes.Rectangle
+                foreach (var face in _activeFaces)
                 {
-                    Width = boxWidth,
-                    Height = boxHeight,
-                    Stroke = new SolidColorBrush(Color.FromRgb(34, 197, 94)), // Vibrant Green (#22C55E)
-                    StrokeThickness = 2.5,
-                    Fill = new SolidColorBrush(Color.FromArgb(24, 34, 197, 94)),
-                    RadiusX = 4,
-                    RadiusY = 4
+                    double rawW = face.NormalizedWidth * canvasWidth;
+                    double rawH = face.NormalizedHeight * canvasHeight;
+                    double rawX = face.NormalizedX * canvasWidth;
+                    double rawY = face.NormalizedY * canvasHeight;
+
+                    double padX = Math.Max(rawW * 0.35, 16);
+                    double padTop = Math.Max(rawH * 0.32, 14);
+                    double padBottom = Math.Max(rawH * 0.45, 20);
+
+                    double minBoxW = Math.Max(78, canvasWidth * 0.18);
+                    double minBoxH = Math.Max(92, canvasHeight * 0.24);
+
+                    double boxWidth = Math.Max(minBoxW, rawW + (padX * 2));
+                    double boxHeight = Math.Max(minBoxH, rawH + padTop + padBottom);
+
+                    double centerX = rawX + (rawW / 2.0);
+                    double centerY = rawY + (rawH / 2.0) + (padBottom - padTop) * 0.25;
+
+                    double left = Math.Clamp(centerX - (boxWidth / 2.0), 2, Math.Max(2, canvasWidth - boxWidth - 2));
+                    double top = Math.Clamp(centerY - (boxHeight / 2.0), 2, Math.Max(2, canvasHeight - boxHeight - 2));
+
+                    var rect = new System.Windows.Shapes.Rectangle
+                    {
+                        Width = boxWidth,
+                        Height = boxHeight,
+                        Stroke = new SolidColorBrush(Color.FromRgb(34, 197, 94)),
+                        StrokeThickness = 2.5,
+                        Fill = new SolidColorBrush(Color.FromArgb(24, 34, 197, 94)),
+                        RadiusX = 4,
+                        RadiusY = 4
+                    };
+
+                    Canvas.SetLeft(rect, left);
+                    Canvas.SetTop(rect, top);
+                    FaceOverlayCanvas.Children.Add(rect);
+
+                    var labelBorder = new Border
+                    {
+                        Background = new SolidColorBrush(Color.FromArgb(230, 21, 128, 61)),
+                        CornerRadius = new CornerRadius(3),
+                        Padding = new Thickness(5, 1, 5, 1)
+                    };
+                    var labelText = new TextBlock
+                    {
+                        Text = $"👤 {Math.Round(face.Confidence * 100)}%",
+                        Foreground = Brushes.White,
+                        FontSize = 9.5,
+                        FontWeight = FontWeights.Bold
+                    };
+                    labelBorder.Child = labelText;
+                    Canvas.SetLeft(labelBorder, left);
+                    Canvas.SetTop(labelBorder, Math.Max(0, top - 20));
+                    FaceOverlayCanvas.Children.Add(labelBorder);
+                }
+            }
+
+            // ۲. رسم کادر خودرو و کادر پلاک زنده (ANPR Box)
+            if (hasPlate && _activePlateObs != null && _activePlateObs.PlateBox != null)
+            {
+                if (_activePlateObs.VehicleBox != null)
+                {
+                    var vb = _activePlateObs.VehicleBox;
+                    double vx = Math.Clamp(vb.X * canvasWidth, 2, canvasWidth - 10);
+                    double vy = Math.Clamp(vb.Y * canvasHeight, 2, canvasHeight - 10);
+                    double vw = Math.Clamp(vb.Width * canvasWidth, 12, canvasWidth - vx - 2);
+                    double vh = Math.Clamp(vb.Height * canvasHeight, 12, canvasHeight - vy - 2);
+
+                    var vehRect = new System.Windows.Shapes.Rectangle
+                    {
+                        Width = vw,
+                        Height = vh,
+                        Stroke = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                        StrokeThickness = 1.6,
+                        StrokeDashArray = new DoubleCollection { 4, 3 },
+                        Fill = Brushes.Transparent,
+                        RadiusX = 3,
+                        RadiusY = 3
+                    };
+                    Canvas.SetLeft(vehRect, vx);
+                    Canvas.SetTop(vehRect, vy);
+                    FaceOverlayCanvas.Children.Add(vehRect);
+                }
+
+                var pb = _activePlateObs.PlateBox;
+                double px = Math.Clamp(pb.X * canvasWidth, 2, canvasWidth - 14);
+                double py = Math.Clamp(pb.Y * canvasHeight, 2, canvasHeight - 10);
+                double pw = Math.Clamp(pb.Width * canvasWidth, 32, canvasWidth - px - 2);
+                double ph = Math.Clamp(pb.Height * canvasHeight, 14, canvasHeight - py - 2);
+
+                Color strokeCol = _activePlateObs.IsOcrVerified
+                    ? Color.FromRgb(16, 185, 129)
+                    : Color.FromRgb(245, 158, 11);
+
+                var plateRect = new System.Windows.Shapes.Rectangle
+                {
+                    Width = pw,
+                    Height = ph,
+                    Stroke = new SolidColorBrush(strokeCol),
+                    StrokeThickness = 2.6,
+                    Fill = new SolidColorBrush(Color.FromArgb(30, strokeCol.R, strokeCol.G, strokeCol.B)),
+                    RadiusX = 2,
+                    RadiusY = 2
                 };
+                Canvas.SetLeft(plateRect, px);
+                Canvas.SetTop(plateRect, py);
+                FaceOverlayCanvas.Children.Add(plateRect);
 
-                Canvas.SetLeft(rect, left);
-                Canvas.SetTop(rect, top);
-                FaceOverlayCanvas.Children.Add(rect);
+                string plateLabel = string.IsNullOrWhiteSpace(_activePlateObs.LabelText)
+                    ? $"🚗 پلاک {Math.Round(_activePlateObs.PlateConfidence * 100)}%"
+                    : $"🚗 {_activePlateObs.LabelText}";
 
-                // برچسب هوشمند درصد اطمینان و کادر چهره
-                var labelBorder = new Border
+                var plateBadge = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(230, 21, 128, 61)),
+                    Background = new SolidColorBrush(Color.FromArgb(235,
+                        _activePlateObs.IsOcrVerified ? (byte)5 : (byte)180,
+                        _activePlateObs.IsOcrVerified ? (byte)150 : (byte)83,
+                        _activePlateObs.IsOcrVerified ? (byte)105 : (byte)9)),
                     CornerRadius = new CornerRadius(3),
                     Padding = new Thickness(5, 1, 5, 1)
                 };
-                var labelText = new TextBlock
+                plateBadge.Child = new TextBlock
                 {
-                    Text = $"👤 {Math.Round(face.Confidence * 100)}%",
+                    Text = plateLabel,
                     Foreground = Brushes.White,
                     FontSize = 9.5,
                     FontWeight = FontWeights.Bold
                 };
-                labelBorder.Child = labelText;
-                Canvas.SetLeft(labelBorder, left);
-                Canvas.SetTop(labelBorder, Math.Max(0, top - 20));
-                FaceOverlayCanvas.Children.Add(labelBorder);
+                Canvas.SetLeft(plateBadge, px);
+                Canvas.SetTop(plateBadge, Math.Max(0, py - 21));
+                FaceOverlayCanvas.Children.Add(plateBadge);
             }
 
             FaceOverlayPopup.IsOpen = true;
-            _overlayExpireTimer?.Stop();
-            _overlayExpireTimer?.Start();
+            if (_overlayExpireTimer != null && !_overlayExpireTimer.IsEnabled)
+            {
+                _overlayExpireTimer.Start();
+            }
         }
 
         #endregion

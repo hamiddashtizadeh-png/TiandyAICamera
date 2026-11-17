@@ -8,6 +8,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using MehrganSurveillance.Models;
@@ -17,12 +19,20 @@ namespace MehrganSurveillance.Services;
 
 /// <summary>
 /// خط لوله هوش مصنوعی پلاک‌خوان هوشمند خودرو (ANPR Pipeline)
-/// مجهز به موتور هوشمند بهینه‌سازی تصویر (AI Image Optimization Engine)، پردازش دو مرحله‌ای:
-/// ۱. تشخیص خودرو و پلاک -> ۲. بهینه‌سازی چندنسخه‌ای و ارزیابی OCR روی بهترین فیلتر
-/// پشتیبانی از شتاب‌دهنده DirectML با بازگشت امن به CPU، کنترل بار صف و عدم ارسال به Cloud.
+/// سیاست سخت‌گیرانه عدم جعل داده: بدون تایید واقعی OCR هیچ پلاک تصادفی یا فرضی در دیتابیس ثبت نمی‌شود.
+/// در حین پایش زنده، رویداد کادر پلاک و تصویر زنده جهت نمایش روی دوربین و پنجره ANPR ارسال می‌گردد.
 /// </summary>
 public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
 {
+    // واژگان استاندارد کاراکترهای پلاک ملی ایران برای دیکودینگ خروجی CTC مدل‌های OCR
+    private static readonly string[] OcrVocabulary =
+    {
+        "", // CTC Blank (index 0)
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+        "الف", "ب", "پ", "ت", "ث", "ج", "د", "س", "ص", "ط",
+        "ع", "ق", "ل", "م", "ن", "و", "ه", "ی", "ژ", "ک", "ش", "ز"
+    };
+
     private readonly object _inferenceLock = new();
     private readonly AnprConfig _config;
     private readonly AiImageOptimizationEngine _imageOptimizer = new();
@@ -32,8 +42,10 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
     private readonly Channel<AcquiredFrame> _queue;
     private readonly CancellationTokenSource _cts = new();
 
-    // کش جلوگیری از ثبت مکرر پلاک‌های یکسان در فریم‌های متوالی (Deduplication Cache)
+    // کش جلوگیری از ثبت مکرر پلاک‌های یکسان در فریم‌های متوالی
     private readonly ConcurrentDictionary<string, DateTime> _recentDetections = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<int, DateTime> _lastPreviewEncodePerChannel = new();
+    private int _previewSubscriberCount;
 
     private InferenceSession? _detectorSession;
     private InferenceSession? _ocrSession;
@@ -42,7 +54,6 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
     private bool _isDisposed;
     private Task? _workerTask;
 
-    // شمارنده‌ها و تله‌متری
     private long _totalFramesProcessed;
     private long _totalPlatesDetected;
     private long _totalDuplicatesSuppressed;
@@ -60,6 +71,7 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
 
     public event Action<AnprResult>? PlateRecognized;
     public event Action<AnprResult, AcquiredFrame>? FramePlateRecognized;
+    public event Action<AnprLiveObservation>? LiveObservationAvailable;
     public event Action<string>? LogMessage;
 
     public AnprPipeline(AnprConfig? config = null, ExecutionProviderVerifier? epVerifier = null)
@@ -76,9 +88,13 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
         _queue = Channel.CreateBounded<AcquiredFrame>(queueOptions);
     }
 
-    /// <summary>
-    /// مقداردهی اولیه و بارگذاری مدل‌های ONNX (با ارزیابی دسترسی به وزن‌ها و اتصال DirectML / CPU و موتور بینایی ساختاری)
-    /// </summary>
+    public void RegisterPreviewSubscriber() => Interlocked.Increment(ref _previewSubscriberCount);
+    public void UnregisterPreviewSubscriber()
+    {
+        int val = Interlocked.Decrement(ref _previewSubscriberCount);
+        if (val < 0) Interlocked.Exchange(ref _previewSubscriberCount, 0);
+    }
+
     public bool Initialize(string? detectorPath = null, string? ocrPath = null)
     {
         lock (_inferenceLock)
@@ -103,7 +119,6 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
                 activeProvider = "CPU";
             }
 
-            // تلاش برای ساخت سشن در صورت وجود فایل‌های وزنی معتبر
             if (detExists)
             {
                 try
@@ -148,6 +163,14 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
                 }
             }
 
+            string statusMsg;
+            if (_detectorSession != null && _ocrSession != null)
+                statusMsg = $"آماده به کار با {activeProvider} (ONNX کامل)";
+            else if (_detectorSession != null)
+                statusMsg = $"دتکتور ONNX فعال ({activeProvider}) — فایل iranian-plate-ocr.onnx یافت نشد";
+            else
+                statusMsg = $"کادریاب زنده فعال ({activeProvider}) — بدون مدل ONNX OCR (عدم ثبت پلاک جعلی)";
+
             _modelStatus = new AnprModelStatus
             {
                 DetectorLoaded = _detectorSession != null,
@@ -155,9 +178,7 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
                 DetectorPath = detPath,
                 OcrPath = ocrPth,
                 ExecutionProvider = activeProvider,
-                StatusMessage = (_detectorSession != null && _ocrSession != null)
-                    ? $"آماده به کار با {activeProvider} (ONNX)"
-                    : $"فعال ({activeProvider} + موتور تحلیل کادر و کاراکتر پلاک ملی)"
+                StatusMessage = statusMsg
             };
 
             _isInitialized = true;
@@ -203,9 +224,6 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
         Log("خط لوله پلاک‌خوان غیرفعال شد.");
     }
 
-    /// <summary>
-    /// دریافت فریم از پایپ‌لاین دوربین (IFrameConsumer) با آزادسازی به موقع و خط‌مشی DropOldest
-    /// </summary>
     public ValueTask OnFrameAvailableAsync(AcquiredFrame frame, CancellationToken cancellationToken)
     {
         if (!_config.IsEnabled || !_isInitialized || _isDisposed)
@@ -214,7 +232,6 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
             return ValueTask.CompletedTask;
         }
 
-        // فیلتر دوربین‌های فعال در تنظیمات (در صورت وجود لیست گزینشی)
         if (_config.ActiveCameraIds.Count > 0 && !_config.ActiveCameraIds.Contains(frame.CameraId))
         {
             frame.Release();
@@ -223,7 +240,6 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
 
         if (!_queue.Writer.TryWrite(frame))
         {
-            // در زمان پر بودن صف فریم بدون نشت آزاد می‌شود
             frame.Release();
         }
 
@@ -246,12 +262,16 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
 
                     try
                     {
-                        var result = ProcessFrame(frame);
+                        var (result, observation) = ProcessFrameWithObservation(frame);
+                        if (observation != null)
+                        {
+                            LiveObservationAvailable?.Invoke(observation);
+                        }
+
                         if (result != null)
                         {
                             Interlocked.Increment(ref _totalFramesProcessed);
 
-                            // اعتبارسنجی تکراری نبودن (Deduplication)
                             string dedupKey = $"{frame.CameraId}:{result.Plate.CompactText}";
                             DateTime now = DateTime.UtcNow;
 
@@ -276,7 +296,6 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
                                 FramePlateRecognized?.Invoke(result, frame);
                             }
 
-                            // پاک‌سازی دوره‌ای کلیدهای منقضی شده
                             if (_recentDetections.Count > 100)
                             {
                                 PruneDeduplicationCache(now);
@@ -296,7 +315,6 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            // خروج عادی هنگام توقف
         }
     }
 
@@ -313,24 +331,66 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
     }
 
     /// <summary>
-    /// پردازش دو مرحله‌ای فریم: ابتدا تشخیص پلاک و سپس نویسه‌خوانی OCR
+    /// پردازش دو مرحله‌ای فریم: تنها در صورتی نتیجه نهایی بازمی‌گرداند که OCR واقعی پلاک معتبر را تایید کند
     /// </summary>
     public AnprResult? ProcessFrame(AcquiredFrame frame)
     {
-        if (frame == null || frame.IsDisposed) return null;
+        var (result, _) = ProcessFrameWithObservation(frame);
+        return result;
+    }
+
+    private (AnprResult? Result, AnprLiveObservation? Observation) ProcessFrameWithObservation(AcquiredFrame frame)
+    {
+        if (frame == null || frame.IsDisposed) return (null, null);
 
         var sw = Stopwatch.StartNew();
+        bool needPreviewJpeg = Volatile.Read(ref _previewSubscriberCount) > 0 && ShouldEncodePreview(frame.ChannelIndex);
+        byte[]? previewJpeg = needPreviewJpeg ? EncodeFramePreviewJpeg(frame) : null;
+
+        NormalizedBoundingBox? plateBox;
+        NormalizedBoundingBox? vehicleBox = null;
+        float detConf;
+        bool plateDetected;
 
         lock (_inferenceLock)
         {
-            // مرحله ۱: کشف خودرو و پلاک (Vehicle & Plate Detection)
-            var (plateDetected, plateBox, detConf) = DetectPlateInFrame(frame);
+            (plateDetected, plateBox, detConf) = DetectPlateInFrame(frame);
+
             if (!plateDetected || plateBox == null || detConf < _config.MinDetectionConfidence)
             {
-                return null;
+                var emptyObs = previewJpeg != null
+                    ? new AnprLiveObservation
+                    {
+                        CameraId = frame.CameraId,
+                        ChannelIndex = frame.ChannelIndex,
+                        TimestampUtc = frame.TimestampUtc,
+                        PreviewFrameJpeg = previewJpeg
+                    }
+                    : null;
+                return (null, emptyObs);
             }
 
-            // برش کاملاً ایزوله و مستقل کادر پلاک در حافظه جداگانه (حفاظت ۱۰۰٪ از فریم اصلی)
+            vehicleBox = BuildVehicleBoxFromPlate(plateBox);
+
+            // اگر مدل OCR بارگذاری نشده است، فقط کادر پلاک روی تصویر زنده نمایش داده می‌شود و هرگز پلاک جعلی ساخته نمی‌شود
+            if (_ocrSession == null)
+            {
+                var candidateObs = new AnprLiveObservation
+                {
+                    CameraId = frame.CameraId,
+                    ChannelIndex = frame.ChannelIndex,
+                    TimestampUtc = frame.TimestampUtc,
+                    PlateBox = plateBox,
+                    VehicleBox = vehicleBox,
+                    PlateConfidence = detConf,
+                    LabelText = "کادر پلاک (نیازمند مدل OCR)",
+                    IsOcrVerified = false,
+                    PreviewFrameJpeg = previewJpeg
+                };
+                return (null, candidateObs);
+            }
+
+            // برش کاملاً ایزوله کادر پلاک بدون دستکاری بافر اصلی
             int px = Math.Clamp((int)(plateBox.X * frame.Width), 0, frame.Width - 10);
             int py = Math.Clamp((int)(plateBox.Y * frame.Height), 0, frame.Height - 10);
             int pw = Math.Clamp((int)(plateBox.Width * frame.Width), 20, frame.Width - px);
@@ -339,8 +399,7 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
             byte[] rawCropBytes = ExtractCropBuffer(frame.PixelData.Span, frame.Width, frame.Height, frame.Stride, px, py, pw, ph);
             int cropStride = pw * 4;
 
-            // مرحله ۲: فعال‌سازی موتور هوشمند بهینه‌سازی تصویر (AI Image Optimization Engine)
-            // مقایسه نسخه‌ها (CLAHE, Denoise, Anti-Glare, De-blur) و استخراج باکیفیت‌ترین پلاک برای OCR
+            // اجرای موتور بهینه‌سازی تصویر همراه با OCR واقعی ONNX روی نامزدها
             var optResult = _imageOptimizer.OptimizePlateCropAsync(
                 frame.CameraId,
                 rawCropBytes,
@@ -356,18 +415,39 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
 
             if (!plate.IsValid || ocrConf < _config.MinOcrConfidence)
             {
-                return null;
+                var partialObs = new AnprLiveObservation
+                {
+                    CameraId = frame.CameraId,
+                    ChannelIndex = frame.ChannelIndex,
+                    TimestampUtc = frame.TimestampUtc,
+                    PlateBox = plateBox,
+                    VehicleBox = vehicleBox,
+                    PlateConfidence = detConf,
+                    LabelText = plate.ValidationStatus == AnprValidationStatus.Partial
+                        ? $"ناخوانا: {plate.CompactText}"
+                        : "کادر پلاک شناسایی شد",
+                    IsOcrVerified = false,
+                    PreviewFrameJpeg = previewJpeg
+                };
+                return (null, partialObs);
             }
-
-            var vehicleBox = new NormalizedBoundingBox(
-                Math.Clamp(plateBox.X - 0.16f, 0.02f, 0.70f),
-                Math.Clamp(plateBox.Y - 0.34f, 0.02f, 0.60f),
-                Math.Clamp(plateBox.Width + 0.32f, 0.25f, 0.96f - Math.Clamp(plateBox.X - 0.16f, 0.02f, 0.70f)),
-                Math.Clamp(plateBox.Height + 0.44f, 0.30f, 0.96f - Math.Clamp(plateBox.Y - 0.34f, 0.02f, 0.60f)));
 
             sw.Stop();
 
-            return new AnprResult
+            var verifiedObs = new AnprLiveObservation
+            {
+                CameraId = frame.CameraId,
+                ChannelIndex = frame.ChannelIndex,
+                TimestampUtc = frame.TimestampUtc,
+                PlateBox = plateBox,
+                VehicleBox = vehicleBox,
+                PlateConfidence = ocrConf,
+                LabelText = plate.NormalizedText,
+                IsOcrVerified = true,
+                PreviewFrameJpeg = previewJpeg
+            };
+
+            var res = new AnprResult
             {
                 EventId = Guid.NewGuid(),
                 CameraId = frame.CameraId,
@@ -383,27 +463,46 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
                 OptimizationMethod = optResult.WinningMethod,
                 OptimizationConfidenceGain = optResult.ConfidenceImprovementPercentage,
                 InferenceDurationMs = sw.Elapsed.TotalMilliseconds,
-                ModelInfo = _modelStatus.IsReady ? "YOLOv8-ANPR-IR (ONNX)" : $"Mehrgan-ANPR-Spatial ({_modelStatus.ExecutionProvider})",
+                ModelInfo = "YOLOv8-ANPR-IR (ONNX)",
                 ExecutionProvider = _modelStatus.ExecutionProvider
             };
+
+            return (res, verifiedObs);
         }
     }
 
+    private bool ShouldEncodePreview(int channelIndex)
+    {
+        var now = DateTime.UtcNow;
+        if (_lastPreviewEncodePerChannel.TryGetValue(channelIndex, out var last) &&
+            (now - last).TotalMilliseconds < 150)
+        {
+            return false;
+        }
+        _lastPreviewEncodePerChannel[channelIndex] = now;
+        return true;
+    }
+
+    private static NormalizedBoundingBox BuildVehicleBoxFromPlate(NormalizedBoundingBox plateBox)
+    {
+        float vx = Math.Clamp(plateBox.X - 0.16f, 0.02f, 0.70f);
+        float vy = Math.Clamp(plateBox.Y - 0.34f, 0.02f, 0.60f);
+        float vw = Math.Clamp(plateBox.Width + 0.32f, 0.25f, 0.96f - vx);
+        float vh = Math.Clamp(plateBox.Height + 0.44f, 0.30f, 0.96f - vy);
+        return new NormalizedBoundingBox(vx, vy, vw, vh);
+    }
+
     /// <summary>
-    /// تشخیص کادر پلاک در فریم (مرحله ۱: استنتاج واقعی ONNX یا سنجش سخت‌گیرانه مشخصات هندسی و اپتیکی پلاک ملی ایران)
+    /// تشخیص کادر پلاک در فریم (استنتاج واقعی YOLOv8 ONNX یا کادریاب هندسی-نوری پلاک ملی ایران)
     /// </summary>
     private (bool Detected, NormalizedBoundingBox? Box, float Confidence) DetectPlateInFrame(AcquiredFrame frame)
     {
         if (frame == null || frame.Width < 180 || frame.Height < 120) return (false, null, 0.0f);
 
-        // ۱. در صورت فعال بودن سشن مدل ONNX، اجرای استنتاج با بررسی خروجی‌ها
         if (_detectorSession != null)
         {
             try
             {
-                // پردازش استنتاج تنسور ورودی
-                // در صورتی که دتکتور باکسی با اطمینان بالاتر از حد آستانه پیدا نکند، قطعا false برمی‌گرداند
-                // هیچ باکسی بدون تایید واقعی مدل نباید برگردانده شود
                 return RunOnnxPlateDetector(frame);
             }
             catch (Exception ex)
@@ -412,11 +511,7 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
             }
         }
 
-        // ۲. اعتبارسنجی سخت‌گیرانه نوری و هندسی کادر پلاک ملی ایران (Optical & Geometric Plate Verification)
-        // ویژگی‌های ذاتی پلاک ایران:
-        // - نسبت عرض به ارتفاع دقیق (بین ۳.۸ تا ۵.۲)
-        // - نوار آبی سمت چپ (Blue Band) استاندارد با پرچم و I.R. IRAN
-        // - توزیع متناوب حروف و ارقام با کنتراست شدید سیاه/سفید
+        // کادریاب نوری و هندسی پلاک ایران (فقط برای رسم کادر زنده — هرگز پلاک جعلی تولید نمی‌کند)
         try
         {
             var span = frame.PixelData.Span;
@@ -424,7 +519,6 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
             int h = frame.Height;
             int stride = frame.Stride;
 
-            // جستجو صرفاً در نیمه پایینی و میانی تصویر که مسیر عبور خودروهاست
             const int cols = 12;
             const int rows = 8;
             int cellW = w / cols;
@@ -434,7 +528,7 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
             int bestR = -1, bestC = -1;
             bool blueBandConfirmed = false;
 
-            for (int r = 3; r < rows - 1; r++)
+            for (int r = 2; r < rows - 1; r++)
             {
                 int yStart = r * cellH;
                 int yEnd = Math.Min(h - 1, yStart + cellH);
@@ -442,7 +536,7 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
                 for (int c = 1; c < cols - 2; c++)
                 {
                     int xStart = c * cellW;
-                    int xEnd = Math.Min(w - 2, xStart + (cellW * 2)); // پلاک افقی و کشیده است
+                    int xEnd = Math.Min(w - 2, xStart + (cellW * 2));
 
                     int edgeTransitions = 0;
                     int brightPlatePixels = 0;
@@ -465,16 +559,15 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
 
                                 int lum = (rCol * 299 + g * 587 + b * 114) / 1000;
 
-                                // بررسی نوار آبی استاندارد سمت چپ پلاک ایران (Blue Band)
-                                if (x < xStart + (cellW / 3) && b > 110 && b > rCol + 35 && b > g + 20)
+                                if (x < xStart + (cellW / 3) && b > 105 && b > rCol + 30 && b > g + 16)
                                 {
                                     blueBandPixels++;
                                 }
 
-                                if (lum > 170) brightPlatePixels++;
-                                else if (lum < 60) darkCharPixels++;
+                                if (lum > 165) brightPlatePixels++;
+                                else if (lum < 65) darkCharPixels++;
 
-                                if (prevLum >= 0 && Math.Abs(lum - prevLum) > 65)
+                                if (prevLum >= 0 && Math.Abs(lum - prevLum) > 60)
                                 {
                                     edgeTransitions++;
                                 }
@@ -483,12 +576,7 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
                         }
                     }
 
-                    // شروط سخت‌گیرانه حضور پلاک خودرو:
-                    // ۱. وجود حداقل ۶۰ پیکسل روشن در کادر
-                    // ۲. وجود حداقل ۲۰ پیکسل تاریک متناظر با نویسه‌ها
-                    // ۳. تراکم لبه‌های عمودی شدید ناشی از کاراکترهای ۸‌گانه (حداقل ۹۵ ترنزیشن)
-                    // ۴. تایید نوار آبی اختصاصی پلاک ملی ایران
-                    if (brightPlatePixels > 75 && darkCharPixels > 25 && edgeTransitions >= 95 && blueBandPixels >= 4)
+                    if (brightPlatePixels > 65 && darkCharPixels > 22 && edgeTransitions >= 85 && blueBandPixels >= 4)
                     {
                         if (edgeTransitions > bestScore)
                         {
@@ -501,17 +589,16 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
                 }
             }
 
-            // فقط در صورتی که پلاک واقعی با نوار آبی و تراکم بالای حروف مشاهده شود تایید می‌گردد
-            if (bestScore >= 95 && blueBandConfirmed && bestR >= 0 && bestC >= 0)
+            if (bestScore >= 85 && blueBandConfirmed && bestR >= 0 && bestC >= 0)
             {
                 float normW = 0.22f;
-                float normH = 0.055f; // نسبت ابعاد ۴ به ۱ پلاک ملی
+                float normH = 0.058f;
                 float centerX = (bestC + 1.0f) / cols;
                 float centerY = (bestR + 0.5f) / rows;
 
                 float bx = Math.Clamp(centerX - (normW / 2f), 0.04f, 0.74f);
-                float by = Math.Clamp(centerY - (normH / 2f), 0.20f, 0.88f);
-                float conf = Math.Min(0.95f, 0.82f + (bestScore / 350f));
+                float by = Math.Clamp(centerY - (normH / 2f), 0.15f, 0.88f);
+                float conf = Math.Min(0.95f, 0.78f + (bestScore / 350f));
 
                 return (true, new NormalizedBoundingBox(bx, by, normW, normH), conf);
             }
@@ -520,93 +607,100 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
         {
         }
 
-        // اگر هیچ کادر معتبر پلاکی در فریم نبود، قطعا false بدون تولید داده کاذب
-        return (false, null, 0.0f);
-    }
-
-    private (bool Detected, NormalizedBoundingBox? Box, float Confidence) RunOnnxPlateDetector(AcquiredFrame frame)
-    {
-        // در صورت اجرای سشن ONNX، در صورتی که خروجی تنسور منفی باشد یا باکسی یافت نشود false بازمی‌گرداند
         return (false, null, 0.0f);
     }
 
     /// <summary>
-    /// نویسه‌خوانی متن پلاک از روی کادر استخراج‌شده (مرحله ۲)
-    /// بدون تولید پلاک‌های ساختگی یا تصادفی در صورت عدم وجود کادر معتبر
+    /// استنتاج واقعی YOLOv8 ONNX دتکتور پلاک خودرو
     /// </summary>
-    private (string RawText, float OcrConfidence) RunPlateOcr(AcquiredFrame frame, NormalizedBoundingBox plateBox)
+    private (bool Detected, NormalizedBoundingBox? Box, float Confidence) RunOnnxPlateDetector(AcquiredFrame frame)
     {
-        if (plateBox == null) return (string.Empty, 0.0f);
+        if (_detectorSession == null) return (false, null, 0.0f);
 
-        // ۱. استخراج از روی مدل نویسه‌خوانی در صورت مهیا بودن
-        if (_ocrSession != null)
+        var inputMeta = _detectorSession.InputMetadata.First();
+        var dims = inputMeta.Value.Dimensions;
+        int targetH = (dims.Length >= 4 && dims[2] > 0) ? dims[2] : 640;
+        int targetW = (dims.Length >= 4 && dims[3] > 0) ? dims[3] : 640;
+
+        var tensor = new DenseTensor<float>(new[] { 1, 3, targetH, targetW });
+        var src = frame.PixelData.Span;
+        float scaleX = (float)frame.Width / targetW;
+        float scaleY = (float)frame.Height / targetH;
+
+        for (int y = 0; y < targetH; y++)
         {
-            try
+            int sy = Math.Min(frame.Height - 1, (int)(y * scaleY));
+            int rOff = sy * frame.Stride;
+            for (int x = 0; x < targetW; x++)
             {
-                // فراخوانی استنتاج واقعی OCR
-                return (string.Empty, 0.0f);
-            }
-            catch (Exception ex)
-            {
-                Log($"خطا در اجرای مدل ONNX OCR: {ex.Message}");
-                return (string.Empty, 0.0f);
-            }
-        }
-
-        // ۲. استخراج کاراکترها صرفاً در صورت احراز مشخصات کامل ۸ کاراکتر پلاک
-        try
-        {
-            var span = frame.PixelData.Span;
-            int px = Math.Clamp((int)(plateBox.X * frame.Width), 0, frame.Width - 10);
-            int py = Math.Clamp((int)(plateBox.Y * frame.Height), 0, frame.Height - 10);
-            int pw = Math.Clamp((int)(plateBox.Width * frame.Width), 20, frame.Width - px);
-            int ph = Math.Clamp((int)(plateBox.Height * frame.Height), 8, frame.Height - py);
-
-            // سنجش تضاد نوری در ۸ شکاف کاراکتر پلاک (۲ رقم + حرف + ۳ رقم + کد ایران)
-            int validSlots = 0;
-            int slotWidth = pw / 8;
-
-            for (int s = 0; s < 8; s++)
-            {
-                int sx = px + (s * slotWidth);
-                int darkCount = 0;
-                int brightCount = 0;
-
-                for (int y = py + (ph / 4); y < py + (ph * 3 / 4); y += 2)
+                int sx = Math.Min(frame.Width - 1, (int)(x * scaleX));
+                int idx = rOff + (sx * 4);
+                if (idx + 2 < src.Length)
                 {
-                    int rowOff = y * frame.Stride;
-                    for (int x = sx + 2; x < sx + slotWidth - 2; x += 2)
-                    {
-                        int idx = rowOff + (x * 4);
-                        if (idx + 2 < span.Length)
-                        {
-                            int lum = (span[idx + 2] + span[idx + 1] + span[idx]) / 3;
-                            if (lum < 75) darkCount++;
-                            else if (lum > 165) brightCount++;
-                        }
-                    }
-                }
-
-                if (darkCount >= 2 && brightCount >= 3)
-                {
-                    validSlots++;
+                    tensor[0, 0, y, x] = src[idx + 2] / 255.0f; // R
+                    tensor[0, 1, y, x] = src[idx + 1] / 255.0f; // G
+                    tensor[0, 2, y, x] = src[idx] / 255.0f;     // B
                 }
             }
+        }
 
-            // پلاک ایران باید حداقل در ۶ تا از ۸ موقعیت دارای ترنزیشن تیره/روشن جوهر باشد
-            if (validSlots < 6)
+        var inputs = new List<NamedOnnxValue>
+        {
+            NamedOnnxValue.CreateFromTensor(inputMeta.Key, tensor)
+        };
+
+        using var outputs = _detectorSession.Run(inputs);
+        var outTensor = outputs.FirstOrDefault()?.AsTensor<float>();
+        if (outTensor == null || outTensor.Dimensions.Length < 3) return (false, null, 0.0f);
+
+        int d1 = outTensor.Dimensions[1];
+        int d2 = outTensor.Dimensions[2];
+
+        float bestConf = 0.0f;
+        NormalizedBoundingBox? bestBox = null;
+
+        // فرمت استاندارد YOLOv8: [1, 4+C, N] یا [1, N, 4+C]
+        bool channelFirst = d1 < d2 && d1 >= 5;
+        int numBoxes = channelFirst ? d2 : d1;
+        int numAttrs = channelFirst ? d1 : d2;
+        if (numAttrs < 5) return (false, null, 0.0f);
+
+        for (int i = 0; i < numBoxes; i++)
+        {
+            float maxClassConf = 0.0f;
+            for (int c = 4; c < numAttrs; c++)
             {
-                // پلاک ناقص است و ثبت نمی‌شود
-                return (string.Empty, 0.0f);
+                float sc = channelFirst ? outTensor[0, c, i] : outTensor[0, i, c];
+                if (sc > maxClassConf) maxClassConf = sc;
             }
 
-            // اگر کاراکترها تایید شدند، کد ساختاری پلاک بازگردانده می‌شود
-            return ("12ب345-67", 0.91f);
+            if (maxClassConf >= _config.MinDetectionConfidence && maxClassConf > bestConf)
+            {
+                float cx = channelFirst ? outTensor[0, 0, i] : outTensor[0, i, 0];
+                float cy = channelFirst ? outTensor[0, 1, i] : outTensor[0, i, 1];
+                float bw = channelFirst ? outTensor[0, 2, i] : outTensor[0, i, 2];
+                float bh = channelFirst ? outTensor[0, 3, i] : outTensor[0, i, 3];
+
+                // نرمال‌سازی در صورتی که خروجی بر حسب پیکسل ورودی 640 باشد
+                if (cx > 1.5f || bw > 1.5f)
+                {
+                    cx /= targetW;
+                    cy /= targetH;
+                    bw /= targetW;
+                    bh /= targetH;
+                }
+
+                float nx = Math.Clamp(cx - (bw / 2f), 0.0f, 0.98f);
+                float ny = Math.Clamp(cy - (bh / 2f), 0.0f, 0.98f);
+                float nw = Math.Clamp(bw, 0.02f, 1.0f - nx);
+                float nh = Math.Clamp(bh, 0.02f, 1.0f - ny);
+
+                bestConf = maxClassConf;
+                bestBox = new NormalizedBoundingBox(nx, ny, nw, nh);
+            }
         }
-        catch
-        {
-            return (string.Empty, 0.0f);
-        }
+
+        return bestBox != null ? (true, bestBox, bestConf) : (false, null, 0.0f);
     }
 
     /// <summary>
@@ -629,55 +723,145 @@ public sealed class AnprPipeline : IFrameConsumer, IAsyncDisposable
     }
 
     /// <summary>
-    /// ارزیابی ساختاری و نوری متن پلاک بر روی یک بافر دلخواه (جهت سنجش نامزدهای فیلترشده در موتور بهینه‌ساز)
+    /// ارزیابی واقعی متن پلاک از روی بافر برش‌خورده با مدل ONNX OCR
+    /// در نبود مدل OCR هرگز پلاک جعلی تولید نمی‌کند و خروجی نامعتبر برمی‌گرداند.
     /// </summary>
     public (string RawText, float Confidence, IranianPlate Plate) EvaluateOcrOnBuffer(byte[] cropBuffer, int w, int h, int stride)
     {
-        if (cropBuffer == null || w < 16 || h < 6)
+        if (cropBuffer == null || w < 16 || h < 6 || _ocrSession == null)
         {
             return (string.Empty, 0.0f, IranianPlate.CreateInvalid(string.Empty));
         }
 
-        int validSlots = 0;
-        int slotWidth = w / 8;
-        var span = cropBuffer.AsSpan();
-
-        for (int s = 0; s < 8; s++)
+        try
         {
-            int sx = s * slotWidth;
-            int darkCount = 0;
-            int brightCount = 0;
+            int bpp = Math.Clamp(stride / Math.Max(1, w), 3, 4);
+            var inputMeta = _ocrSession.InputMetadata.First();
+            var dims = inputMeta.Value.Dimensions;
+            int inChannels = (dims.Length >= 4 && dims[1] > 0) ? dims[1] : 1;
+            int inH = (dims.Length >= 4 && dims[2] > 0) ? dims[2] : 40;
+            int inW = (dims.Length >= 4 && dims[3] > 0) ? dims[3] : 160;
 
-            for (int y = h / 4; y < h * 3 / 4; y += 2)
+            var tensor = new DenseTensor<float>(new[] { 1, inChannels, inH, inW });
+            float scaleX = (float)w / inW;
+            float scaleY = (float)h / inH;
+
+            for (int y = 0; y < inH; y++)
             {
-                int rowOff = y * stride;
-                for (int x = sx + 2; x < sx + slotWidth - 2; x += 2)
+                int sy = Math.Min(h - 1, (int)(y * scaleY));
+                int rOff = sy * stride;
+                for (int x = 0; x < inW; x++)
                 {
-                    int idx = rowOff + (x * 4);
-                    if (idx + 2 < span.Length)
+                    int sx = Math.Min(w - 1, (int)(x * scaleX));
+                    int idx = rOff + (sx * bpp);
+                    if (idx + 2 < cropBuffer.Length)
                     {
-                        int lum = (span[idx + 2] + span[idx + 1] + span[idx]) / 3;
-                        if (lum < 80) darkCount++;
-                        else if (lum > 160) brightCount++;
+                        byte b = cropBuffer[idx];
+                        byte g = cropBuffer[idx + 1];
+                        byte r = cropBuffer[idx + 2];
+
+                        if (inChannels == 1)
+                        {
+                            float gray = (0.299f * r + 0.587f * g + 0.114f * b) / 255.0f;
+                            tensor[0, 0, y, x] = gray;
+                        }
+                        else
+                        {
+                            tensor[0, 0, y, x] = r / 255.0f;
+                            tensor[0, 1, y, x] = g / 255.0f;
+                            tensor[0, 2, y, x] = b / 255.0f;
+                        }
                     }
                 }
             }
 
-            if (darkCount >= 2 && brightCount >= 2)
+            var inputs = new List<NamedOnnxValue>
             {
-                validSlots++;
-            }
-        }
+                NamedOnnxValue.CreateFromTensor(inputMeta.Key, tensor)
+            };
 
-        if (validSlots < 5)
+            using var outputs = _ocrSession.Run(inputs);
+            var logits = outputs.FirstOrDefault()?.AsTensor<float>();
+            if (logits == null || logits.Dimensions.Length < 3)
+            {
+                return (string.Empty, 0.0f, IranianPlate.CreateInvalid(string.Empty));
+            }
+
+            // پشتیبانی از شکل [1, T, C] یا [T, 1, C]
+            bool batchFirst = logits.Dimensions[0] == 1;
+            int timeSteps = batchFirst ? logits.Dimensions[1] : logits.Dimensions[0];
+            int vocabCount = Math.Min(logits.Dimensions[2], OcrVocabulary.Length);
+
+            var sb = new System.Text.StringBuilder();
+            int prevClass = -1;
+            float probSum = 0f;
+            int charCount = 0;
+
+            for (int t = 0; t < timeSteps; t++)
+            {
+                int bestClass = 0;
+                float maxLogit = float.MinValue;
+
+                for (int c = 0; c < vocabCount; c++)
+                {
+                    float val = batchFirst ? logits[0, t, c] : logits[t, 0, c];
+                    if (val > maxLogit)
+                    {
+                        maxLogit = val;
+                        bestClass = c;
+                    }
+                }
+
+                // Softmax approximation for confidence of winning timestep
+                double expSum = 0;
+                for (int c = 0; c < vocabCount; c++)
+                {
+                    float val = batchFirst ? logits[0, t, c] : logits[t, 0, c];
+                    expSum += Math.Exp(val - maxLogit);
+                }
+                float prob = (float)(1.0 / expSum);
+
+                if (bestClass != 0 && bestClass != prevClass)
+                {
+                    sb.Append(OcrVocabulary[bestClass]);
+                    probSum += prob;
+                    charCount++;
+                }
+                prevClass = bestClass;
+            }
+
+            string rawText = sb.ToString().Trim();
+            float avgConf = charCount > 0 ? Math.Clamp(probSum / charCount, 0.0f, 1.0f) : 0.0f;
+            var plate = IranianPlateNormalizer.ParseAndNormalize(rawText, avgConf);
+            return (rawText, avgConf, plate);
+        }
+        catch (Exception ex)
         {
+            Log($"خطا در اجرای OCR: {ex.Message}");
             return (string.Empty, 0.0f, IranianPlate.CreateInvalid(string.Empty));
         }
+    }
 
-        float conf = Math.Min(0.96f, 0.65f + (validSlots * 0.04f));
-        string rawText = "12ب345-67";
-        var plate = IranianPlateNormalizer.ParseAndNormalize(rawText, conf);
-        return (rawText, conf, plate);
+    private static byte[]? EncodeFramePreviewJpeg(AcquiredFrame frame)
+    {
+        try
+        {
+            int w = frame.Width;
+            int h = frame.Height;
+            if (w <= 0 || h <= 0) return null;
+
+            byte[] copy = frame.PixelData.ToArray();
+            var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, copy, frame.Stride);
+            var enc = new JpegBitmapEncoder { QualityLevel = 72 };
+            enc.Frames.Add(BitmapFrame.Create(bmp));
+            using var ms = new MemoryStream();
+            enc.Save(ms);
+            return ms.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>

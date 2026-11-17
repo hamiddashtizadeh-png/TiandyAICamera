@@ -15,8 +15,8 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <!-- ۱. نوار ابزار فوقانی سبک NetVideo VMS (52px) -->
-            <RowDefinition Height="52" />
+            <!-- ۱. نوار ابزار فوقانی دو ردیفه سبک NetVideo VMS (بدون تداخل یا رفتن زیر هم تب‌ها) -->
+            <RowDefinition Height="Auto" />
             <!-- ۲. فضای کاری اصلی (صفحه اصلی کاشی‌های NetVideo یا نمای پایش زنده) -->
             <RowDefinition Height="*" />
             <!-- ۳. نوار تایم‌لاین پخش و کنترل‌های فشرده پایینی -->
@@ -28,23 +28,24 @@
         <!-- ================================================================= -->
         <Border Grid.Row="0"
                 Background="#11151E"
-                Padding="14,0"
                 BorderBrush="#252D3D"
                 BorderThickness="0,0,0,1">
-            <Grid VerticalAlignment="Stretch">
-                <Grid.ColumnDefinitions>
-                    <!-- برند مهرگان / NetVideo و تب‌های اصلی (Home page, Live View, ...) -->
-                    <ColumnDefinition Width="Auto" />
-                    <!-- کنترل‌های چیدمان ماتریسی ۱x۱, ۲x۲, ۳x۳ و عملیات گروهی استریم -->
-                    <ColumnDefinition Width="*" />
-                    <!-- وضعیت لاگین، موتور TCP و ساعت زنده -->
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <!-- ستون راست: لوگو NetVideo / مهرگان و تب‌های ناوبری سبک NetVideo -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Stretch">
+                <!-- ردیف اول هدر: برند برنامه، چیدمان ماتریسی، کنترل پخش و ساعت زنده -->
+                <Grid Grid.Row="0" Margin="14,6,14,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
                     <!-- برندینگ آبی درخشان سبک NetVideo -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Width="30" Height="30"
                                 Background="#1A73E8"
                                 CornerRadius="6"
@@ -71,8 +72,136 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- تب‌های ناوبری سقف برنامه دقیقاً مشابه هدر NetVideo -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch">
+                    <!-- ستون وسط: سوئیچرهای ماتریسی ۱x۱، ۲x۲، ۳x۳، سوئیچ پلاک‌خوان و عملیات گروهی استریم -->
+                    <StackPanel x:Name="LiveToolbarControls"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <!-- انتخابگر ماتریس چیدمان -->
+                        <Border Background="#181E2C"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="2"
+                                Margin="0,0,10,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="Layout1x1Button"
+                                        Content="⊞ ۱×۱"
+                                        ToolTip="چیدمان تک‌تصویر با رزولوشن کامل (/1/1)"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Background="Transparent"
+                                        Foreground="#E2E8F0"
+                                        BorderThickness="0"
+                                        Padding="10,2"
+                                        Height="26"
+                                        FontSize="10.5"
+                                        Margin="0,0,2,0"
+                                        Click="Layout1x1Button_Click" />
+
+                                <Button x:Name="Layout2x2Button"
+                                        Content="⊞ ۲×۲"
+                                        ToolTip="چیدمان ۴ تصویر با استریم فرعی بهینه (/1/2)"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        Padding="12,2"
+                                        Height="26"
+                                        FontSize="10.5"
+                                        Margin="0,0,2,0"
+                                        Click="Layout2x2Button_Click" />
+
+                                <Button x:Name="Layout3x3Button"
+                                        Content="⊞ ۳×۳"
+                                        ToolTip="چیدمان ۹ تصویر با استریم فرعی (/1/2)"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Background="Transparent"
+                                        Foreground="#E2E8F0"
+                                        BorderThickness="0"
+                                        Padding="10,2"
+                                        Height="26"
+                                        FontSize="10.5"
+                                        Click="Layout3x3Button_Click" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- عملیات همگانی استریم‌ها -->
+                        <Button x:Name="ConnectAllButton"
+                                Content="▶ اتصال همه"
+                                ToolTip="برقراری اتصال همزمان کلیه استریم‌های فعال در چیدمان جاری"
+                                Style="{StaticResource SuccessButtonStyle}"
+                                Height="28"
+                                Padding="12,0"
+                                FontSize="10.5"
+                                Margin="0,0,6,0"
+                                Click="ConnectAllButton_Click" />
+
+                        <Button x:Name="DisconnectAllButton"
+                                Content="⏹ قطع همه"
+                                ToolTip="قطع فوری کلیه استریم‌ها جهت آزادسازی منابع شبکه و گرافیک"
+                                Style="{StaticResource DangerButtonStyle}"
+                                Height="28"
+                                Padding="10,0"
+                                FontSize="10.5"
+                                Margin="0,0,10,0"
+                                Click="DisconnectAllButton_Click" />
+
+                        <Border Background="#181E2C"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="8,3"
+                                VerticalAlignment="Center">
+                            <CheckBox x:Name="MasterAnprToggle"
+                                      Content="🚗 پلاک‌خوان زنده (ANPR)"
+                                      IsChecked="True"
+                                      Foreground="#FBBF24"
+                                      FontSize="10.5"
+                                      FontWeight="Bold"
+                                      VerticalAlignment="Center"
+                                      Click="MasterAnprToggle_Click" />
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ستون چپ: نشانگر موتور LibVLC TCP و ساعت دیجیتال -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#1B2232"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="8,3"
+                                Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse x:Name="EngineStatusDot" Width="7" Height="7" Fill="#10B981" Margin="0,0,5,0" />
+                                <TextBlock x:Name="EngineStatusText"
+                                           Text="موتور فعال (TCP)"
+                                           FontSize="9.5"
+                                           Foreground="#CBD5E1"
+                                           FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#181E2C"
+                                BorderBrush="#2C3548"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="9,3">
+                            <TextBlock x:Name="LiveClockText"
+                                       Text="--:--:--"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       FontFamily="JetBrains Mono, Consolas"
+                                       Foreground="#38BDF8"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- ردیف دوم هدر: نوار تب‌های ناوبری با WrapPanel (نمایش کامل تمام منوها بدون تداخل) -->
+                <Border Grid.Row="1"
+                        Background="#0D121B"
+                        BorderBrush="#1E273A"
+                        BorderThickness="0,1,0,0"
+                        Padding="10,2">
+                    <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- تب ۱: صفحه اصلی (Home page) -->
                         <Button x:Name="HomeNavTabButton"
                                 ToolTip="صفحه اصلی و میزکار ماژول‌های نظارتی (Home page)"
@@ -80,11 +209,13 @@
                                 Background="Transparent"
                                 BorderBrush="Transparent"
                                 BorderThickness="0,0,0,2"
-                                Padding="16,0"
+                                Height="34"
+                                Padding="12,0"
+                                Margin="0,1,2,1"
                                 Click="HomeNavTabButton_Click">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="🏠" FontSize="12" Margin="0,0,5,0" VerticalAlignment="Center" />
-                                <TextBlock x:Name="HomeNavTabText" Text="صفحه اصلی (Home page)" FontSize="11.5" FontWeight="Bold" Foreground="#CBD5E1" VerticalAlignment="Center" />
+                                <TextBlock x:Name="HomeNavTabText" Text="صفحه اصلی (Home)" FontSize="11" FontWeight="Bold" Foreground="#CBD5E1" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
 
@@ -95,172 +226,90 @@
                                 Background="#1C273C"
                                 BorderBrush="#2563EB"
                                 BorderThickness="0,0,0,2"
-                                Padding="16,0"
+                                Height="34"
+                                Padding="12,0"
+                                Margin="0,1,2,1"
                                 Click="LiveViewNavTabButton_Click">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="⊞" FontSize="13" Foreground="#60A5FA" Margin="0,0,5,0" VerticalAlignment="Center" />
-                                <TextBlock x:Name="LiveViewNavTabText" Text="پایش زنده (Live View)" FontSize="11.5" FontWeight="Bold" Foreground="#60A5FA" VerticalAlignment="Center" />
+                                <TextBlock x:Name="LiveViewNavTabText" Text="پایش زنده (Live View)" FontSize="11" FontWeight="Bold" Foreground="#60A5FA" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
 
                         <!-- تب ۳: مدیریت تجهیزات (Device management / ONVIF) -->
                         <Button Content="📹 مدیریت تجهیزات (ONVIF)"
-                                ToolTip="کشف و مدیریت دوربین‌های شبکه محلی (Device management)"
+                                ToolTip="کشف و مدیریت دوربین‌های شبکه محلی"
                                 Style="{StaticResource NavTabButtonStyle}"
-                                Padding="14,0"
+                                Height="34"
+                                Padding="11,0"
+                                Margin="0,1,2,1"
                                 FontSize="11"
                                 Click="OpenDiscoveryWindow_Click" />
 
                         <!-- تب ۴: تشخیص چهره (Face recognition) -->
                         <Button Content="👤 تشخیص و آرشیو چهره"
-                                ToolTip="مشاهده، جستجو و مدیریت آرشیو محلی چهره‌ها (Face recognition)"
+                                ToolTip="مشاهده، جستجو و مدیریت آرشیو محلی چهره‌ها"
                                 Style="{StaticResource NavTabButtonStyle}"
-                                Padding="14,0"
+                                Height="34"
+                                Padding="11,0"
+                                Margin="0,1,2,1"
                                 FontSize="11"
                                 Click="OpenFaceArchiveWindow_Click" />
 
-                        <!-- تب ۵: پلاک‌خوان خودرو (Vehicle management / ANPR) -->
-                        <Button Content="🚗 مدیریت خودرو و پلاک (ANPR)"
-                                ToolTip="پلاک‌خوان هوشمند خودرو و جستجوی پلاک‌های ملی ایران"
+                        <!-- تب ۵: پلاک‌خوان خودرو (ANPR) -->
+                        <Button Content="🚗 پلاک‌خوان هوشمند (ANPR)"
+                                ToolTip="پلاک‌خوان هوشمند خودرو و مشاهده تصویر زنده پلاک"
                                 Style="{StaticResource NavTabButtonStyle}"
-                                Padding="14,0"
+                                Height="34"
+                                Padding="11,0"
+                                Margin="0,1,2,1"
                                 FontSize="11"
                                 Click="OpenAnprWindow_Click" />
 
-                        <!-- تب ۶: بهینه‌ساز هوشمند دوربین (Camera Optimizer) -->
-                        <Button Content="⚙️ بهینه‌ساز تنظیمات دوربین"
+                        <!-- تب ۶: بهینه‌ساز تنظیمات دوربین -->
+                        <Button Content="⚙️ بهینه‌ساز دوربین"
                                 ToolTip="بهینه‌سازی شاتر، نوردهی، گین و HLC دوربین در شب و روز"
                                 Style="{StaticResource NavTabButtonStyle}"
-                                Padding="12,0"
+                                Height="34"
+                                Padding="11,0"
+                                Margin="0,1,2,1"
                                 FontSize="11"
                                 Click="OpenCameraOptimizerWindow_Click" />
 
-                        <!-- تب ۷: بهینه‌ساز هوشمند تصویر پلاک (AI Image Optimizer Engine) -->
+                        <!-- تب ۷: بهینه‌ساز هوشمند تصویر پلاک -->
                         <Button Content="✨ بهینه‌ساز تصویر پلاک"
-                                ToolTip="موتور هوشمند پردازش تصویر محلی و ارتقای دقت پلاک‌خوان (CLAHE, Denoise, Sharpen) بدون تغییر تنظیمات دوربین"
+                                ToolTip="موتور هوشمند پردازش تصویر محلی و ارتقای دقت پلاک‌خوان"
                                 Style="{StaticResource NavTabButtonStyle}"
-                                Padding="12,0"
+                                Height="34"
+                                Padding="11,0"
+                                Margin="0,1,2,1"
                                 FontSize="11"
                                 Click="OpenImageOptimizerWindow_Click" />
 
-                        <!-- تب ۷: پنل زنده چهره‌ها -->
+                        <!-- تب ۸: تنظیمات اعلان واتس‌اپ / تلگرام / پیامک -->
+                        <Button x:Name="NotificationNavTabButton"
+                                Content="🔔 اعلان (واتس‌اپ / SMS)"
+                                ToolTip="پیکربندی ارسال خودکار هشدارهای پلاک و چهره از طریق WhatsApp، Telegram و پیامک SMS"
+                                Style="{StaticResource NavTabButtonStyle}"
+                                Foreground="#34D399"
+                                Height="34"
+                                Padding="11,0"
+                                Margin="0,1,2,1"
+                                FontSize="11"
+                                Click="OpenNotificationSettingsWindow_Click" />
+
+                        <!-- تب ۹: پنل زنده چهره‌ها -->
                         <Button x:Name="ToggleLiveFacePanelButton"
                                 Content="🪪 پنل چهره زنده"
                                 ToolTip="باز / بسته کردن پنل جانبی نمایش چهره‌های شناسایی‌شده لحظه‌ای"
                                 Style="{StaticResource NavTabButtonStyle}"
-                                Padding="12,0"
+                                Height="34"
+                                Padding="11,0"
+                                Margin="0,1,2,1"
                                 FontSize="11"
                                 Click="ToggleLiveFacePanelButton_Click" />
-                    </StackPanel>
-                </StackPanel>
-
-                <!-- ستون وسط: سوئیچرهای ماتریسی ۱x۱، ۲x۲، ۳x۳ و عملیات گروهی (فقط در نمای زنده کاربردی است) -->
-                <StackPanel x:Name="LiveToolbarControls"
-                            Grid.Column="1"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <!-- انتخابگر ماتریس چیدمان -->
-                    <Border Background="#181E2C"
-                            BorderBrush="#2C3548"
-                            BorderThickness="1"
-                            CornerRadius="5"
-                            Padding="2"
-                            Margin="0,0,10,0">
-                        <StackPanel Orientation="Horizontal">
-                            <Button x:Name="Layout1x1Button"
-                                    Content="⊞ ۱×۱"
-                                    ToolTip="چیدمان تک‌تصویر با رزولوشن کامل (/1/1)"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Background="Transparent"
-                                    Foreground="#E2E8F0"
-                                    BorderThickness="0"
-                                    Padding="10,2"
-                                    Height="26"
-                                    FontSize="10.5"
-                                    Margin="0,0,2,0"
-                                    Click="Layout1x1Button_Click" />
-
-                            <Button x:Name="Layout2x2Button"
-                                    Content="⊞ ۲×۲"
-                                    ToolTip="چیدمان ۴ تصویر با استریم فرعی بهینه (/1/2)"
-                                    Style="{StaticResource PrimaryButtonStyle}"
-                                    Padding="12,2"
-                                    Height="26"
-                                    FontSize="10.5"
-                                    Margin="0,0,2,0"
-                                    Click="Layout2x2Button_Click" />
-
-                            <Button x:Name="Layout3x3Button"
-                                    Content="⊞ ۳×۳"
-                                    ToolTip="چیدمان ۹ تصویر با استریم فرعی (/1/2)"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Background="Transparent"
-                                    Foreground="#E2E8F0"
-                                    BorderThickness="0"
-                                    Padding="10,2"
-                                    Height="26"
-                                    FontSize="10.5"
-                                    Click="Layout3x3Button_Click" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- عملیات همگانی استریم‌ها -->
-                    <Button x:Name="ConnectAllButton"
-                            Content="▶ اتصال همه"
-                            ToolTip="برقراری اتصال همزمان کلیه استریم‌های فعال در چیدمان جاری"
-                            Style="{StaticResource SuccessButtonStyle}"
-                            Height="28"
-                            Padding="12,0"
-                            FontSize="10.5"
-                            Margin="0,0,6,0"
-                            Click="ConnectAllButton_Click" />
-
-                    <Button x:Name="DisconnectAllButton"
-                            Content="⏹ قطع همه"
-                            ToolTip="قطع فوری کلیه استریم‌ها جهت آزادسازی منابع شبکه و گرافیک"
-                            Style="{StaticResource DangerButtonStyle}"
-                            Height="28"
-                            Padding="10,0"
-                            FontSize="10.5"
-                            Margin="0,0,8,0"
-                            Click="DisconnectAllButton_Click" />
-                </StackPanel>
-
-                <!-- ستون چپ: نشانگر موتور LibVLC TCP، وضعیت ادمین و ساعت دیجیتال -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- نشانگر کاربر/سیستم مشابه گوشه بالای راست NetVideo -->
-                    <Border Background="#1B2232"
-                            BorderBrush="#2C3548"
-                            BorderThickness="1"
-                            CornerRadius="12"
-                            Padding="8,3"
-                            Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="EngineStatusDot" Width="7" Height="7" Fill="#10B981" Margin="0,0,5,0" />
-                            <TextBlock x:Name="EngineStatusText"
-                                       Text="موتور فعال (TCP)"
-                                       FontSize="9.5"
-                                       Foreground="#CBD5E1"
-                                       FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- ساعت زنده مانیتورینگ -->
-                    <Border Background="#181E2C"
-                            BorderBrush="#2C3548"
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Padding="9,3">
-                        <TextBlock x:Name="LiveClockText"
-                                   Text="--:--:--"
-                                   FontSize="12"
-                                   FontWeight="Bold"
-                                   FontFamily="JetBrains Mono, Consolas"
-                                   Foreground="#38BDF8"
-                                   VerticalAlignment="Center" />
-                    </Border>
-                </StackPanel>
+                    </WrapPanel>
+                </Border>
             </Grid>
         </Border>
 
@@ -537,11 +586,11 @@
                                     </StackPanel>
                                 </Button>
 
-                                <!-- ۳. Alarm configuration -->
-                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenAlarmManagementTile_Click">
+                                <!-- ۳. Alarm & WhatsApp/SMS Notification configuration -->
+                                <Button Style="{StaticResource NetVideoBasicFuncButtonStyle}" Click="OpenNotificationSettingsWindow_Click">
                                     <StackPanel HorizontalAlignment="Center">
                                         <Border Width="52" Height="52" CornerRadius="12" Background="#F97316" Margin="0,0,0,8">
-                                            <TextBlock Text="🚨" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <TextBlock Text="🔔" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <TextBlock Text="تنظیمات هشدار" FontSize="10.5" Foreground="#E2E8F0" TextAlignment="Center" />
                                     </StackPanel>

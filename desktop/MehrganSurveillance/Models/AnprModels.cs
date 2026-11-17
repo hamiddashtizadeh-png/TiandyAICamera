@@ -172,3 +172,19 @@ public static class IranianPlateParser
         return Services.IranianPlateNormalizer.ParseAndNormalize(rawText, confidence);
     }
 }
+
+/// <summary>
+/// مشاهده زنده فریم و کادر پلاک خودرو (برای رسم کادر روی تصویر زنده و مانیتورینگ پنجره ANPR بدون ثبت پلاک فرضی)
+/// </summary>
+public sealed record AnprLiveObservation
+{
+    public string CameraId { get; init; } = string.Empty;
+    public int ChannelIndex { get; init; }
+    public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
+    public NormalizedBoundingBox? PlateBox { get; init; }
+    public NormalizedBoundingBox? VehicleBox { get; init; }
+    public float PlateConfidence { get; init; }
+    public string LabelText { get; init; } = string.Empty;
+    public bool IsOcrVerified { get; init; }
+    public byte[]? PreviewFrameJpeg { get; init; }
+}

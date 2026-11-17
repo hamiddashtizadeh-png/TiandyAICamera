@@ -200,6 +200,92 @@ public sealed class FaceArchiveService : IAsyncDisposable, IDisposable
         }
     }
 
+    /// <summary>
+    /// ذخیره‌سازی دقیقاً «یک بهترین شات» حاصل از ترک کامل شخص (از لحظه ورود تا خروج از تصویر)
+    /// و بازگرداندن بایت‌های JPEG جهت استفاده در اطلاع‌رسانی یا پنل زنده
+    /// </summary>
+    public async Task<(FaceEventRecord? Event, byte[]? JpegBytes)> SaveBestShotAsync(CompletedFaceTrack track, CancellationToken ct = default)
+    {
+        if (track == null || track.BestCropBgra32.Length == 0 || !_config.IsEnabled || _storageState == ArchiveStorageState.StorageFullPaused)
+        {
+            return (null, null);
+        }
+
+        byte[] jpegBytes = EncodeToJpeg(track.BestCropBgra32, track.CropWidth, track.CropHeight, _config.JpegQuality);
+        if (jpegBytes.Length == 0) return (null, null);
+
+        var parentEvent = new FaceEventRecord
+        {
+            EventId = Guid.NewGuid(),
+            CameraId = track.CameraId,
+            ChannelIndex = track.ChannelIndex,
+            TimestampUtc = track.BestShotTimestampUtc == default ? DateTime.UtcNow : track.BestShotTimestampUtc,
+            FaceCount = 1,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        var face = track.BestBox;
+        var meta = new FaceCropMetadata(
+            parentEvent.EventId,
+            0,
+            parentEvent.TimestampUtc.Ticks,
+            parentEvent.CameraId,
+            face.NormalizedX,
+            face.NormalizedY,
+            face.NormalizedWidth,
+            face.NormalizedHeight,
+            track.BestConfidence);
+
+        byte[] headerBytes = EnvelopeCodec.SerializeHeader(meta);
+        string cameraFolder = Path.Combine(_canonicalArchiveRoot, SanitizeCameraFolderName(track.CameraId), parentEvent.TimestampUtc.ToString("yyyy-MM-dd"));
+        if (!Directory.Exists(cameraFolder)) Directory.CreateDirectory(cameraFolder);
+
+        string finalEncPath = Path.Combine(cameraFolder, $"{parentEvent.EventId:N}_0.enc");
+        string stagingTmpPath = Path.Combine(_stagingDir, $"{parentEvent.EventId:N}_0.tmp");
+
+        byte[] nonce = new byte[12];
+        byte[] tag = new byte[16];
+        byte[] ciphertext = new byte[jpegBytes.Length];
+
+        ushort usedKeyId;
+        byte[] aad = EnvelopeCodec.ConstructAad(1, (ushort)headerBytes.Length, headerBytes);
+        _keyStore.Encrypt(jpegBytes, ciphertext, tag, nonce, aad, out usedKeyId);
+        aad = EnvelopeCodec.ConstructAad(usedKeyId, (ushort)headerBytes.Length, headerBytes);
+
+        await using (var fs = new FileStream(stagingTmpPath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+        {
+            await fs.WriteAsync(aad.AsMemory(0, 10 + headerBytes.Length), ct);
+            await fs.WriteAsync(nonce.AsMemory(0, 12), ct);
+            await fs.WriteAsync(tag.AsMemory(0, 16), ct);
+            await fs.WriteAsync(ciphertext.AsMemory(0, ciphertext.Length), ct);
+            await fs.FlushAsync(ct);
+        }
+
+        File.Move(stagingTmpPath, finalEncPath, overwrite: true);
+
+        var cropRecord = new FaceCropRecord
+        {
+            CropId = Guid.NewGuid(),
+            EventId = parentEvent.EventId,
+            CropIndex = 0,
+            Confidence = track.BestConfidence,
+            NormX = face.NormalizedX,
+            NormY = face.NormalizedY,
+            NormW = face.NormalizedWidth,
+            NormH = face.NormalizedHeight,
+            EncryptedFilePath = finalEncPath
+        };
+
+        await _database.InsertEventWithCropsAsync(parentEvent, new List<FaceCropRecord> { cropRecord });
+        Interlocked.Increment(ref _totalCropsArchived);
+        EventArchived?.Invoke(parentEvent);
+
+        return (parentEvent, jpegBytes);
+    }
+
+    public static byte[] EncodeBgra32ToJpeg(byte[] bgra32Bytes, int width, int height, int quality = 88)
+        => EncodeToJpeg(bgra32Bytes, width, height, quality);
+
     private async Task ArchiveWorkerAsync(CancellationToken ct)
     {
         try

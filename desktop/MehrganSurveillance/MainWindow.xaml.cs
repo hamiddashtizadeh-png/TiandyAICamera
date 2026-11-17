@@ -41,8 +41,9 @@ namespace MehrganSurveillance
         private FaceArchiveService? _archiveService;
         private readonly AnprPipeline _anprPipeline = new();
         private AnprArchiveService? _anprArchiveService;
+        private readonly NotificationService _notificationService = new();
+        private readonly FaceBestShotTracker _faceBestShotTracker = new(exitTimeoutSeconds: 2.0);
         private readonly System.Collections.ObjectModel.ObservableCollection<LiveFaceFeedItem> _liveFaceFeed = new();
-        private readonly ConcurrentDictionary<string, (DateTime Timestamp, FaceBoundingBox Box, float Confidence)> _lastCapturedFacePerCamera = new();
         private long _liveFaceCounter;
 
         // صف لاگ‌های باچ‌شده و تایمر اختصاصی جهت جلوگیری از فریز UI
@@ -130,6 +131,8 @@ namespace MehrganSurveillance
                 _anprArchiveService = new AnprArchiveService();
                 await _anprArchiveService.InitializeAsync();
 
+                _notificationService.LogMessage += LogEvent;
+
                 // ۶. اتصال رویداد بهینه‌ساز هوشمند دوربین به سلول‌های ویدیویی زنده
                 MehrganSurveillance.Services.Optimization.CameraSettingsOptimizerService.OptimizationSettingsApplied += (camIp, snap) =>
                 {
@@ -145,26 +148,106 @@ namespace MehrganSurveillance
                     });
                 };
 
+                // نمایش زنده کادر پلاک خودرو روی سلول دوربین‌ها (بدون ساخت پلاک فرضی)
+                _anprPipeline.LiveObservationAvailable += obs =>
+                {
+                    if (obs == null) return;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (obs.ChannelIndex >= 0 && obs.ChannelIndex < _cells.Count)
+                        {
+                            _cells[obs.ChannelIndex].UpdatePlateObservation(obs.PlateBox != null ? obs : null);
+                        }
+                    }));
+                };
+
+                // ثبت واقعی پلاک تاییدشده در SQLite + ارسال پیامک/واتس‌اپ/تلگرام همراه با تصویر
                 _anprPipeline.FramePlateRecognized += (anprResult, frame) =>
                 {
+                    var (vehJpeg, pltJpeg) = ExtractAnprCropsFromFrame(frame, anprResult);
                     if (_anprArchiveService != null)
                     {
-                        var (vehJpeg, pltJpeg) = ExtractAnprCropsFromFrame(frame, anprResult);
                         _ = _anprArchiveService.RecordEventAsync(anprResult, vehJpeg, pltJpeg);
                     }
+
+                    string camName = (anprResult.ChannelIndex >= 0 && anprResult.ChannelIndex < _channels.Count)
+                        ? _channels[anprResult.ChannelIndex].DisplayName
+                        : $"کانال {anprResult.ChannelIndex + 1}";
+
+                    _notificationService.EnqueueAnprNotification(anprResult, camName, vehJpeg ?? pltJpeg);
                     LogEvent($"پلاک خودرو کشف شد: {anprResult.Plate.NormalizedText} (اطمینان: {anprResult.OcrConfidence:P0})");
                 };
 
                 LiveFaceCaptureListBox.ItemsSource = _liveFaceFeed;
 
-                // اتصال رویداد تشخیص فریم به آرشیو، نمایش کادر سبز روی سلول و افزودن بهترین شات به پنل زنده بدون اسپم
+                // ثبت دقیقاً «یک بهترین شات» چهره پس از خروج شخص از صحنه در آرشیو و ارسال اعلان با عکس
+                _faceBestShotTracker.TrackCompleted += async track =>
+                {
+                    try
+                    {
+                        if (track.BestCropBgra32 == null || track.BestCropBgra32.Length == 0) return;
+
+                        var ch = (track.ChannelIndex >= 0 && track.ChannelIndex < _channels.Count)
+                            ? _channels[track.ChannelIndex]
+                            : null;
+                        string camName = ch?.DisplayName ?? $"کانال {track.ChannelIndex + 1}";
+
+                        byte[]? faceJpeg = null;
+                        if (_archiveService != null && (ch == null || ch.IsFaceArchiveEnabled))
+                        {
+                            var saved = await _archiveService.SaveBestShotAsync(track);
+                            faceJpeg = saved.JpegBytes;
+                        }
+
+                        faceJpeg ??= FaceArchiveService.EncodeBgra32ToJpeg(track.BestCropBgra32, track.CropWidth, track.CropHeight, 90);
+
+                        _notificationService.EnqueueFaceNotification(
+                            track.CameraId,
+                            track.ChannelIndex,
+                            camName,
+                            track.BestShotTimestampUtc == default ? DateTime.UtcNow : track.BestShotTimestampUtc,
+                            track.BestConfidence,
+                            faceJpeg);
+
+                        var thumb = CreateFrozenBitmapFromBgra(track.BestCropBgra32, track.CropWidth, track.CropHeight, track.CropStride);
+                        DateTime localTime = (track.BestShotTimestampUtc == default ? DateTime.UtcNow : track.BestShotTimestampUtc).ToLocalTime();
+                        string timeStr = localTime.ToString("HH:mm:ss");
+                        string confStr = $"{Math.Round(track.BestConfidence * 100)}%";
+
+                        _ = Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            long count = Interlocked.Increment(ref _liveFaceCounter);
+                            _liveFaceFeed.Insert(0, new LiveFaceFeedItem
+                            {
+                                CameraName = camName,
+                                TimestampString = timeStr,
+                                ConfidenceText = confStr,
+                                ChannelIndex = track.ChannelIndex,
+                                Thumbnail = thumb
+                            });
+
+                            while (_liveFaceFeed.Count > 50)
+                            {
+                                _liveFaceFeed.RemoveAt(_liveFaceFeed.Count - 1);
+                            }
+
+                            LiveFaceCountBadgeText.Text = count.ToString();
+                        }));
+
+                        LogEvent($"[چهره] بهترین تصویر {camName} پس از خروج فرد انتخاب و ثبت شد ({track.FramesObserved} فریم، اطمینان {confStr}).");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogEvent($"خطا در ثبت بهترین شات چهره: {ex.Message}");
+                    }
+                };
+
+                // اتصال رویداد تشخیص فریم به کادر سبز زنده و ردیاب ورود-تا-خروج (جلوگیری از اسپم دیتابیس)
                 _facePipeline.FrameFaceDetected += (result, frame) =>
                 {
                     var faces = result.Faces;
                     int chIndex = result.ChannelIndex;
-                    string camId = result.CameraId;
 
-                    // ۱. به‌روزرسانی کادر سبز زنده روی تصویر دوربین در هر فریم
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         if (chIndex >= 0 && chIndex < _cells.Count)
@@ -178,68 +261,10 @@ namespace MehrganSurveillance
                         return;
                     }
 
-                    // ۲. انتخاب بهترین و واضح‌ترین چهره در فریم جاری (Best-Shot Selection)
-                    var bestFace = faces.OrderByDescending(f => f.Confidence).First();
-                    var now = DateTime.UtcNow;
-                    bool shouldCaptureShot = false;
-
-                    if (!_lastCapturedFacePerCamera.TryGetValue(camId, out var lastState))
+                    if (chIndex < 0 || chIndex >= _channels.Count || _channels[chIndex].IsFaceDetectionEnabled)
                     {
-                        shouldCaptureShot = true;
+                        _faceBestShotTracker.ObserveFrame(result, frame);
                     }
-                    else
-                    {
-                        double elapsedSec = (now - lastState.Timestamp).TotalSeconds;
-                        float dx = Math.Abs(bestFace.NormalizedX - lastState.Box.NormalizedX);
-                        float dy = Math.Abs(bestFace.NormalizedY - lastState.Box.NormalizedY);
-                        bool movedSignificantly = (dx > 0.14f || dy > 0.14f);
-                        bool muchBetterConfidence = (bestFace.Confidence > lastState.Confidence + 0.04f) && elapsedSec >= 3.0;
-
-                        // اگر شخص جدید/جابه‌جا شده باشد (حداقل ۳ ثانیه)، یا تصویر بسیار باکیفیت‌تری به دست آمده باشد، یا بیش از ۱۵ ثانیه از آخرین ثبت گذشته باشد
-                        if ((movedSignificantly && elapsedSec >= 3.0) || muchBetterConfidence || elapsedSec >= 15.0)
-                        {
-                            shouldCaptureShot = true;
-                        }
-                    }
-
-                    if (!shouldCaptureShot)
-                    {
-                        return;
-                    }
-
-                    _lastCapturedFacePerCamera[camId] = (now, bestFace, bestFace.Confidence);
-
-                    // ۳. ثبت در آرشیو امن فقط برای بهترین شات منتخب (جلوگیری از پر شدن بی‌رویه آرشیو)
-                    _archiveService?.OnFaceDetected(result, frame);
-
-                    // ۴. استخراج فوری تصویر بندانگشتی چهره در همین نخ قبل از آزاد شدن بافر فریم به ArrayPool!
-                    var capturedThumb = CreateThumbnailFromFrame(frame, bestFace);
-                    string timeStr = DateTime.Now.ToString("HH:mm:ss");
-                    string confStr = $"{Math.Round(bestFace.Confidence * 100)}%";
-
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        string camName = (chIndex >= 0 && chIndex < _channels.Count)
-                            ? _channels[chIndex].DisplayName
-                            : $"کانال {chIndex + 1}";
-
-                        long count = Interlocked.Increment(ref _liveFaceCounter);
-                        _liveFaceFeed.Insert(0, new LiveFaceFeedItem
-                        {
-                            CameraName = camName,
-                            TimestampString = timeStr,
-                            ConfidenceText = confStr,
-                            ChannelIndex = chIndex,
-                            Thumbnail = capturedThumb
-                        });
-
-                        while (_liveFaceFeed.Count > 50)
-                        {
-                            _liveFaceFeed.RemoveAt(_liveFaceFeed.Count - 1);
-                        }
-
-                        LiveFaceCountBadgeText.Text = count.ToString();
-                    }));
                 };
 
                 // ۴. مقداردهی اسلات‌های ۹ گانه
@@ -752,6 +777,9 @@ namespace MehrganSurveillance
             _clockTimer.Stop();
             _logBatchTimer.Stop();
 
+            _faceBestShotTracker.FlushAll();
+            _faceBestShotTracker.Dispose();
+
             foreach (var cell in _cells)
             {
                 cell.StopPlayback();
@@ -761,6 +789,8 @@ namespace MehrganSurveillance
             {
                 _ = _framePipeline.DisposeAsync();
             }
+
+            _ = _notificationService.DisposeAsync();
 
             if (_sharedLibVlc != null)
             {
@@ -878,11 +908,52 @@ namespace MehrganSurveillance
         private void OpenAnprWindow_Click(object sender, RoutedEventArgs e)
         {
             HideAllCellOverlays();
-            var anprWin = new AnprWindow(_anprPipeline, _anprArchiveService)
+            var anprWin = new AnprWindow(_anprPipeline, _anprArchiveService, _framePipeline, _channels)
             {
                 Owner = this
             };
             anprWin.ShowDialog();
+            if (MasterAnprToggle != null)
+            {
+                MasterAnprToggle.IsChecked = _anprPipeline.Config.IsEnabled;
+            }
+        }
+
+        private void OpenNotificationSettingsWindow_Click(object sender, RoutedEventArgs e)
+        {
+            HideAllCellOverlays();
+            var notifyWin = new NotificationSettingsWindow(_notificationService)
+            {
+                Owner = this
+            };
+            notifyWin.ShowDialog();
+        }
+
+        private void MasterAnprToggle_Click(object sender, RoutedEventArgs e)
+        {
+            bool enabled = MasterAnprToggle.IsChecked == true;
+            if (enabled)
+            {
+                _anprPipeline.EnablePipeline();
+                LogEvent("پلاک‌خوان زنده (ANPR) توسط کاربر فعال شد.");
+                for (int i = 0; i < _channels.Count; i++)
+                {
+                    _channels[i].IsAnprEnabled = true;
+                    if (_channels[i].IsAssigned || _channels[i].IsConnected)
+                    {
+                        StartAiAcquisitionForChannel(_channels[i]);
+                    }
+                }
+            }
+            else
+            {
+                _anprPipeline.DisablePipeline();
+                LogEvent("پلاک‌خوان زنده (ANPR) غیرفعال شد.");
+                foreach (var cell in _cells)
+                {
+                    cell.UpdatePlateObservation(null);
+                }
+            }
         }
 
         private void OpenCameraOptimizerWindow_Click(object sender, RoutedEventArgs e)
@@ -972,6 +1043,7 @@ namespace MehrganSurveillance
             else
             {
                 _facePipeline.DisablePipeline();
+                _faceBestShotTracker.FlushAll();
                 FaceAiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(100, 116, 139));
                 FaceAiStatusText.Text = "هوش مصنوعی چهره غیرفعال شد";
                 LogEvent("پردازش هوش مصنوعی چهره غیرفعال شد.");
@@ -994,6 +1066,10 @@ namespace MehrganSurveillance
 
         private void StopAiAcquisitionForChannel(int slotIndex)
         {
+            if (slotIndex >= 0 && slotIndex < _channels.Count)
+            {
+                _faceBestShotTracker.FlushCamera(_channels[slotIndex].Id);
+            }
             if (_framePipeline == null) return;
             _ = _framePipeline.StopChannelAcquisitionAsync(slotIndex);
         }
@@ -1010,6 +1086,7 @@ namespace MehrganSurveillance
         {
             if (cell?.Channel != null)
             {
+                cell.HideFaceOverlayImmediate();
                 StopAiAcquisitionForChannel(cell.Channel.SlotIndex);
             }
         }
@@ -1020,10 +1097,14 @@ namespace MehrganSurveillance
             {
                 StartAiAcquisitionForChannel(args.Cell.Channel);
             }
-            else if (!args.Cell.Channel.IsAnprEnabled)
+            else
             {
-                StopAiAcquisitionForChannel(args.Cell.Channel.SlotIndex);
+                _faceBestShotTracker.FlushCamera(args.Cell.Channel.Id);
                 args.Cell.UpdateFaceDetections(new List<FaceBoundingBox>());
+                if (!args.Cell.Channel.IsAnprEnabled)
+                {
+                    StopAiAcquisitionForChannel(args.Cell.Channel.SlotIndex);
+                }
             }
         }
 
@@ -1041,65 +1122,29 @@ namespace MehrganSurveillance
             {
                 StartAiAcquisitionForChannel(args.Cell.Channel);
             }
-            else if (!args.Cell.Channel.IsFaceDetectionEnabled)
+            else
             {
-                StopAiAcquisitionForChannel(args.Cell.Channel.SlotIndex);
+                args.Cell.UpdatePlateObservation(null);
+                if (!args.Cell.Channel.IsFaceDetectionEnabled)
+                {
+                    StopAiAcquisitionForChannel(args.Cell.Channel.SlotIndex);
+                }
             }
         }
 
-        /// <summary>
-        /// استخراج شات پرتره کامل سر و شانه از فریم دوربین با حاشیه استاندارد امنیتی تا تصویر چهره کوچک یا بریده نیفتد
-        /// </summary>
-        private static System.Windows.Media.ImageSource? CreateThumbnailFromFrame(AcquiredFrame frame, FaceBoundingBox face)
+        private static System.Windows.Media.ImageSource? CreateFrozenBitmapFromBgra(byte[] bgra, int width, int height, int stride)
         {
             try
             {
-                var (cx, cy, cw, ch) = face.ToPixelCoordinates(frame.Width, frame.Height);
-                if (cw <= 4 || ch <= 4) return null;
-
-                // گسترش سخاوتمندانه کادر پرتره (شامل کامل مو، سر، گردن و سرشانه) و تضمین حداقل ابعاد استاندارد
-                int padLeftRight = Math.Max((int)(cw * 0.42), 24);
-                int padTop = Math.Max((int)(ch * 0.38), 22);
-                int padBottom = Math.Max((int)(ch * 0.55), 32);
-
-                int targetX = Math.Max(0, cx - padLeftRight);
-                int targetY = Math.Max(0, cy - padTop);
-                int targetW = Math.Min(frame.Width - targetX, cw + (padLeftRight * 2));
-                int targetH = Math.Min(frame.Height - targetY, ch + padTop + padBottom);
-
-                // تضمین حداقل اندازه شات در صورت کوچک بودن چهره در دورترین نقطه تصویر
-                int minShotDim = Math.Min(frame.Width, frame.Height) / 3;
-                if (targetW < minShotDim)
+                if (bgra == null || bgra.Length == 0 || width <= 0 || height <= 0 || stride <= 0)
                 {
-                    int extraW = minShotDim - targetW;
-                    targetX = Math.Max(0, targetX - (extraW / 2));
-                    targetW = Math.Min(frame.Width - targetX, minShotDim);
-                }
-                if (targetH < minShotDim)
-                {
-                    int extraH = minShotDim - targetH;
-                    targetY = Math.Max(0, targetY - (extraH / 2));
-                    targetH = Math.Min(frame.Height - targetY, minShotDim);
-                }
-
-                int stride = targetW * 4;
-                byte[] crop = new byte[stride * targetH];
-                var raw = frame.PixelData.Span;
-
-                for (int y = 0; y < targetH; y++)
-                {
-                    int srcOffset = ((targetY + y) * frame.Stride) + (targetX * 4);
-                    int dstOffset = y * stride;
-                    if (srcOffset + stride <= raw.Length && dstOffset + stride <= crop.Length)
-                    {
-                        raw.Slice(srcOffset, stride).CopyTo(crop.AsSpan(dstOffset, stride));
-                    }
+                    return null;
                 }
 
                 var bitmap = System.Windows.Media.Imaging.BitmapSource.Create(
-                    targetW, targetH, 96, 96,
+                    width, height, 96, 96,
                     System.Windows.Media.PixelFormats.Bgra32,
-                    null, crop, stride);
+                    null, bgra, stride);
                 bitmap.Freeze();
                 return bitmap;
             }

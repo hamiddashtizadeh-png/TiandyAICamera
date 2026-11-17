@@ -32,6 +32,7 @@
                     <MenuItem x:Name="MenuFaceOverlayToggle" Header="🟩 کادر سبز رنگ زنده چهره (Live Box)" IsCheckable="True" IsChecked="True" Click="MenuFaceOverlayToggle_Click" />
                     <Separator />
                     <MenuItem x:Name="MenuAnprToggle" Header="🚗 پلاک‌خوان هوشمند (ANPR)" IsCheckable="True" IsChecked="False" Click="MenuAnprToggle_Click" />
+                    <MenuItem x:Name="MenuAnprOverlayToggle" Header="🟧 کادر زنده پلاک (ANPR Box)" IsCheckable="True" IsChecked="True" Click="MenuAnprOverlayToggle_Click" />
                 </MenuItem>
                 <Separator />
 

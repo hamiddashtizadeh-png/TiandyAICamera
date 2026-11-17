@@ -8,26 +8,39 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using System.Windows.Threading;
 using MehrganSurveillance.Models;
 using MehrganSurveillance.Services;
 
 namespace MehrganSurveillance;
 
 /// <summary>
-/// پنجره اختصاصی پلاک‌خوان هوشمند خودرو (ANPR) با پشتیبانی از استانداردهای پلاک ملی ایران
+/// پنجره اختصاصی پلاک‌خوان هوشمند خودرو (ANPR) با نمایش زنده دوربین، رسم کادر پلاک و آرشیو واقعی بدون پلاک جعلی
 /// </summary>
 public partial class AnprWindow : Window
 {
     private readonly AnprPipeline _pipeline;
     private readonly AnprArchiveService _archiveService;
+    private readonly LocalFrameAcquisitionPipeline? _framePipeline;
+    private readonly List<CameraChannel> _channels;
     private readonly List<AnprResult> _loadedEvents = new();
+    private DispatcherTimer? _overlayExpireTimer;
+    private DateTime _lastOverlayUtc = DateTime.MinValue;
+    private int _selectedPreviewSlot = -1; // -1 = همه دوربین‌های فعال
 
-    public AnprWindow(AnprPipeline? pipeline = null, AnprArchiveService? archiveService = null)
+    public AnprWindow(
+        AnprPipeline? pipeline = null,
+        AnprArchiveService? archiveService = null,
+        LocalFrameAcquisitionPipeline? framePipeline = null,
+        List<CameraChannel>? channels = null)
     {
         InitializeComponent();
 
         _pipeline = pipeline ?? new AnprPipeline();
         _archiveService = archiveService ?? new AnprArchiveService();
+        _framePipeline = framePipeline;
+        _channels = channels ?? new List<CameraChannel>();
 
         Loaded += AnprWindow_Loaded;
         Closed += AnprWindow_Closed;
@@ -38,15 +51,32 @@ public partial class AnprWindow : Window
         try
         {
             await _archiveService.InitializeAsync();
+            _pipeline.RegisterPreviewSubscriber();
             _pipeline.PlateRecognized += OnLivePlateRecognized;
+            _pipeline.LiveObservationAvailable += OnLiveObservationAvailable;
 
             AnprEnableToggle.IsChecked = _pipeline.Config.IsEnabled;
             UpdateEngineBadge();
+            UpdateOcrNoticeBanner();
 
-            // پر کردن دوربین‌های پیش‌فرض
-            CameraFilterCombo.Items.Clear();
-            CameraFilterCombo.Items.Add("همه دوربین‌ها");
-            CameraFilterCombo.SelectedIndex = 0;
+            _overlayExpireTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _overlayExpireTimer.Tick += (s, ev) =>
+            {
+                if (_lastOverlayUtc != DateTime.MinValue && (DateTime.UtcNow - _lastOverlayUtc).TotalSeconds > 1.8)
+                {
+                    LiveAnprOverlayCanvas.Children.Clear();
+                    _lastOverlayUtc = DateTime.MinValue;
+                }
+            };
+            _overlayExpireTimer.Start();
+
+            PopulateCameraSelectors();
+
+            // اگر موتور فعال است و دوربین تخصیص‌یافته داریم، فریم‌گیری کانال منتخب را تضمین می‌کنیم
+            if (_pipeline.Config.IsEnabled && _framePipeline != null)
+            {
+                await EnsureLivePreviewAcquisitionStartedAsync();
+            }
 
             await LoadEventsAsync();
             await UpdateStatisticsAsync();
@@ -59,7 +89,170 @@ public partial class AnprWindow : Window
 
     private void AnprWindow_Closed(object? sender, EventArgs e)
     {
+        _overlayExpireTimer?.Stop();
+        _pipeline.LiveObservationAvailable -= OnLiveObservationAvailable;
         _pipeline.PlateRecognized -= OnLivePlateRecognized;
+        _pipeline.UnregisterPreviewSubscriber();
+    }
+
+    private void PopulateCameraSelectors()
+    {
+        CameraFilterCombo.Items.Clear();
+        CameraFilterCombo.Items.Add(new ComboBoxItem { Content = "همه دوربین‌ها", Tag = null });
+
+        LiveCameraSelectorCombo.Items.Clear();
+        LiveCameraSelectorCombo.Items.Add(new ComboBoxItem { Content = "اولین دوربین فعال (خودکار)", Tag = -1 });
+
+        foreach (var ch in _channels.Where(c => c.IsAssigned))
+        {
+            string title = $"{ch.DisplayName} (کانال {ch.SlotIndex + 1})";
+            CameraFilterCombo.Items.Add(new ComboBoxItem { Content = title, Tag = ch.Id });
+            LiveCameraSelectorCombo.Items.Add(new ComboBoxItem { Content = title, Tag = ch.SlotIndex });
+        }
+
+        CameraFilterCombo.SelectedIndex = 0;
+        LiveCameraSelectorCombo.SelectedIndex = LiveCameraSelectorCombo.Items.Count > 1 ? 1 : 0;
+    }
+
+    private async Task EnsureLivePreviewAcquisitionStartedAsync()
+    {
+        if (_framePipeline == null) return;
+
+        var assigned = _channels.Where(c => c.IsAssigned && c.IsAnprEnabled).ToList();
+        if (_selectedPreviewSlot >= 0)
+        {
+            var target = _channels.FirstOrDefault(c => c.SlotIndex == _selectedPreviewSlot && c.IsAssigned);
+            if (target != null)
+            {
+                target.IsAnprEnabled = true;
+                await _framePipeline.StartChannelAcquisitionAsync(target);
+                return;
+            }
+        }
+
+        foreach (var ch in assigned)
+        {
+            await _framePipeline.StartChannelAcquisitionAsync(ch);
+        }
+    }
+
+    private void OnLiveObservationAvailable(AnprLiveObservation obs)
+    {
+        if (obs == null) return;
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_selectedPreviewSlot >= 0 && obs.ChannelIndex != _selectedPreviewSlot)
+            {
+                return;
+            }
+
+            if (obs.PreviewFrameJpeg != null && obs.PreviewFrameJpeg.Length > 0)
+            {
+                try
+                {
+                    using var ms = new MemoryStream(obs.PreviewFrameJpeg);
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.StreamSource = ms;
+                    bmp.EndInit();
+                    bmp.Freeze();
+
+                    LiveCameraPreviewImage.Source = bmp;
+                    LivePreviewPlaceholderText.Visibility = Visibility.Collapsed;
+                }
+                catch { }
+            }
+
+            DrawLiveAnprBoxes(obs);
+        }));
+    }
+
+    private void DrawLiveAnprBoxes(AnprLiveObservation obs)
+    {
+        LiveAnprOverlayCanvas.Children.Clear();
+
+        if (obs.PlateBox == null)
+        {
+            return;
+        }
+
+        double cw = LiveAnprOverlayCanvas.ActualWidth;
+        double ch = LiveAnprOverlayCanvas.ActualHeight;
+        if (cw <= 10 || ch <= 10) return;
+
+        double ox = 0, oy = 0, rw = cw, rh = ch;
+        if (LiveCameraPreviewImage.Source is BitmapSource bmp && bmp.PixelWidth > 0 && bmp.PixelHeight > 0)
+        {
+            double scale = Math.Min(cw / bmp.PixelWidth, ch / bmp.PixelHeight);
+            rw = bmp.PixelWidth * scale;
+            rh = bmp.PixelHeight * scale;
+            ox = (cw - rw) / 2.0;
+            oy = (ch - rh) / 2.0;
+        }
+
+        if (obs.VehicleBox != null)
+        {
+            var vb = obs.VehicleBox;
+            var vehRect = new Rectangle
+            {
+                Width = Math.Max(14, vb.Width * rw),
+                Height = Math.Max(14, vb.Height * rh),
+                Stroke = new SolidColorBrush(Color.FromRgb(56, 189, 248)),
+                StrokeThickness = 1.6,
+                StrokeDashArray = new DoubleCollection { 4, 3 },
+                Fill = Brushes.Transparent,
+                RadiusX = 3,
+                RadiusY = 3
+            };
+            Canvas.SetLeft(vehRect, ox + (vb.X * rw));
+            Canvas.SetTop(vehRect, oy + (vb.Y * rh));
+            LiveAnprOverlayCanvas.Children.Add(vehRect);
+        }
+
+        var pb = obs.PlateBox;
+        double px = ox + (pb.X * rw);
+        double py = oy + (pb.Y * rh);
+        double pw = Math.Max(34, pb.Width * rw);
+        double ph = Math.Max(14, pb.Height * rh);
+
+        Color col = obs.IsOcrVerified ? Color.FromRgb(16, 185, 129) : Color.FromRgb(245, 158, 11);
+        var plateRect = new Rectangle
+        {
+            Width = pw,
+            Height = ph,
+            Stroke = new SolidColorBrush(col),
+            StrokeThickness = 2.5,
+            Fill = new SolidColorBrush(Color.FromArgb(32, col.R, col.G, col.B)),
+            RadiusX = 2,
+            RadiusY = 2
+        };
+        Canvas.SetLeft(plateRect, px);
+        Canvas.SetTop(plateRect, py);
+        LiveAnprOverlayCanvas.Children.Add(plateRect);
+
+        var badge = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(230,
+                obs.IsOcrVerified ? (byte)5 : (byte)180,
+                obs.IsOcrVerified ? (byte)150 : (byte)83,
+                obs.IsOcrVerified ? (byte)105 : (byte)9)),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(5, 1, 5, 1)
+        };
+        badge.Child = new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(obs.LabelText) ? "🚗 کادر پلاک" : $"🚗 {obs.LabelText}",
+            Foreground = Brushes.White,
+            FontSize = 9.5,
+            FontWeight = FontWeights.Bold
+        };
+        Canvas.SetLeft(badge, px);
+        Canvas.SetTop(badge, Math.Max(0, py - 21));
+        LiveAnprOverlayCanvas.Children.Add(badge);
+
+        _lastOverlayUtc = DateTime.UtcNow;
     }
 
     private void OnLivePlateRecognized(AnprResult result)
@@ -81,13 +274,28 @@ public partial class AnprWindow : Window
         }
         else if (_pipeline.IsInitialized)
         {
-            AiEngineStatusBadge.Text = $"موتور پلاک‌خوان فعال ({_pipeline.ModelStatus.ExecutionProvider} / تحلیل کادر و کاراکتر)";
+            AiEngineStatusBadge.Text = $"کادریاب فعال ({_pipeline.ModelStatus.ExecutionProvider}) — بدون پلاک جعلی";
             AiEngineStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248));
         }
         else
         {
             AiEngineStatusBadge.Text = "در انتظار راه‌اندازی موتور";
             AiEngineStatusBadge.Foreground = new SolidColorBrush(Color.FromRgb(251, 191, 36));
+        }
+    }
+
+    private void UpdateOcrNoticeBanner()
+    {
+        if (_pipeline.ModelStatus.IsReady)
+        {
+            OcrModelNoticeText.Text = "✅ مدل‌های ONNX تشخیص پلاک و OCR ایرانی فعال هستند؛ پلاک‌های تاییدشده بلافاصله در دیتابیس ذخیره می‌شوند.";
+            OcrModelNoticeText.Foreground = new SolidColorBrush(Color.FromRgb(52, 211, 153));
+        }
+        else
+        {
+            OcrModelNoticeText.Text =
+                "ℹ️ تصویر دوربین و کادر پلاک زنده نمایش داده می‌شود. به دلیل عدم وجود فایل وزن مدل نویسه‌خوان (Models/ANPR/iranian-plate-ocr.onnx)، هیچ پلاک تصادفی/جعلی در دیتابیس ثبت نمی‌شود.";
+            OcrModelNoticeText.Foreground = new SolidColorBrush(Color.FromRgb(251, 191, 36));
         }
     }
 
@@ -98,7 +306,7 @@ public partial class AnprWindow : Window
             DateTime? from = FromDatePicker.SelectedDate?.ToUniversalTime();
             DateTime? to = ToDatePicker.SelectedDate?.ToUniversalTime().AddDays(1);
 
-            string? cam = CameraFilterCombo.SelectedIndex > 0 ? CameraFilterCombo.SelectedItem?.ToString() : null;
+            string? cam = (CameraFilterCombo.SelectedItem as ComboBoxItem)?.Tag as string;
 
             AnprValidationStatus? status = null;
             if (StatusFilterCombo.SelectedIndex == 1) status = AnprValidationStatus.Verified;
@@ -137,17 +345,49 @@ public partial class AnprWindow : Window
         catch { }
     }
 
-    private void AnprEnableToggle_Click(object sender, RoutedEventArgs e)
+    private async void AnprEnableToggle_Click(object sender, RoutedEventArgs e)
     {
         bool enable = AnprEnableToggle.IsChecked == true;
         if (enable)
         {
             _pipeline.EnablePipeline();
+            await EnsureLivePreviewAcquisitionStartedAsync();
         }
         else
         {
             _pipeline.DisablePipeline();
+            LiveAnprOverlayCanvas.Children.Clear();
         }
+    }
+
+    private void LiveCameraSelectorCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LiveCameraSelectorCombo.SelectedItem is ComboBoxItem item && item.Tag is int slot)
+        {
+            _selectedPreviewSlot = slot;
+            LiveAnprOverlayCanvas.Children.Clear();
+        }
+    }
+
+    private async void StartLiveCameraPreview_Click(object sender, RoutedEventArgs e)
+    {
+        AnprEnableToggle.IsChecked = true;
+        _pipeline.EnablePipeline();
+
+        if (_framePipeline == null)
+        {
+            MessageBox.Show("پایپ‌لاین دریافت فریم آماده نیست. ابتدا پنجره اصلی دوربین را باز نگه دارید.", "توجه", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (!_channels.Any(c => c.IsAssigned))
+        {
+            MessageBox.Show("هنوز دوربینی به اسلات‌های برنامه اختصاص نیافته است. ابتدا از «مدیریت تجهیزات» یک دوربین اضافه یا به اسلات اختصاص دهید.", "دوربین یافت نشد", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        LivePreviewPlaceholderText.Text = "در حال دریافت تصویر زنده از دوربین...";
+        await EnsureLivePreviewAcquisitionStartedAsync();
     }
 
     private void AutoArchiveToggle_Click(object sender, RoutedEventArgs e)

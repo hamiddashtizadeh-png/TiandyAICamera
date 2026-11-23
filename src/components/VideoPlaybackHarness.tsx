@@ -166,6 +166,60 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
   const currentUrl = method === 'direct' ? directUrl : nvrUrl;
   const currentSanitizedUrl = sanitizeRtspUrl(currentUrl);
 
+  // ثبت سگمنت متوالی کم‌وضوح از بوم زنده جهت درونیابی فریم و تثبیت لرزش چهره
+  const handleCaptureLiveFaceSegment = async (): Promise<string[]> => {
+    const canvas = videoCanvasRef.current;
+    if (!canvas) return [];
+    const frames: string[] = [];
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 96;
+    offscreen.height = 96;
+    const offCtx = offscreen.getContext('2d');
+    if (!offCtx) return [];
+
+    for (let i = 0; i < 8; i++) {
+      // Simulate micro camera-mount jitter while capturing live cropped face ROI
+      const jx = Math.round(Math.sin(i * 2.1) * 14);
+      const jy = Math.round(Math.cos(i * 1.7) * 10);
+      const cropX = Math.max(0, Math.min(canvas.width * 0.5, canvas.width * 0.25 + jx));
+      const cropY = Math.max(0, Math.min(canvas.height * 0.5, canvas.height * 0.22 + jy));
+      offCtx.clearRect(0, 0, 96, 96);
+      offCtx.drawImage(
+        canvas,
+        cropX,
+        cropY,
+        canvas.width * 0.44,
+        canvas.height * 0.48,
+        0,
+        0,
+        96,
+        96
+      );
+      frames.push(offscreen.toDataURL('image/png'));
+      await new Promise((r) => setTimeout(r, 95));
+    }
+    return frames;
+  };
+
+  const handleUpdateFaceThumbnail = (
+    eventId: string,
+    enhancedDataUrl: string,
+    newQualityScore: number
+  ) => {
+    setDetectedFaces((prev) =>
+      prev.map((ev) =>
+        ev.id === eventId
+          ? {
+              ...ev,
+              thumbnailUrl: enhancedDataUrl,
+              qualityScore: Math.max(ev.qualityScore, newQualityScore),
+              interpolatedEnhanced: true,
+            }
+          : ev
+      )
+    );
+  };
+
   // بستن منوی راست کلیک با کلیک در هر نقطه دیگر
   useEffect(() => {
     const handleClickOutside = () => {
@@ -949,6 +1003,8 @@ export const VideoPlaybackHarness: React.FC<VideoPlaybackHarnessProps> = ({
               settings={faceSettings}
               onUpdateSettings={(updates) => setFaceSettings((prev) => ({ ...prev, ...updates }))}
               onClearEvents={() => setDetectedFaces([])}
+              onCaptureLiveSegment={handleCaptureLiveFaceSegment}
+              onUpdateEventThumbnail={handleUpdateFaceThumbnail}
               isStreamLive={isPlaying}
             />
           </div>

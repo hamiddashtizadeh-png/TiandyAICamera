@@ -18,8 +18,10 @@ import {
   Camera,
   Maximize2,
   X,
+  Film,
 } from 'lucide-react';
 import { DetectedFaceEvent, FaceDetectionSettings } from '../types/faceDetection';
+import { FaceInterpolationTool } from './FaceInterpolationTool';
 
 interface FaceDetectionPanelProps {
   events: DetectedFaceEvent[];
@@ -27,6 +29,12 @@ interface FaceDetectionPanelProps {
   onUpdateSettings: (updates: Partial<FaceDetectionSettings>) => void;
   onClearEvents: () => void;
   onSelectEvent?: (event: DetectedFaceEvent) => void;
+  onCaptureLiveSegment?: () => Promise<string[]>;
+  onUpdateEventThumbnail?: (
+    eventId: string,
+    enhancedDataUrl: string,
+    newQualityScore: number
+  ) => void;
   isStreamLive?: boolean;
 }
 
@@ -36,8 +44,15 @@ export const FaceDetectionPanel: React.FC<FaceDetectionPanelProps> = ({
   onUpdateSettings,
   onClearEvents,
   onSelectEvent,
+  onCaptureLiveSegment,
+  onUpdateEventThumbnail,
   isStreamLive = true,
 }) => {
+  const [panelTab, setPanelTab] = useState<'events' | 'interpolation'>('events');
+  const [interpolationTargetEvent, setInterpolationTargetEvent] =
+    useState<DetectedFaceEvent | null>(null);
+  const [isInterpolationExpanded, setIsInterpolationExpanded] = useState<boolean>(false);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedConfidenceFilter, setSelectedConfidenceFilter] = useState<number>(0);
   const [selectedEventForModal, setSelectedEventForModal] = useState<DetectedFaceEvent | null>(null);
@@ -45,6 +60,15 @@ export const FaceDetectionPanel: React.FC<FaceDetectionPanelProps> = ({
   const [searchDate, setSearchDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [searchStartTime, setSearchStartTime] = useState<string>('00:00');
   const [searchEndTime, setSearchEndTime] = useState<string>('23:59');
+
+  const openInterpolatorForEvent = (ev: DetectedFaceEvent, expand = false) => {
+    setInterpolationTargetEvent(ev);
+    setSelectedEventForModal(null);
+    setPanelTab('interpolation');
+    if (expand) {
+      setIsInterpolationExpanded(true);
+    }
+  };
 
   // فیلتر کردن رویدادهای چهره بر اساس جستجو و حداقل ضریب اطمینان
   const filteredEvents = useMemo(() => {
@@ -178,8 +202,47 @@ export const FaceDetectionPanel: React.FC<FaceDetectionPanelProps> = ({
         </div>
       </div>
 
-      {/* نوار ابزار جستجو و فیلتر */}
-      <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-col gap-2">
+      {/* سوییچر تب‌های داخلی پنل: فهرست رویدادها / ابزار درونیابی و تثبیت فریم AI */}
+      <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5">
+        <button
+          onClick={() => setPanelTab('events')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap ${
+            panelTab === 'events'
+              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <ScanFace className="w-3.5 h-3.5 text-emerald-600" />
+          <span>رویدادهای زنده ({events.length})</span>
+        </button>
+        <button
+          onClick={() => setPanelTab('interpolation')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap ${
+            panelTab === 'interpolation'
+              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Film className="w-3.5 h-3.5 text-cyan-700" />
+          <span>تثبیت و درونیابی AI</span>
+        </button>
+      </div>
+
+      {panelTab === 'interpolation' ? (
+        <FaceInterpolationTool
+          events={events}
+          selectedEvent={interpolationTargetEvent || events[0] || null}
+          onSelectEvent={setInterpolationTargetEvent}
+          onCaptureLiveSegment={onCaptureLiveSegment}
+          onUpdateEventThumbnail={onUpdateEventThumbnail}
+          isStreamLive={isStreamLive}
+          isExpandedModal={false}
+          onToggleExpand={(exp) => setIsInterpolationExpanded(exp)}
+        />
+      ) : (
+        <>
+          {/* نوار ابزار جستجو و فیلتر */}
+          <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -339,7 +402,23 @@ export const FaceDetectionPanel: React.FC<FaceDetectionPanelProps> = ({
 
                   <div className="flex items-center justify-between text-[10px] text-slate-400">
                     <span>زاویه: {ev.pose}</span>
-                    <span className="text-cyan-700 font-medium">کیفیت: {ev.qualityScore}%</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-cyan-700 font-medium font-mono tabular-nums">
+                        کیفیت: {ev.qualityScore}%{ev.interpolatedEnhanced ? ' · تثبیت AI' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openInterpolatorForEvent(ev, false);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-cyan-700 hover:text-white text-slate-700 font-semibold inline-flex items-center gap-1 transition-colors"
+                        title="درونیابی فریم، تثبیت لرزش و بزرگ‌نمایی سگمنت این چهره"
+                      >
+                        <Film className="w-2.5 h-2.5" />
+                        <span>تثبیت AI</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -349,6 +428,8 @@ export const FaceDetectionPanel: React.FC<FaceDetectionPanelProps> = ({
           })
         )}
       </div>
+        </>
+      )}
 
       {/* نوار وضعیت آماری پایین پنل */}
       <div className="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-600 flex items-center justify-between">
@@ -433,7 +514,14 @@ export const FaceDetectionPanel: React.FC<FaceDetectionPanelProps> = ({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <button
+                  onClick={() => openInterpolatorForEvent(selectedEventForModal, true)}
+                  className="px-3.5 py-2 text-xs font-bold text-white bg-cyan-700 hover:bg-cyan-800 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>تثبیت و درونیابی سگمنت (AI)</span>
+                </button>
                 <button
                   onClick={() => setSelectedEventForModal(null)}
                   className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors"
@@ -442,6 +530,30 @@ export const FaceDetectionPanel: React.FC<FaceDetectionPanelProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال تمام‌صفحه کارگاه تثبیت و درونیابی فریم AI */}
+      {isInterpolationExpanded && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setIsInterpolationExpanded(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FaceInterpolationTool
+              events={events}
+              selectedEvent={interpolationTargetEvent || events[0] || null}
+              onSelectEvent={setInterpolationTargetEvent}
+              onCaptureLiveSegment={onCaptureLiveSegment}
+              onUpdateEventThumbnail={onUpdateEventThumbnail}
+              isStreamLive={isStreamLive}
+              isExpandedModal={true}
+              onToggleExpand={(exp) => setIsInterpolationExpanded(exp)}
+            />
           </div>
         </div>
       )}

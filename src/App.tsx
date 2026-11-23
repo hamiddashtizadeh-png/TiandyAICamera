@@ -198,6 +198,20 @@ export default function App() {
                   settings={faceSettings}
                   onUpdateSettings={(u) => setFaceSettings((prev) => ({ ...prev, ...u }))}
                   onClearEvents={() => setFaceEvents([])}
+                  onUpdateEventThumbnail={(eventId, enhancedDataUrl, newQualityScore) => {
+                    setFaceEvents((prev) =>
+                      prev.map((ev) =>
+                        ev.id === eventId
+                          ? {
+                              ...ev,
+                              thumbnailUrl: enhancedDataUrl,
+                              qualityScore: Math.max(ev.qualityScore, newQualityScore),
+                              interpolatedEnhanced: true,
+                            }
+                          : ev
+                      )
+                    );
+                  }}
                   isStreamLive={true}
                 />
               </div>
